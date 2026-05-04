@@ -1,0 +1,55 @@
+﻿@using System.Text.Json
+@using System.Text.Json.Serialization
+@using CornerkickApp.Shared.Models
+@inject IJSRuntime JS
+
+<div class="@(bDisabled ? "disabled" : "")" style="position: relative; width: 100%; height: fit-content">
+  <img style="position: relative; width: 100%" src="@CkAppShared.sContentDir/Images/stadium/field.png" />
+  <div style="position: absolute; margin-left: 5%; width: 90%; height: 94%; top: 0px; left: 0%">
+    <div id="divDrawFormationBest11" @ref=erPlayerBest11Container style="position: absolute; width: 100%; height: 100%; top: 0%; left: 0%"></div>
+  </div>
+  <b id="average" style="position: absolute; bottom: 0%; left: 0%; width: 100%; text-align:center; font-size:130%; color:white"></b>
+</div>
+
+@code {
+  private IJSObjectReference? module;
+
+  ElementReference erPlayerBest11Container;
+  public bool bDisabled = true;
+
+  protected override async Task OnInitializedAsync()
+  {
+    await base.OnInitializedAsync();
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender) {
+      /*
+      await JS.InvokeAsync<IJSObjectReference>("import", "./_content/CornerkickApp.Components/js/Formation.js");
+      await JS.InvokeAsync<IJSObjectReference>("import", "./_content/CornerkickApp.Components/js/Player.js");
+      module = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/CornerkickApp.Components/Pages/Templates/Best11.razor.js");
+      */
+    }
+  }
+
+  private bool firstRender = true;
+  public async Task<bool> draw(TeamModel.TeamData? tD, bool bMobile = false)
+  {
+    if (tD == null) return false;
+
+    if (firstRender) {
+      await JS.InvokeAsync<IJSObjectReference>("import", "./_content/CornerkickApp.Components/js/Formation.js");
+      await JS.InvokeAsync<IJSObjectReference>("import", "./_content/CornerkickApp.Components/js/Player.js");
+      module = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/CornerkickApp.Components/Pages/Templates/Best11.razor.js");
+
+      firstRender = false;
+    }
+
+    await JS.InvokeVoidAsync("drawPlayerBest", JsonSerializer.Serialize(tD), erPlayerBest11Container, bMobile);
+    bDisabled = false;
+    await InvokeAsync(StateHasChanged);
+
+    return true;
+  }
+}

@@ -1,0 +1,300 @@
+﻿@page "/member/settings"
+
+@using Microsoft.JSInterop
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using CornerkickApp.Components.Shared.Components
+@using CornerkickApp.Controllers.Member
+@using CornerkickApp.Shared.Models
+
+@inject HttpClient Http
+
+<PageTitle>Optionen</PageTitle>
+
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    select {
+      width: 200px !important;
+    }
+  </style>
+</head>
+
+<body style="position: relative; width: 100%; max-width: 100vw">
+@if (model != null) {
+  <div style="width: 100%; overflow-x: auto">
+    <div>
+      <h4>Allgemeine Einstellungen</h4>
+      <table cellpadding="6" style="white-space: nowrap; margin-bottom: 12px">
+        <tbody>
+          @*
+          <tr>
+            <td><b>Sound:</b></td>
+            <td>
+              <input type="checkbox" name="cbSound" @sChecked1 onclick="changeSound(this.checked)" style="cursor: pointer">
+            </td>
+          </tr>
+          *@
+          @*
+          <tr>
+            <td><b>Textgröße:</b></td>
+            <td>
+              @Html.DropDownListFor(m => m.iFontSize, Model.ddlFontSize, new { @Id = "ddlFontSize", @class = "form-control", @style = "width: 80px", @onchange = "setFontSizeOptions(this.value)" })
+            </td>
+          </tr>
+          *@
+          @*
+          <tr>
+            <td><b>Übersicht tägl. Transaktionen:</b></td>
+            <td>
+              <input type="checkbox" @sChecked2 onclick="changeShowBalanceToday(this.checked)" style="cursor: pointer">
+            </td>
+          </tr>
+          *@
+          <tr>
+            <td><b>Schwierigkeitsgrad:</b></td>
+            <td>
+              <Blazorise.Select SelectedValue="@_usr.iLevel" SelectedValueChanged="@((i) => _usr.iLevel = byte.Parse(i.ToString()))" TValue="int">
+                <Blazorise.SelectItem Value="0">Fußball? Schon mal gehört...</Blazorise.SelectItem>
+                <Blazorise.SelectItem Value="1">Stammtischtrainer</Blazorise.SelectItem>
+                <Blazorise.SelectItem Value="2">Erfahrener Trainer</Blazorise.SelectItem>
+                <Blazorise.SelectItem Value="3">Lichtgestalt</Blazorise.SelectItem>
+              </Blazorise.Select>
+            </td>
+          </tr>
+          <tr>
+            <td><b>Tutorial zeigen:</b></td>
+            <td>
+              <input type="checkbox" checked="@model.bShowTutorial" @onchange="(b) => SetShowTutorial(bool.Parse(b.Value.ToString()))" style="cursor: pointer">
+            </td>
+          </tr>
+          <tr>
+            <td><b>Geschwindigkeit Kalender:</b></td>
+            <td>
+              <Blazorise.Select SelectedValue="@model.iCalSpeed" SelectedValueChanged="(iCs) => SetCalSpeed(iCs)" TValue="int" Style="width: fit-content" Disabled="@(CkAppShared.ckMng.ltUser.Count > 1)">
+                @foreach (LayoutModel.SelectListItem sli in ltCalSpeedSelect) {
+                  <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+                }
+              </Blazorise.Select>
+            </td>
+            <td hidden>
+              <label style="display: ruby">
+                <input type="tel" class="form-control" style="width: 80px; text-align: right" @bind="model.iCalSpeed" @bind:after="SetCalSpeed" />
+                [ms/Zeitschritt]
+              </label>
+            </td>
+          </tr>
+          @if (AppConstants.IS_DEBUG && _usr != null) {
+            <tr>
+              <td><b>User resp. level:</b></td>
+              <td>
+                <Blazorise.Select SelectedValue="@_usr.iResp" SelectedValueChanged="@((i) => _usr.iResp = byte.Parse(i.ToString()))" TValue="int">
+                  @for (int iL = 0; iL < CornerkickManager.Names.sUserRespLvlNames.Length; iL++) {
+                    int jL = iL;
+                    <Blazorise.SelectItem Value="@jL">@CornerkickManager.Names.sUserRespLvlNames[jL]</Blazorise.SelectItem>
+                  }
+                </Blazorise.Select>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div>
+      <h4>Einstellungen Live-Spiel</h4>
+      <table cellpadding="6" style="white-space: nowrap">
+        <tbody>
+          <tr>
+            <td><b>Geschwindigkeit live-Spiel:</b></td>
+            <td>
+              <Blazorise.Select SelectedValue="@model.iGameSpeed" SelectedValueChanged="(iGs) => SetGameSpeed(iGs)" TValue="int" Style="width: fit-content">
+                @foreach (LayoutModel.SelectListItem sli in ltGameSpeedSelect) {
+                  <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+                }
+              </Blazorise.Select>
+            </td>
+            <td hidden>
+              <label style="display: ruby">
+                <input type="tel" class="form-control" style="width: 80px; text-align: right" @bind="model.iGameSpeed" @bind:after="SetGameSpeed" />
+                [ms/Spielzug]
+              </label>
+            </td>
+          </tr>
+          <tr>
+            <td><b>Geschw. live-Spiel im letzten Drittel:</b></td>
+            <td>
+              <Blazorise.Select SelectedValue="@model.iGameSpeed2" SelectedValueChanged="(iGs) => SetGameSpeed2(iGs)" TValue="int" Style="width: fit-content">
+                @foreach (LayoutModel.SelectListItem sli in ltGameSpeedSelect) {
+                  <Blazorise.SelectItem Value="@sli.Value">@sli.Text.Replace("sofort", "deaktiviert")</Blazorise.SelectItem>
+                }
+              </Blazorise.Select>
+            </td>
+            <td hidden>
+              <label style="display: ruby">
+                <input type="tel" class="form-control" style="width: 80px; text-align: right" @bind="model.iGameSpeed2" @bind:after="SetGameSpeed2" />
+                [ms/Spielzug] (wenn 0: deaktiviert)
+              </label>
+            </td>
+          </tr>
+          <tr>
+            <td><b>Kommentar:</b></td>
+            <td>
+              <Blazorise.Select SelectedValue="@model.iComments" SelectedValueChanged="SetCommentLevel" TValue="int">
+                @foreach (LayoutModel.SelectListItem sli in model.ddlComments) {
+                  <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+                }
+              </Blazorise.Select>
+            </td>
+          </tr>
+          @*
+          <tr>
+            <td><b>Spielfeld:</b></td>
+            <td>
+              @Html.DropDownListFor(m => m.iShowPitch, Model.ddlShowPitch, new { @Id = "ddlShowPitch", @class = "form-control", @onchange = "setShowPitch(this.value)" })
+            </td>
+          </tr>
+          <tr>
+            <td><b>3D-Animationen:</b></td>
+            <td>
+              @Html.DropDownListFor(m => m.iAnimations, Model.ddlAnimations, new { @Id = "ddlAnimations", @class = "form-control", @onchange = "setAnimationLevel(this.value)" })
+            </td>
+          </tr>
+          <tr>
+            <td><b>Spielerscouting:</b></td>
+            <td>
+              <input type="checkbox" name="cbScouting" @sChecked5 onclick="changeScouting(this.checked)" style="cursor: pointer">
+            </td>
+          </tr>
+          *@
+        </tbody>
+      </table>
+    </div>
+  </div>
+}
+</body>
+</html>
+
+@code {
+  private UserOptionsModel? model;
+  private CornerkickManager.User? _usr;
+
+  List<LayoutModel.SelectListItem> ltCalSpeedSelect = new List<LayoutModel.SelectListItem>() {
+    new LayoutModel.SelectListItem() { Value = "50", Text = "langsam" },
+    new LayoutModel.SelectListItem() { Value = "20", Text = "normal" },
+    new LayoutModel.SelectListItem() { Value = "10", Text = "schnell" },
+    new LayoutModel.SelectListItem() { Value =  "1", Text = "sehr schnell" },
+    new LayoutModel.SelectListItem() { Value =  "0", Text = "sofort" }
+  };
+
+  List<LayoutModel.SelectListItem> ltGameSpeedSelect = new List<LayoutModel.SelectListItem>() {
+    new LayoutModel.SelectListItem() { Value = CkAppShared.iOptionGameSpeedSlow    .ToString(), Text = "langsam" },
+    new LayoutModel.SelectListItem() { Value = CkAppShared.iOptionGameSpeedNormal  .ToString(), Text = "normal" },
+    new LayoutModel.SelectListItem() { Value = CkAppShared.iOptionGameSpeedFast    .ToString(), Text = "schnell" },
+    new LayoutModel.SelectListItem() { Value = CkAppShared.iOptionGameSpeedVeryFast.ToString(), Text = "sehr schnell" },
+    new LayoutModel.SelectListItem() { Value = "2",                                             Text = "maximal" },
+    new LayoutModel.SelectListItem() { Value = "0",                                             Text = "sofort" }
+  };
+
+  public static class AppConstants
+  {
+#if DEBUG
+    public const bool IS_DEBUG = true;
+#else
+    public const bool IS_DEBUG = false;
+#endif
+  }
+
+  protected override async Task OnInitializedAsync()
+  {
+    await base.OnInitializedAsync();
+
+#if _WebApp
+#else
+    _usr = CkAppShared.ckMng.ltUser[CkAppShared.iUserActive];
+#endif
+
+#if _WebApp
+    model = await Http.GetFromJsonAsync<UserOptionsModel>("member/Desk/Desk");
+#else
+    model = UserController.UserOptions(_usr);
+#endif
+  }
+
+  private void SetShowTutorial(bool bShow)
+  {
+    if (_usr == null) return;
+
+    if (model == null) return;
+    model.bShowTutorial = bShow;
+
+    Controllers.Member.TutorialController.setTutorialLvl(_usr, bShow, 0);
+  }
+
+  private void SetCalSpeed(int iCs)
+  {
+    if (model == null) return;
+    model.iCalSpeed = iCs;
+    SetCalSpeed();
+  }
+  private void SetCalSpeed()
+  {
+    if (_usr == null) return;
+    if (model == null) return;
+
+    if (_usr.lti == null) _usr.lti = new List<int>();
+    while (_usr.lti.Count <= UserOptionsModel.iUserOptionsIxCalSpeed) _usr.lti.Add(0);
+
+    _usr.lti[UserOptionsModel.iUserOptionsIxCalSpeed] = model.iCalSpeed;
+  }
+
+  private void SetGameSpeed(int iGs)
+  {
+    if (model == null) return;
+    model.iGameSpeed = iGs;
+    SetGameSpeed();
+  }
+  private void SetGameSpeed()
+  {
+    if (model == null) return;
+    if (_usr?.club?.nextGame == null) return;
+    _usr.club.nextGame.iGameSpeed = model.iGameSpeed;
+    if (_usr.game != null) _usr.game.iGameSpeedUsed = model.iGameSpeed;
+  }
+
+  private void SetGameSpeed2(int iGs)
+  {
+    if (model == null) return;
+    model.iGameSpeed2 = iGs;
+    SetGameSpeed2();
+  }
+  private void SetGameSpeed2()
+  {
+    if (model == null) return;
+    if (_usr?.club?.nextGame == null) return;
+    _usr.club.nextGame.iGameSpeed2 = model.iGameSpeed2;
+  }
+
+  private void SetShowPitch(int iLevel)
+  {
+    if (_usr == null) return;
+
+    if (_usr.lti == null) _usr.lti = new List<int>();
+    while (_usr.lti.Count <= UserOptionsModel.iUserOptionsIxShowPitch) _usr.lti.Add(0);
+
+    _usr.lti[UserOptionsModel.iUserOptionsIxShowPitch] = iLevel;
+  }
+
+  private void SetCommentLevel(int iLevel)
+  {
+    if (_usr == null) return;
+
+    if (model != null) model.iComments = iLevel;
+
+    if (_usr.lti == null) _usr.lti = new List<int>();
+    while (_usr.lti.Count <= UserOptionsModel.iUserOptionsIxComment) _usr.lti.Add(0);
+
+    _usr.lti[UserOptionsModel.iUserOptionsIxComment] = iLevel;
+  }
+}

@@ -1,0 +1,45 @@
+﻿p {
+  margin: 0;
+}
+
+div.name {
+  position: relative;
+  width: 90%;
+  left: 5%;
+  top: 7%;
+  text-align: left;
+  font-size: 1.4em;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+div.portrait {
+  position: absolute;
+  width: 25%;
+  left: 7%;
+  top: 27%;
+  text-align: center;
+}
+
+div.skills {
+  position: absolute;
+  width: 64%;
+  left: 36%;
+  top: 25%;
+  text-align: left;
+  font-size: 1em;
+}
+
+@media (max-width: 640.98px) {
+  div.name {
+    font-size: 1.3em;
+  }
+
+  div.portrait {
+    top: 24%;
+  }
+
+  div.skills {
+    line-height: 120%;
+  }
+}

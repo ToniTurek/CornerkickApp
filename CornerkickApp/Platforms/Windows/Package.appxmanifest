@@ -1,0 +1,56 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:mp="http://schemas.microsoft.com/appx/2014/phone/manifest"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  IgnorableNamespaces="uap rescap">
+
+  <Identity Name="64614Cornerkick.Cornerkick-Managerv8" Publisher="CN=13595EFE-D299-481B-A17D-B1F8B952A601" Version="8.1.191.0" />
+
+  <mp:PhoneIdentity PhoneProductId="31304f4c-6ace-4071-a5c3-40d1daa4cd4f" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
+
+  <Properties>
+    <DisplayName>Cornerkick-Manager_v8</DisplayName>
+    <PublisherDisplayName>Cornerkick</PublisherDisplayName>
+    <Logo>Resources\Assets\ck_pakage_logo.png</Logo>
+  </Properties>
+
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Universal" MinVersion="10.0.17763.0" MaxVersionTested="10.0.19041.0" />
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.19041.0" />
+  </Dependencies>
+
+  <Resources>
+    <Resource Language="x-generate" />
+  </Resources>
+
+  <Applications>
+    <Application Id="App" Executable="$targetnametoken$.exe" EntryPoint="$targetentrypoint$">
+      <uap:VisualElements
+        DisplayName="Cornerkick-Manager_v8"
+        Description="ck Assets"
+        Square150x150Logo="Resources\Assets\ck_tile_medium.png"
+        Square44x44Logo="Resources\Assets\ck_symbol.png"
+        BackgroundColor="transparent">
+        <uap:DefaultTile Square71x71Logo="Resources\Assets\ck_tile_small.png" Wide310x150Logo="Resources\Assets\ck_tile_wide.png" Square310x310Logo="Resources\Assets\ck_tile_big.png"  ShortName="ck">
+          <uap:ShowNameOnTiles>
+            <uap:ShowOn Tile="square150x150Logo"/>
+            <uap:ShowOn Tile="wide310x150Logo"/>
+            <uap:ShowOn Tile="square310x310Logo"/>
+          </uap:ShowNameOnTiles>
+        </uap:DefaultTile >
+        <uap:SplashScreen Image="Resources\Assets\ckSplashScreen.png" />
+        <uap:LockScreen Notification="badge" BadgeLogo="Resources\Assets\BadgeLogo.png"/>
+        <uap:InitialRotationPreference>
+          <uap:Rotation Preference="landscape"/>
+          <uap:Rotation Preference="portrait"/></uap:InitialRotationPreference>
+      </uap:VisualElements>
+    </Application>
+  </Applications>
+
+  <Capabilities>
+    <rescap:Capability Name="runFullTrust" />
+  </Capabilities>
+
+</Package>

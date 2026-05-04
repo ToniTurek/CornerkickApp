@@ -1,0 +1,31 @@
+.block {
+  position: absolute;
+  width: 7%;
+  min-width: min-content;
+  text-align: center;
+  background-color: white;
+  border-radius: 3px;
+  border: 1px solid black;
+}
+
+input {
+  color: black;
+  font-size: 100%;
+}
+
+.center {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+tr {
+  text-align: center;
+}
+
+td {
+  align-content: center;
+  white-space: nowrap;
+}
+
+@media (max-width: 640.98px) {
+}

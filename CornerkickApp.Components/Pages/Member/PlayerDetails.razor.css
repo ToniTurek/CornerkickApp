@@ -1,0 +1,14 @@
+.nav-link.active {
+  background-color: aqua;
+}
+
+div.portrait {
+  position: relative;
+  height: 122px;
+}
+
+@media (max-width: 640.98px) {
+  div.portrait {
+    height: 80px;
+  }
+}

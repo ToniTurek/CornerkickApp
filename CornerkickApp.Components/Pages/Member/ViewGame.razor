@@ -1,0 +1,1558 @@
+﻿@page "/member/viewgame/{id}"
+
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using CornerkickApp.Shared.Models
+@using CornerkickApp.Components.Pages.Templates
+
+@inject IJSRuntime JS
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject Controllers.Shared.MyAuthenticationStateProvider _auth
+
+<PageTitle>Live-Spiel</PageTitle>
+
+<!DOCTYPE html>
+<html>
+<head>
+  <link rel="stylesheet" href="./_content/CornerkickApp.Components/css/slider.css" />
+
+  <style>
+    .accordion-body {
+      padding: 2px !important;
+    }
+  </style>
+</head>
+
+<body id="body">
+  <input type="hidden" id="bShowAnimations" name="bShowAnimations" checked="">
+  <input type="hidden" id="bShowChances" name="bShowChances" checked="">
+  <input type="hidden" id="bShowPassTargets" name="bShowPassTargets">
+  <input type="hidden" id="bShowTargetPos" name="bShowTargetPos">
+
+  @*
+  <div id="divRenderContainer" style="position: absolute; top: 100px; left: 25%; width: 50%; min-width: 300px; height: 800px; z-index: 101; border-style: ridge; border-width: 4px; border-color: lightgray; display: none;">
+    <b id="txtRenderLeft" style="position: absolute; top: 4px; left: 4px; color: white"></b>
+    <b id="txtRenderShootResult" style="position: absolute; top: 16px; left: 0px; width: 100%; text-align: center; color: red; font-size: 200%"></b>
+    <canvas width="1264" height="792" style="display: block; width: 1264px; height: 792px; touch-action: none;"></canvas>
+  </div>
+  *@
+
+  @if (model != null) {
+    <div id="header" style="position: relative; width: 100%; max-width: 1200px; height: calc(71px * var(--ckRelSize)); background-color: lightgrey; border-radius: 10px; display: block; z-index: 2">
+      @if (gd != null) {
+        if (!string.IsNullOrEmpty(gd.sTeamH)) {
+          if (!string.IsNullOrEmpty(gd.sEmblemH)) {
+            <div id="divEmblemH" class="emblem" style="left: 36%">
+              <img src="@gd.sEmblemH" alt="Wappen" style="position: absolute; height: 100%; right: 0px; object-fit: contain" title="@gd.sTeamH">
+            </div>
+          }
+          <div style="position: absolute; width: 30px; height: 30px; left:  1%; margin-top: 12px" @onclick="() => changeJerseyColors(0)">
+            <div id="divJerseyH" style="position: relative; width: 30px; height: 30px; border: 2px solid @gd.sJerseyColors[0][1 + iClIxH]; border-radius: 50%; cursor: pointer; background-color: @gd.sJerseyColors[0][0 + iClIxH]"></div>
+          </div>
+          <div style="position: absolute; width: 30%; left: 5%; top: 30%; text-align: right; white-space: nowrap; overflow: hidden">
+            <text id="lbTeamH" style="font-size: 1.25em">@gd.sTeamH</text>
+          </div>
+        }
+
+        if (!string.IsNullOrEmpty(gd.sTeamA)) {
+          if (!string.IsNullOrEmpty(gd.sEmblemA) && !string.IsNullOrEmpty(gd.sTeamA)) {
+            <div id="divEmblemA" class="emblem" style="right: 36%">
+              <img src="@gd.sEmblemA" alt="Wappen" style="position: absolute; height: 100%; left: 0px; object-fit: contain" title="@gd.sTeamA">
+            </div>
+          }
+          <div style="position: absolute; width: 30px; height: 30px; right: 1%; margin-top: 12px" @onclick="() => changeJerseyColors(1)">
+            <div id="divJerseyA" style="position: relative; width: 30px; height: 30px; border: 2px solid @gd.sJerseyColors[1][1 + iClIxA]; border-radius: 50%; cursor: pointer; background-color: @gd.sJerseyColors[1][0 + iClIxA]"></div>
+          </div>
+          <div style="position: absolute; width: 30%; right: 5%; top: 30%; text-align: left; white-space: nowrap; overflow: hidden">
+            <text id="lbTeamA" style="font-size: 1.25em">@gd.sTeamA</text>
+          </div>
+        }
+
+        <div style="position: absolute; width: 20%; height: 100%; left: 40%">
+          <div style="position: absolute; width: 35%; height: 100%; left: 0%">
+            <text id="lbGoalsH" style="position: absolute; top: 0px; right: 3px; font-size: 2.75em; color: @(!bFinished && state != null && state.iShootHA == 1 ? "red" : "black"); font-weight: @(!bFinished && state != null && state.iShootHA == 1 ? "bold" : "normal");">@gd.iGoalsH.ToString()</text>
+          </div>
+          <div style="position: absolute; width: 100%; height: 100%; left: 0px; text-align: center">
+            <text style="font-size: 2.75em">-</text>
+          </div>
+          <div style="position: absolute; width: 35%; height: 100%; right: 0%">
+            <text id="lbGoalsA" style="position: absolute; top: 0px; left: 3px; font-size: 2.75em; color: @(!bFinished && state != null && state.iShootHA == 2 ? "red" : "black"); font-weight: @(!bFinished && state != null && state.iShootHA == 2 ? "bold" : "normal");">@gd.iGoalsA.ToString()</text>
+          </div>
+        </div>
+
+        <div style="position: absolute; width: 100%; height: auto; bottom: 0px; left: 0px; text-align: center">
+          <text id="lbStadium" style="font-size: 0.75em">@gd.sStadium</text>
+      </div>
+      }
+    </div>
+
+    @*<div id="divContainer" style="position:relative; width: 100%; max-width: 1200px; top: calc(71px * var(--ckRelSize))">*@
+    <div id="divContainer">
+      @if (bShowPitch) {
+        <div id="divOptions" style="position: relative; left: 0px; width: 100%; margin-top: 8px; display: flex; align-items: flex-end">
+          @if (bFinished) {
+            <button id="bnStart" @onclick="() => setState(iState2 - 10)" class="btn btn-outline-secondary" style="width: 5rem; margin-right: 4px" disabled="@(iState2 <= 0)">
+              <i class="fa fa-fast-backward"></i>
+            </button>
+            <button id="bnBack" @onclick="() => setState(iState2 - 1)" class="btn btn-outline-secondary" style="width: 5rem; margin-right: 4px" disabled="@(iState2 <= 0)">
+              <i class="fa fa-step-backward"></i>
+            </button>
+            <button id="bnPlay"@onclick="() => loopStates(iState2)" class="btn btn-outline-secondary" style="width: 5rem; margin-right: 4px" disabled="@(iState2 >= nStates)">
+              <i class="@( bRunning ? "fa fa-stop" : "fa fa-play" )"></i>
+            </button>
+            <button id="bnForth" @onclick="() => setState(iState2 + 1)" class="btn btn-outline-secondary" style="width: 5rem; margin-right: 4px" disabled="@(iState2 >= nStates)">
+              <i class="fa fa-step-forward"></i>
+            </button>
+            <button id="bnEnd" @onclick="() => setState(iState2 + 10)" class="btn btn-outline-secondary" style="width: 5rem; margin-right: 4px" disabled="@(iState2 >= nStates)">
+              <i class="fa fa-fast-forward"></i>
+            </button>
+          }
+        </div>
+      }
+
+      @if (AppConstants.IS_DEBUG) {
+        <div id="divDebugOptions" style="position: relative; left: 0px; width: 100%; margin-top: 2px; display: block;">
+          <select @bind="iDebugNextAction">
+            <option value="-1">auto</option>
+            <option value="0">Schuss</option>
+            <option value="1">Pass</option>
+            <option value="2">Solo</option>
+            <option value="3">Warten</option>
+          </select>
+          <select @bind="iDebugNextActionResult">
+            <option value="-1">auto</option>
+            <option value="0">vorbei</option>
+            <option value="1">Tor</option>
+            <option value="2">gefangen</option>
+            <option value="3">Abpraller</option>
+            <option value="4">Ecke</option>
+            <option value="5">Pfosten</option>
+            <option value="6">Latte</option>
+          </select>
+          <button class="btn btn-outline-secondary" @onclick="StartStopDebug">
+            <i class="@( bRunning ? "fa fa-stop" : "fa fa-play" )"></i>
+          </button>
+          <button class="btn btn-outline-secondary" @onclick="OneStep">
+            <i class="fa fa-step-forward"></i>
+          </button>
+          <button class="btn btn-outline-secondary" style="width: auto" @onclick="setSituation1">Sit. 1</button>
+          <button class="btn btn-outline-secondary" style="width: auto" @onclick="setSituation2">Sit. 2</button>
+          <button class="btn btn-outline-secondary" style="width: auto" @onclick="setSituation3">Sit. 3</button>
+        </div>
+      }
+
+      @if (bShowPitch) {
+        <div id="divTimeline" style="position: relative; width: 100%; left: 0px;">
+          @if (gd != null) {
+            <div id="divTimelineIcons" style="position: absolute; width: 100%; height: 100%">
+              @((MarkupString)gd.sTimelineIcons)
+            </div>
+            <div style="position: absolute; width: 100%; top: 20px; display: flex; align-items: center; justify-content: center">
+              @if (bFinished) {
+                <Blazorise.Slider TValue="int" Value="iState2" Min="0" Max="nStates" Step="1" ValueChanged="setState" Class="slider handleOrange" />
+              } else {
+                <Blazorise.Progress Value="iState2" Max="nStates" Animated Striped Color="Blazorise.Color.Warning" Style="width: 100%; height: 24px" />
+              }
+              <span style="position: absolute; left: @(((iState2 / (float)nStates) + (bFinished ? 0.02f : 0f)).ToString("0.0%", System.Globalization.CultureInfo.InvariantCulture))">@sMin</span>
+            </div>
+            @*
+            <div id="slider-Minute" style="position: absolute; width: 100%; top: 20px" class="ui-slider ui-corner-all ui-slider-horizontal ui-widget ui-widget-content">
+              <div id="divMinute" style="position: absolute; width: 100%">
+                <text id="txtMinute" style="position: absolute; left: @fMin.ToString("0.0%", System.Globalization.CultureInfo.InvariantCulture)">@sMin</text>
+              </div>
+              <div class="ui-slider-range ui-corner-all ui-widget-header ui-slider-range-min" style="width: @fMin.ToString("0.0%", System.Globalization.CultureInfo.InvariantCulture)"></div>
+              <span tabindex="0" class="ui-slider-handle ui-corner-all ui-state-default" style="left: @fMin.ToString("0.0%", System.Globalization.CultureInfo.InvariantCulture)"></span>
+            </div>
+            *@
+          }
+        </div>
+
+        <div id="divDrawGameContainer2" style="position: relative; width: 100%; min-height: 28px; margin-bottom: 4px; height: auto;">
+          <div id="divDrawGameContainer" style="position: relative; width: 100%; height: 100%; display: block; top: 0px; left: 0px; z-index: 0;">
+            <img id="imgGame" style="position: relative; width: 100%; height: auto;" src="@CornerkickApp.Shared.Models.CkAppShared.sContentDir/Images/stadium/field_full.png" alt="">
+            <div id="divDrawGame" style="position: absolute; margin-left: 5%; width: 90%; height: 84%; top: 8%" @ref=refField>
+              @if (gd != null) {
+                @* Hexagonnetz SVG-Overlay *@
+                <ViewGameGrid @ref="grid" edField="@edField" ptPitch="@gd.ptPitch"></ViewGameGrid>
+
+                @* Player paths *@
+                @if ((ltPathsH != null && ltPathsH.Count > 0) || (ltPathsA != null && ltPathsA.Count > 0)) {
+                  <svg style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:3"
+                       viewBox="0 0 @edField.Width @edField.Height" preserveAspectRatio="none">
+                    @if (ltPathsH != null && ltPathsH.Count > 1) {
+                      @foreach (var path in ltPathsH) {
+                        <path d="@GetPathSvg(path)" stroke="@gd.sJerseyColors[0][0 + iClIxH]" stroke-width="1" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.85" />
+                        <circle cx="@convertPointToSvgPix(path[path.Count - 1])[0]" cy="@convertPointToSvgPix(path[path.Count - 1])[1]" r="4" fill="@gd.sJerseyColors[0][0 + iClIxH]"></circle>
+                      }
+                    }
+                    @if (ltPathsA != null && ltPathsA.Count > 1) {
+                      @foreach (var path in ltPathsA) {
+                        <path d="@GetPathSvg(path)" stroke="@gd.sJerseyColors[1][0 + iClIxA]" stroke-width="1" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.85" />
+                        <circle cx="@convertPointToSvgPix(path[path.Count - 1])[0]" cy="@convertPointToSvgPix(path[path.Count - 1])[1]" r="4" fill="@gd.sJerseyColors[1][0 + iClIxA]"></circle>
+                      }
+                    }
+                  </svg>
+                }
+
+                @* Heatmap *@
+                <div id="drawHeatmap" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%">
+                  @foreach (ViewGameModel.HeatmapPoint hmp in ltHeatmap) {
+                    <div style="position: absolute; width: 2%; height: 3%; top: @hmp.y.ToString("0.00%", System.Globalization.CultureInfo.InvariantCulture); left: @hmp.x.ToString("0.00%", System.Globalization.CultureInfo.InvariantCulture); background-color: @hmp.color; -webkit-border-radius: 50%; -moz-border-radius: 50%; z-index: @hmp.level.ToString()"></div>
+                  }
+                </div>
+
+                @* Offsite *@
+                if (fOffsiteLine > 0f) {
+                  <div style="position: absolute; top: 0; left: @fOffsiteLine.ToString("0.00%", System.Globalization.CultureInfo.InvariantCulture); height: 100%; border: 2px solid yellow"></div>
+                  if (fPlOffsite != null) {
+                    @*
+                    <div style="position: absolute; top: @fPlOffsite[1].ToString("0.00%", System.Globalization.CultureInfo.InvariantCulture); left: @fPlOffsite[0].ToString("0.00%", System.Globalization.CultureInfo.InvariantCulture); height: 5%; border: 1px solid yellow"></div>
+                    *@
+                    <svg style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:3"
+                         viewBox="0 0 @edField.Width @edField.Height" preserveAspectRatio="none">
+                      <circle cx="@fPlOffsite[0].ToString("0.00%", System.Globalization.CultureInfo.InvariantCulture)" cy="@fPlOffsite[1].ToString("0.00%", System.Globalization.CultureInfo.InvariantCulture)" r="14" stroke="yellow" stroke-width="1" fill="none"></circle>
+                    </svg>
+                  }
+                }
+
+                @((MarkupString)gd.sCard)
+
+                <ViewGamePlayer @ref="player" ptPitch="gd.ptPitch" GameFinished="bFinished"></ViewGamePlayer>
+                <ViewGameBall @ref="ball" ptPitch="gd.ptPitch"></ViewGameBall>
+              }
+
+              @* Half-time information & continue button *@
+              @if (state != null && (state.evt != null || state.bFinished)) {
+                if ((state.evt != null && (state.evt == ViewGameModel.State.Event.NotStarted || state.evt == ViewGameModel.State.Event.HalfTime || state.evt == ViewGameModel.State.Event.FullTime || state.evt == ViewGameModel.State.Event.PenaltyShootout)) || state.bFinished) {
+                  <div style="position: absolute; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; bottom: 4px">
+                    <div style="display: flex; flex-direction: column; height: fit-content; max-height: 100%; background-color: white; padding: 0.5rem; z-index: 10">
+                      @* Half-time information *@
+                      @if (ltScoutedPlayer != null) {
+                        <h5><img src="@CkAppShared.sContentDir/Icons/menu/binoculars.svg" height="20" width="20" /> Spielerbeobachtungen</h5>
+                        <div style="overflow-y: auto">
+                          <table style="border: 1px solid black">
+                            <thead>
+                              <tr style="background-color: lightgrey">
+                                <th class="scouting-row-details">Nr.</th>
+                                <th class="scouting-row-details">Spieler</th>
+                                <th class="scouting-row-details">Min.</th>
+                                <th class="scouting-row-details">Fertigkeit</th>
+                                <th class="scouting-row-details">Wert</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              @foreach (var pd in ltScoutedPlayer) {
+                                if (pd.ltDetails != null && pd.ltDetails.Count > 0) {
+                                  @for (int ipd = 0; ipd < pd.ltDetails.Count; ipd++) {
+                                    var pdd = pd.ltDetails[ipd];
+                                    string sSkillName = pdd.iSkillIx.ToString();
+                                    if (CornerkickManager.Names.sSkills != null && pdd.iSkillIx >= 0 && pdd.iSkillIx < CornerkickManager.Names.sSkills.Length) {
+                                      sSkillName = CornerkickManager.Names.sSkills[pdd.iSkillIx];
+                                    }
+
+                                    <tr style="@(ipd == 0 ? "border-top: 1px solid black" : "")">
+                                      @if (ipd == 0) {
+                                        <th class="scouting-row-details" rowspan="@pd.ltDetails.Count">@pd.pl.iNr</th>
+                                        <th class="scouting-row-details" rowspan="@pd.ltDetails.Count">
+                                          @{
+                                            string sPlName = pd.pl.sName;
+                                            string sPlSurname = "";
+
+                                            string[] sPlNameSplit = pd.pl.sName.Split();
+                                            if (sPlNameSplit.Length > 1) {
+                                              for (int i = 0; i < sPlNameSplit.Length - 1; i++) sPlSurname += sPlNameSplit[i] + " ";
+                                              sPlName = sPlNameSplit[sPlNameSplit.Length - 1];
+                                            }
+                                          }
+                                          <span class="player-name">@sPlSurname</span>
+                                          @sPlName
+                                        </th>
+                                      }
+                                      <td class="scouting-row-details">@(pdd.dt.Minute + 1).</td>
+                                      <td class="scouting-row-details">@sSkillName</td>
+                                      <td class="scouting-row-details">@pdd.iSkill</td>
+                                    </tr>
+                                  }
+                                }
+                              }
+                            </tbody>
+                          </table>
+                        </div>
+                        @*
+                        <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; flex-wrap: wrap; align-content: center; justify-content: center; align-items: center">
+                          @foreach (var pd in ltScoutedPlayer) {
+                            if (pd.ltDetails != null && pd.ltDetails.Count > 0) {
+                              <table>
+                                @for (int ipd = 0; ipd < pd.ltDetails.Count; ipd++) {
+                                  var pdd = pd.ltDetails[ipd];
+                                  string sSkillName = pdd.iSkillIx.ToString();
+                                  if (CornerkickManager.Names.sSkills != null && pdd.iSkillIx >= 0 && pdd.iSkillIx < CornerkickManager.Names.sSkills.Length) {
+                                    sSkillName = CornerkickManager.Names.sSkills[pdd.iSkillIx];
+                                  }
+
+                                  <tr style="border: 1px solid black;">
+                                    @if (ipd == 0) {
+                                      <th rowspan="@pd.ltDetails.Count" style="border: 1px solid black;">@pd.pl.sName</th>
+                                    }
+                                    <td style="font-size: 60%; padding: 0">@pdd.dt.ToShortTimeString()</td>
+                                    <td style="font-size: 60%; padding: 0">@sSkillName</td>
+                                    <td style="font-size: 60%; padding: 0">@pdd.iSkill</td>
+                                  </tr>
+                                }
+                              </table>
+                            }
+                          }
+                        </div>
+                        *@
+                      }
+
+                      <button class="btn btn-primary continue" style="background-color: rgb(@CkAppShared.sClCkRgb2)" @onclick="() => state.bFinished ? GoToDesk() : updateState(bImediately: true)">
+                        @{
+                          string s = "";
+                          if (state.bFinished) {
+                            s = "Zurück zum Schreibtisch";
+                          } else {
+                            <img src="@CornerkickApp.Shared.Models.CkAppShared.sContentDir/Icons/whistle-32-white.png" style="margin-right: 4px" />
+                            s = "Anstoß 2. HZ";
+                            if      (state.evt == ViewGameModel.State.Event.FullTime)        s = "Anstoß Verlängerung";
+                            else if (state.evt == ViewGameModel.State.Event.PenaltyShootout) s = "Start Elfmeterschießen";
+                            else if (!StartGameOnEnter && !bRunning && state.evt == ViewGameModel.State.Event.NotStarted) s = "Anpfiff";
+                          }
+                        }
+                        @s
+                      </button>
+                    </div>
+                  </div>
+                }
+              }
+            </div>
+
+            <text id="txtDebugInfo"></text>
+
+            @if (!bFinished) {
+              <div id="divCbUpdate" style="position: absolute; bottom: 0px; right: 4px; width: 200px; text-align: right">
+                <label>
+                  <input type="checkbox" @bind-value="bTeamInfos">
+                  Mannschaftsinfos
+                </label>
+              </div>
+            }
+
+            @if (model.bAdmin) {
+              <div id="divAdminChanceShoot" style="position: absolute; width: 30%; left: 35%; bottom: 0px; text-align: center">
+                <text id="txtAdminChanceShootOnGoal"></text>
+                <text id="txtAdminChanceGoal"></text>
+              </div>
+            }
+          </div>
+          <div id="divLinks" style="position: absolute; top: 0px; left: 5%; width: 90%; z-Index: 9; display: flex; justify-content: space-between">
+            @{
+              if (model.bOwnLiveGame) {
+                <div style="margin-right: 6px">
+                  <div id="divLinkTeam">
+                    <a href="/member/team" style="color:#000aaa; text-decoration: none">Aufstellung</a>
+                  </div>
+                  <div id="divLinkTactic">
+                    <a href="/member/tactic" style="color:#000aaa; text-decoration: none">Taktik</a>
+                  </div>
+                </div>
+                @*
+                @Html.DropDownListFor(m => m.iSystem, Model.sliSystem, new { @onchange = "javascript:changeSystem(this, null, 0)", @style = "position: relative; top: 0px; width: 95px; float: left", id = "ddlSystem" })
+                *@
+              }
+            }
+            <div>
+              <div id="divLinkHome" style="text-align: right">
+                <a href="/member/desk" style="color:#000aaa; text-decoration: none">Schreibtisch</a>
+              </div>
+              <div>
+                <Blazorise.Accordion>
+                  <Blazorise.AccordionItem Style="background-color: transparent">
+                    <Blazorise.AccordionHeader>
+                      <Blazorise.Heading Size="Blazorise.HeadingSize.Is4">
+                        <Blazorise.AccordionToggle Style="background-color: transparent; padding: 2px">Optionen</Blazorise.AccordionToggle>
+                      </Blazorise.Heading>
+                    </Blazorise.AccordionHeader>
+                    <Blazorise.AccordionBody Style="background-color: rgb(255,255,255,0.25)">
+                      <div id="divOptions" style="position: relative; left: 0px; width: fit-content; display: flex; flex-direction: column">
+                        @if (bFinished) {
+                          <label>
+                            Schüsse:
+                            <Blazorise.Select SelectedValue="@model.iShoots" SelectedValueChanged="(i) => SetShootLines(i)" TValue="int" Style="width: 100px; margin-right: 4px">
+                              @foreach (LayoutModel.SelectListItem sli in model.ddlHeatmap) {
+                                <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+                              }
+                            </Blazorise.Select>
+                          </label>
+                          <label>
+                            Heatmap:
+                            <Blazorise.Select SelectedValue="@model.iHeatmap" SelectedValueChanged="(i) => SetHeatmap(i)" TValue="int" Style="width: 100px; margin-right: 4px">
+                              @foreach (LayoutModel.SelectListItem sli in model.ddlHeatmap) {
+                                <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+                              }
+                            </Blazorise.Select>
+                          </label>
+                        }
+
+                        <label style="margin-left:8px">
+                          <input type="checkbox" @onchange="ToggleHexGrid" />
+                          Spielfelder
+                        </label>
+                        <label style="margin-left:8px">
+                          <input type="checkbox" @onchange="TogglePlayerPath" />
+                          Zielpositionen
+                        </label>
+                        <label style="margin-left:8px">
+                          <input type="checkbox" @onchange="ToggleOffsiteWait" />
+                          Warte bei Abseits
+                        </label>
+                        
+                      </div>
+                    </Blazorise.AccordionBody>
+                  </Blazorise.AccordionItem>
+                </Blazorise.Accordion>
+              </div>
+            </div>
+            @*
+            <div id="divLinkOptions" style="position: absolute; top: calc(20px * var(--ckRelSize)); right: 0px; text-align: right">
+              <a href="#" id="aOptions" style="color:#000aaa; text-decoration:none">Optionen</a>
+            </div>
+            *@
+          </div>
+        </div>
+
+        <ViewGameComments @ref="comments"></ViewGameComments>
+      }
+
+      @if (gd != null && model.bOwnLiveGame) {
+        string sCl2H = gd.sJerseyColors[0][1 + iClIxH];
+        if (CornerkickApp.Controllers.Tool.checkColorsSimilar(CornerkickApp.Controllers.Tool.convertToColor(gd.sJerseyColors[0][0 + iClIxH]), CornerkickApp.Controllers.Tool.convertToColor(sCl2H))) {
+          sCl2H = gd.sJerseyColors[0][2 + iClIxH];
+        }
+        string sCl3H = gd.sJerseyColors[0][2 + iClIxH];
+        System.Drawing.Color cCl3H = CornerkickApp.Controllers.Tool.convertToColor(sCl3H);
+        if (CornerkickApp.Controllers.Tool.checkColorsSimilar(CornerkickApp.Controllers.Tool.convertToColor(gd.sJerseyColors[0][0 + iClIxH]), cCl3H)) {
+          sCl3H = CornerkickApp.Controllers.Tool.convertToRgb(CornerkickApp.Controllers.Tool.getColorComplementary(cCl3H));
+        }
+
+        string sCl2A = gd.sJerseyColors[1][1 + iClIxA];
+        if (CornerkickApp.Controllers.Tool.checkColorsSimilar(CornerkickApp.Controllers.Tool.convertToColor(gd.sJerseyColors[1][0 + iClIxA]), CornerkickApp.Controllers.Tool.convertToColor(sCl2A))) {
+          sCl2A = gd.sJerseyColors[1][2 + iClIxA];
+        }
+        string sCl3A = gd.sJerseyColors[1][2 + iClIxA];
+        System.Drawing.Color cCl3A = CornerkickApp.Controllers.Tool.convertToColor(sCl3A);
+        if (CornerkickApp.Controllers.Tool.checkColorsSimilar(CornerkickApp.Controllers.Tool.convertToColor(gd.sJerseyColors[1][0 + iClIxA]), cCl3A)) {
+          sCl3A = CornerkickApp.Controllers.Tool.convertToRgb(CornerkickApp.Controllers.Tool.getColorComplementary(cCl3A));
+        }
+
+        <div id="divPlotStatistics" style="width: 100%; padding: 0px; position: relative; height: 480px; top: -2rem">
+          <RadzenChart style="height: 240px; width: 100%">
+            <RadzenStackedBarSeries Data="@dataGoalH" CategoryProperty="sName" Title="Heim" Fill="@gd.sJerseyColors[0][0 + iClIxH]" Stroke="@sCl2H" StrokeWidth=1 ValueProperty="fValue">
+              <RadzenSeriesDataLabels Visible="true" Fill="@sCl3H" />
+              @*<RadzenSeriesAnnotation Visible="true" TItem="DataItem" Data="@dataH[0]" OffsetY="-16" Text="Acquisition" />*@
+            </RadzenStackedBarSeries>
+            <RadzenStackedBarSeries Data="@dataGoalA" CategoryProperty="sName" Title="Ausw" Fill="@gd.sJerseyColors[1][0 + iClIxA]" Stroke="@sCl2A" StrokeWidth=1 ValueProperty="fValue">
+              <RadzenSeriesDataLabels Visible="true" Fill="@sCl3A" />
+            </RadzenStackedBarSeries>
+            <RadzenValueAxis Min="-fChartMinMax" Max="fChartMinMax" Formatter="@FormatAsFloatAbs" Visible="true">
+              <RadzenGridLines Visible="true" />
+            </RadzenValueAxis>
+            <RadzenBarOptions Radius="5" Height="24" />
+            <RadzenLegend Visible="false" Position="LegendPosition.Top" />
+          </RadzenChart>
+          <RadzenChart style="position: absolute; top: 180px; height: 340px; width: 100%">
+            <RadzenStackedBarSeries Data="@dataH" CategoryProperty="sName" Title="Heim" Fill="@gd.sJerseyColors[0][0 + iClIxH]" Stroke="@sCl2H" StrokeWidth=1 ValueProperty="fValue">
+              <RadzenSeriesDataLabels Visible="true" Fill="@sCl3H" />
+            </RadzenStackedBarSeries>
+            <RadzenStackedBarSeries Data="@dataA" CategoryProperty="sName" Title="Ausw" Fill="@gd.sJerseyColors[1][0 + iClIxA]" Stroke="@sCl2A" StrokeWidth=1 ValueProperty="fValue">
+              <RadzenSeriesDataLabels Visible="true" Fill="@sCl3A" />
+            </RadzenStackedBarSeries>
+            <RadzenValueAxis Min="0" Max="1" Formatter="@FormatAsPercent" Visible="false">
+              <RadzenGridLines Visible="true" />
+            </RadzenValueAxis>
+            <RadzenBarOptions Radius="5" Height="24" />
+            <RadzenLegend Visible="false" Position="LegendPosition.Top" />
+          </RadzenChart>
+        </div>
+      }
+
+      @if (ltTableTeam != null) {
+        <div id="divTableViewGame" style="position: relative; width: auto; overflow-x: auto; margin-bottom: 10px">
+          <DataGrid TItem="TeamModel.TableTeam"
+                    Data="@ltTableTeam"
+                    Style="white-space:nowrap"
+                    PageSize="11"
+                    Striped
+                    RowSelectable="@((args) => false)"
+                    Hoverable
+                    Narrow>
+              <ChildContent>
+                <DataGridColumn Field="@nameof(TeamModel.TableTeam.iId)" Sortable="false" Displayable="false" />
+                <DataGridColumn Field="" Sortable="false" Displayable="false" />
+                <DataGridColumn Field="@nameof(TeamModel.TableTeam.iNr)" Caption="Nr" TextAlignment="Blazorise.TextAlignment.End" />
+                <DataGridColumn Field="@nameof(TeamModel.TableTeam.sName)" Caption="Name" TextAlignment="Blazorise.TextAlignment.Center">
+                  <DisplayTemplate>
+                  <a href="/member/playerdetails/@context.iId" style="text-decoration: none">
+                    @((MarkupString)context.sName)
+                    </a>
+                  </DisplayTemplate>
+                </DataGridColumn>
+                <DataGridColumn Field="@nameof(TeamModel.TableTeam.sPosition)" Caption="Pos." TextAlignment="Blazorise.TextAlignment.Center" />
+                <DataGridColumn Field="@nameof(TeamModel.TableTeam.fSkill)" Caption="Stärke" DisplayFormat="{0:N1}" TextAlignment="Blazorise.TextAlignment.Center" />
+                <DataGridColumn Field="@nameof(TeamModel.TableTeam.fCondi)" Caption="Kondi." TextAlignment="Blazorise.TextAlignment.End">
+                  <DisplayTemplate>
+                  <span style="color: @CornerkickApp.Controllers.Member.PlayerController.getColorFromValue(0, context.fCondi)">
+                    @((context.fCondi * 100f).ToString("0.0"))
+                    </span>
+                  </DisplayTemplate>
+                </DataGridColumn>
+                <DataGridColumn Field="@nameof(TeamModel.TableTeam.fFresh)" Caption="Frische" TextAlignment="Blazorise.TextAlignment.End">
+                  <DisplayTemplate>
+                  <span style="color: @CornerkickApp.Controllers.Member.PlayerController.getColorFromValue(1, context.fFresh)">
+                    @((context.fFresh * 100f).ToString("0.0"))
+                    </span>
+                  </DisplayTemplate>
+                </DataGridColumn>
+                <DataGridColumn Field="@nameof(TeamModel.TableTeam.fMoral)" Caption="Moral" TextAlignment="Blazorise.TextAlignment.End">
+                  <DisplayTemplate>
+                  <span style="color: @CornerkickApp.Controllers.Member.PlayerController.getColorFromValue(2, context.fMoral)">
+                    @((context.fMoral * 100f).ToString("0.0"))
+                    </span>
+                  </DisplayTemplate>
+                </DataGridColumn>
+                <DataGridColumn Field="@nameof(TeamModel.TableTeam.fExperience)" Caption="Spielpr." TextAlignment="Blazorise.TextAlignment.End">
+                  <DisplayTemplate>
+                  @((context.fExperience * 100f).ToString("0.0"))
+                  </DisplayTemplate>
+                </DataGridColumn>
+                <DataGridColumn Field="@nameof(TeamModel.TableTeam.sForm)" Caption="Form" TextAlignment="Blazorise.TextAlignment.Center">
+                  <DisplayTemplate>
+                  @((MarkupString)Controllers.Tool.getFormIcon(context.sForm))
+                  </DisplayTemplate>
+                </DataGridColumn>
+                <DataGridColumn Field="@nameof(TeamModel.TableTeam.fLeader)" Caption="FP" TextAlignment="Blazorise.TextAlignment.End">
+                  <DisplayTemplate>
+                  @((context.fLeader * 100f).ToString("0.0"))
+                  </DisplayTemplate>
+                </DataGridColumn>
+                <DataGridColumn Field="@nameof(TeamModel.TableTeam.fGrade)" Caption="Note" TextAlignment="Blazorise.TextAlignment.Center">
+                  <DisplayTemplate>
+                  @(context.fGrade > 0f ? context.fGrade.ToString("0.0") : "-")
+                  </DisplayTemplate>
+                </DataGridColumn>
+                @*
+                <DataGridColumn Field="@nameof(TeamModel.TableTeam.fAge)" Caption="Alter" TextAlignment="Blazorise.TextAlignment.End">
+                  <CaptionTemplate>
+                    <Blazorise.Tooltip Text="Hello tooltip">
+                      @context.Caption
+                    </Blazorise.Tooltip>
+                  </CaptionTemplate>
+                  <DisplayTemplate>
+                    @(context.fAge.ToString("0"))
+                  </DisplayTemplate>
+                </DataGridColumn>
+                <DataGridColumn Field="@nameof(TeamModel.TableTeam.fTalent)" Caption="Tal." DisplayFormat="{0:N1}" TextAlignment="Blazorise.TextAlignment.End" />
+                <DataGridColumn Field="@nameof(TeamModel.TableTeam.fSkillIdeal)" Caption="St. ber." DisplayFormat="{0:N1}" TextAlignment="Blazorise.TextAlignment.End" />
+                *@
+                <DataGridColumn Field="@nameof(TeamModel.TableTeam.sCaptain)" Caption="C" TextAlignment="Blazorise.TextAlignment.Center" />
+                <DataGridColumn Field="@nameof(TeamModel.TableTeam.sNat)" Caption="Nat." TextAlignment="Blazorise.TextAlignment.Center">
+                <DisplayTemplate>
+                  @((MarkupString)Controllers.Tool.getNatIcon(context.sNat))
+                </DisplayTemplate>
+              </DataGridColumn>
+            </ChildContent>
+            <EmptyTemplate>
+              <div class="box">
+                Keine Spieler ...
+              </div>
+            </EmptyTemplate>
+            <LoadingTemplate>
+              <div class="box">
+                <progress class="progress is-small is-primary" max="100" />
+              </div>
+            </LoadingTemplate>
+          </DataGrid>
+        </div>
+      }
+
+      @if (bTeamInfos) {
+        <div id="chartContainerF" style="position: relative; height: 300px; width: 100%; margin-top: 10px">
+          <h5 style="margin-bottom: 0">Frischeentwicklung</h5>
+          <RadzenChart @ref="chartPlayerFresh" Style="height:100%">
+            @{
+              if (gd?.ltF != null && gd.ltF.Length > 0 && gd.ltF[0].Count > 0) {
+                double fDeltaTs = 0.0;
+                if (gd.ltF[0] != null && gd.ltF[0].Count > 0) fDeltaTs = (gd.ltF[0][gd.ltF[0].Count - 1].X - gd.ltF[0][0].X).Value.TotalMinutes;
+                double fDeltaMin = fDeltaTs < 5.0 ? 0.25 : fDeltaTs < 15.0 ? 1.0 : 5.0;
+
+                /*
+                string[] sCls = ["#FF0000",
+                                  "#FF8700",
+                                  "#FFD300",
+                                  "#DEFF0A",
+                                  "#A1FF0A",
+                                  "#0AFF99",
+                                  "#0AEFFF",
+                                  "#147DF5",
+                                  "#580AFF",
+                                  "#BE0AFF",
+                                  "#000000"];
+                int i = 0;
+                */
+
+                foreach (List<CkAppShared.DataPointTD> f in gd.ltF) {
+                  if (f != null && f.Count > 0 && f[0].X > DateTime.MinValue) {
+                    //string sCl = sCls[i];
+                    <RadzenLineSeries Data="@f" CategoryProperty="X" ValueProperty="Y" StrokeWidth="1">
+                      <TooltipTemplate Context="data">
+                        @if (data.X.HasValue && data.Y.HasValue) {
+                          <b>@(data.X.Value.ToString("mm:ss"))</b><br />
+                        }
+                        @if (!string.IsNullOrEmpty(data.Z)) {
+                          @((MarkupString)(data.Z + ": "))
+                        }
+                        @(String.Format("{0:P2}", data.Y))
+                      </TooltipTemplate>
+                      <ChildContent>
+                        <RadzenMarkers MarkerType="@(fDeltaTs < 15.0 ? MarkerType.Circle : MarkerType.None)" Size="6" StrokeWidth="0" />
+                      </ChildContent>
+                    </RadzenLineSeries>
+                  }
+
+                  //i++;
+                }
+
+                <RadzenCategoryAxis Visible="true" Formatter="@FormatAsMinute" Step="TimeSpan.FromMinutes(fDeltaMin)">
+                  <RadzenGridLines Visible="true" Stroke="#ccc" LineType="Radzen.Blazor.LineType.Dashed" />
+                </RadzenCategoryAxis>
+                <RadzenValueAxis FormatString="{0:P0}">
+                  <RadzenGridLines Visible="true" StrokeWidth="2" />
+                </RadzenValueAxis>
+                <RadzenLegend Visible="false" />
+              }
+            }
+          </RadzenChart>
+        </div>
+      }
+
+      @if (gd != null) {
+        <div id="divStat1" style="display: flex; flex-wrap: wrap">
+          <div class="statistictable">@((MarkupString)(gd.sStatGoals))</div>
+          <div class="statistictable">@((MarkupString)(gd.sStatSubs))</div>
+          <div class="statistictable">@((MarkupString)(gd.sStatCards))</div>
+        </div>
+      }
+    </div>
+  }
+
+  @*
+  <div id="divSoundCreditsContainer" style="position: relative; width: 100%; margin-top: 40px; top: 0px;">
+    Soundeffekte werden unter der Lizenz CC BY 3.0 (<a>https://creativecommons.org/licenses/by/3.0/</a>) verwendet und können verändert worden sein.<br>
+    Autoren sind:
+    <ul>
+      <li>paulw2k (<a>https://freesound.org/people/paulw2k/sounds/196464/</a>)</li>
+    </ul>
+  </div>
+  *@
+  </body>
+</html>
+
+@code {
+  [Parameter]
+  public string id { get; set; } = "";
+
+  [Parameter]
+  public bool StartGameOnEnter { get; set; } = true;
+
+  private CornerkickManager.User? _usr;
+  private ViewGameModel? model;
+  private IJSObjectReference? module;
+  private IJSObjectReference? moduleSite;
+
+  MainLayout.BrowserDimension? bd { get; set; }
+
+  bool bFinished;
+  int iPlayerIdShowCard = -1;
+  private ViewGameModel.State? state;
+  private ViewGameModel.gameData? gd;
+  private string[] sPlActive { get; set; } = new string[2];
+
+  private bool bRunning = false;
+#if !_WebApp
+  public static bool bInterruptLiveGame = false;
+#endif
+
+  CornerkickApp.Components.Pages.Templates.ViewGameGrid? grid { get; set; }
+  CornerkickApp.Components.Pages.Templates.ViewGamePlayer? player { get; set; }
+  CornerkickApp.Components.Pages.Templates.ViewGameBall? ball { get; set; }
+  CornerkickApp.Components.Pages.Templates.ViewGameComments? comments { get; set; }
+
+  static RadzenChart? chartPlayerFresh { get; set; }
+  TimeSpan step = TimeSpan.FromMinutes(15);
+
+  public static int iClIxH = 0;
+  public static int iClIxA = 0;
+
+  string sMin = "0:00 Min.";
+  int iState = -1;
+  int iState2 = 0;
+  int nStates = 1;
+
+  protected List<TeamModel.TableTeam>? ltTableTeam;
+  protected List<string[]>? ltComments;
+  bool bShowPitch;
+  bool bTeamInfos;
+
+  // Element references of field
+  ElementReference refField;
+
+  // Grid
+  bool bShowHexGrid = false;
+
+  // Player paths
+  bool bShowPlayerPath = false;
+  List<List<System.Drawing.Point>> ltPathsH = new();
+  List<List<System.Drawing.Point>> ltPathsA = new();
+
+  // Heatmap
+  ElemDimension edField = new ElemDimension();
+  List<ViewGameModel.HeatmapPoint> ltHeatmap = new List<ViewGameModel.HeatmapPoint>();
+
+  // Shoot / Pass lines
+  List<ViewGameModel.drawLine> ltShootLines = new List<ViewGameModel.drawLine>();
+  List<ViewGameModel.drawLine> ltPassLines  = new List<ViewGameModel.drawLine>();
+
+  // Offsite
+  bool bOffsiteWait = false;
+  float fOffsiteLine = -1f;
+  float[]? fPlOffsite = null;
+
+  // Player scouting data
+  List<CornerkickManager.Main.Staff.Scout.PlayerData>? ltScoutedPlayer = null;
+
+  class DataItem
+  {
+    public DataItem(string _sName, float _fValue)
+    {
+      sName = _sName;
+      fValue = _fValue;
+    }
+    public string sName { get; set; }
+    public float fValue { get; set; }
+  }
+
+  //string[] sDataGoalNames = [ "Tore", "xGoals", "Torschüsse", "aufs Tor" ];
+  string[] sDataGoalNames = [ "Tore", "xGoals", "Torsch.", "aufs Tor" ];
+  DataItem[] dataGoalH = new DataItem[4];
+  DataItem[] dataGoalA = new DataItem[4];
+  float fChartMinMax = 1f;
+  //float fChartShootsFactor = 1f;
+
+  //string[] sDataNames = [ "Ballbesitz", "Zweikämpfe", "Fouls", "Ecken", "Abseits", "Passquote" ];
+  string[] sDataNames     = [ "Ballb.", "Zweik.", "Fouls", "Ecken", " Abseits", "Passq." ];
+  DataItem[] dataH = new DataItem[6];
+  DataItem[] dataA = new DataItem[6];
+
+  int iDebugNextAction = -1;
+  int iDebugNextActionResult = -1;
+
+  private bool _navigateToRegister = false;
+
+  public static class AppConstants
+  {
+#if DEBUG
+    public const bool IS_DEBUG = true;
+#else
+    public const bool IS_DEBUG = false;
+#endif
+  }
+
+  protected override async Task OnInitializedAsync()
+  {
+    initializeChartData();
+
+    await base.OnInitializedAsync();
+
+    /*
+    #if ANDROID || IOS || WINDOWS || MACCATALYST
+  DeviceDisplay.Current.KeepScreenOn = true;
+  #endif
+    */
+
+    Ini();
+  }
+
+  public void Ini()
+  {
+    initializeChartData();
+
+#if _WebApp
+  /*
+  model = await Http.GetFromJsonAsync<ViewGameModel>("member/ViewGame/Model");
+
+  //teamData = (await Http.GetFromJsonAsync<TeamModel.TeamData>("member/Team/getTeamData?iFormation=0"));
+  var respTeamData = (await Http.GetAsync("member/Team/getTeamData?iFormation=0"));
+  if (respTeamData.IsSuccessStatusCode) {
+  var jsonString = await respTeamData.Content.ReadAsStringAsync();
+  ltTableTeam = Newtonsoft.Json.JsonConvert.DeserializeObject<TeamModel.TableTeam[]>(jsonString).ToList();
+  }
+  */
+  _usr = Controllers.Member.MemberController.ckUser(_auth.GetUserId().Result);
+  if (_usr == null) {
+  _navigateToRegister = true;
+  return;
+  }
+#else
+    MainLayout.bOnViewGamePage = true;
+
+    _usr = CkAppShared.ckMng.ltUser[CkAppShared.iUserActive];
+#endif
+
+    int iBalanceStart = 0;
+    int iBalanceSecretStart = 0;
+    CornerkickManager.Club? clb = Controllers.Member.MemberController.ckClub(_usr);
+    if (clb != null) {
+      iBalanceStart = clb.iBalance;
+      iBalanceSecretStart = clb.iBalanceSecret;
+    }
+
+    model = CornerkickApp.Controllers.Member.ViewGameController.Model(_usr, sGameId: id.Equals("x") ? "" : id);
+
+    if (MainLayout.headline != null && clb != null) MainLayout.headline.Refresh(clb, iBalanceStart: iBalanceStart, iBalanceSecretStart: iBalanceSecretStart);
+
+    bFinished = _usr.game == null ? true : _usr.game.data.bFinished;
+    if (!StartGameOnEnter) {
+      state = new ViewGameModel.State() {
+        evt = ViewGameModel.State.Event.NotStarted
+      };
+    }
+
+    bShowPitch = model.game != null && model.game.player != null;
+
+    if (model != null) {
+      gd = model.gD;
+    }
+  }
+
+  public void Stop()
+  {
+    bStop = true;
+  }
+
+  public async Task Reset()
+  {
+    bStop = true;
+    while (bRunning) {
+      // Warte, bis laufendes Update fertig ist
+      await wait(state != null && state.iGameSpeedUsed > 2 ? state.iGameSpeedUsed / 2 : 100);
+    }
+    bStop = false;
+
+    Ini();
+
+    if (StartGameOnEnter) {
+      updateState();
+    } else {
+      if (player   != null) await player  .clear();
+      if (ball     != null) await ball    .clear();
+      if (comments != null) await comments.clear();
+
+      await InvokeAsync(StateHasChanged);
+    }
+  }
+
+  public class ElemDimension
+  {
+    public int Width { get; set; }
+    public int Height { get; set; }
+  }
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender) {
+      if (_navigateToRegister) {
+        // Navigation während Render-Phase nach Fertigstellung ausführen
+        //NavigationManager.NavigateTo(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = "/member/desk" }), forceLoad: true);
+        NavigationManager.NavigateTo("/Account/Register", forceLoad: true);
+        return;
+      }
+
+      moduleSite = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/CornerkickApp.Components/js/site.js");
+
+      MainLayout.BrowserService browserService = new MainLayout.BrowserService(JS);
+      bd = await browserService.GetDimensions();
+
+      /*
+      if (bd != null && bd.Width < 641) {
+        sDataGoalNames = [ "Tore", "xGoals", "Torsch.", "aufs Tor" ];
+        sDataNames     = [ "Ballb.", "Zweik.", "Fouls", "Ecken", "Abseits", "Passq." ];
+        initializeChartData();
+        }
+      */
+
+      edField = await JS.InvokeAsync<ElemDimension>("getElemDimensions", refField);
+      //int Height = dimension.Height;
+      //int Width = dimension.Width;
+      InvokeAsync(StateHasChanged);
+
+#if !_WebApp
+      bInterruptLiveGame = false;
+#endif
+
+      if (StartGameOnEnter) updateState();
+    }
+
+    //return base.OnAfterRenderAsync(firstRender);
+  }
+
+  void initializeChartData()
+  {
+    for (int i = 0; i < dataGoalH.Length; i++) dataGoalH[i] = new DataItem(sDataGoalNames[i], 0f);
+    for (int i = 0; i < dataGoalA.Length; i++) dataGoalA[i] = new DataItem(sDataGoalNames[i], 0f);
+    for (int i = 0; i < dataH    .Length; i++) dataH    [i] = new DataItem(sDataNames    [i], 0.5f);
+    for (int i = 0; i < dataA    .Length; i++) dataA    [i] = new DataItem(sDataNames    [i], 0.5f);
+  }
+
+  private async Task changeJerseyColors(int iHA)
+  {
+    if (iHA == 0) iClIxH = 3 - iClIxH;
+    else          iClIxA = 3 - iClIxA;
+
+    await InvokeAsync(StateHasChanged);
+  }
+
+  bool bStop = false;
+  int iEventCounter = 0;
+  private async Task StartStopDebug()
+  {
+    bStop = !bStop;
+    await InvokeAsync(StateHasChanged);
+
+    if (!bStop) updateState();
+  }
+  private async Task OneStep()
+  {
+    bStop = false;
+
+    await updateState(bOneStep: true);
+    await InvokeAsync(StateHasChanged);
+  }
+  private async Task updateState(bool bOneStep = false, bool bImediately = false)
+  {
+    if (_usr == null) return;
+    if (model?.game == null) return;
+
+    /*
+    bStop = false;
+    if (bRunning) {
+      bStop = true;
+      return;
+      }
+    */
+
+    bool bFirstCall = true;
+
+    int iBalanceStart = 0;
+    int iBalanceSecretStart = 0;
+    CornerkickManager.Club? clb = Controllers.Member.MemberController.ckClub(_usr);
+    if (clb != null) {
+      iBalanceStart       = clb.iBalance;
+      iBalanceSecretStart = clb.iBalanceSecret;
+    }
+
+    while (!bFinished) {
+      if (bStop) {
+        bRunning = false;
+        await InvokeAsync(StateHasChanged);
+        return;
+      }
+
+      bRunning = true;
+
+      try {
+        state = await CornerkickApp.Controllers.Member.ViewGameController.getState(_usr,
+#if !_WebApp
+          bExecuteGame: true,
+          bImediately: bImediately,
+#if DEBUG
+  iPlNextAction: (sbyte)iDebugNextAction,
+  iPlNextActionResult: (sbyte)iDebugNextActionResult,
+#endif
+#endif
+          bOnlyMainComments: _usr.lti != null && _usr.lti[UserOptionsModel.iUserOptionsIxComment] > 0,
+          bPlayerAtBallDetails: bd != null && bd.Width > 640 && model.game.data.iGameSpeed > 2
+        );
+      } catch (Exception e) {
+        System.Diagnostics.Debug.Print(e.StackTrace);
+        System.Diagnostics.Debug.Print(e.Message);
+      }
+      bFinished = model.game.data.bFinished;
+
+      if (state != null) {
+        //if (_usr.game.data.iGameSpeed > 1) {
+        if (state.iGameSpeedUsed > 1 || state.evt == ViewGameModel.State.Event.HalfTime || state.evt == ViewGameModel.State.Event.FullTime || state.evt == ViewGameModel.State.Event.PenaltyShootout) {
+          // If not waiting
+          if (state.evt != ViewGameModel.State.Event.Wait || bFirstCall) {
+            // Reset offsite
+            fOffsiteLine = -1f;
+            fPlOffsite = null;
+            //await InvokeAsync(StateHasChanged);
+
+            // Break for game pause
+            if (state.evt == ViewGameModel.State.Event.HalfTime || state.evt == ViewGameModel.State.Event.FullTime || state.evt == ViewGameModel.State.Event.PenaltyShootout) {
+              ltScoutedPlayer = Controllers.Member.ViewGameController.GetScoutedPlayer(_usr, model.game.data.dt);
+              /*
+              // Scout home player
+              if (clbH.user != null && clbH.ltPlayer != null) {
+                for (byte iPl = 0; iPl < _usr.game.data.nPlStart; iPl++) {
+                  if (iPl >= clbH.ltPlayer.Count) break;
+                  Player plSc = clbH.ltPlayer[iPl];
+                  plt.checkPlayerDevScouting(clbH.user.scout.scoutPlayer(plSc.plGame, dtDatum), clbH.user, plSc);
+                  }
+                }
+
+              // Scout away player
+              if (clbA.user != null && clbA.ltPlayer != null) {
+                for (byte iPl = 0; iPl < game.data.nPlStart; iPl++) {
+                  if (iPl >= clbA.ltPlayer.Count) break;
+                  Player plSc = clbA.ltPlayer[iPl];
+                  plt.checkPlayerDevScouting(clbA.user.scout.scoutPlayer(plSc.plGame, dtDatum), clbA.user, plSc);
+                  }
+                }
+              */
+              break;
+            }
+
+            sPlActive = [ state.sPlActiveName, state.sPlActivePortraitImg ];
+
+            // Update player, ball & comments
+#if !DEBUG
+            if (state.bUpdate) {
+#endif
+            if (player   != null && gd != null) await player.update(state.ltPlayer, gd.sJerseyColors, _sPlActive: sPlActive, _fPlAction: state.fPlAction, _iEventCounter: iEventCounter);
+            if (ball     != null)               await ball.update(state.gBall, state.iGameSpeedUsed);
+            if (comments != null)               await comments.update(state.ltComments);
+
+            if (bShowPlayerPath) UpdatePath();
+#if !DEBUG
+            }
+#endif
+
+            if (state.evt == null) iEventCounter = 0;
+            else                   iEventCounter++;
+
+            if (state.bUpdateStatistic) {
+              await getGameData();
+
+              setChartData();
+
+              if (bTeamInfos && model.gD != null) {
+                // Update team table
+                ltTableTeam = (await CornerkickApp.Controllers.Member.TeamController.getTableTeam(_usr, model.gD.nPlStart, 0, 0)).ToList();
+
+                // Fresh chart
+                if (chartPlayerFresh != null) await chartPlayerFresh.Reload();
+              } else {
+                ltTableTeam = null;
+                chartPlayerFresh = null;
+              }
+
+              if (MainLayout.headline != null) await MainLayout.headline.Refresh();
+
+              await InvokeAsync(StateHasChanged);
+            } else if (state.evt != null) {
+              await InvokeAsync(StateHasChanged);
+            }
+
+  #if !_WebApp
+            if (bOneStep || bInterruptLiveGame) {
+              bRunning = false;
+              /*
+              float fTest = model.game.tl.getOffsiteX(model.game.ball.plAtBall.iHA == 0) / (float)model.game.ptPitch.X;
+              Console.WriteLine("Offsite Line: " + fTest.ToString("0.00"));
+              */
+              return;
+            }
+  #endif
+
+            if (state.evt == ViewGameModel.State.Event.GoalHome || state.evt == ViewGameModel.State.Event.GoalAway) {
+              // Wait 1 sec. for goal cheers
+              await wait(1500);
+            } else if (state.evt == ViewGameModel.State.Event.NoGoal) {
+              // Wait 0.75 sec. for shoot result
+              await wait(750);
+            } else if (state.evt == ViewGameModel.State.Event.RedCard) {
+              // Wait 2 sec. for red card
+              await wait(1500);
+            } else if (state.evt == ViewGameModel.State.Event.Offsite) {
+              fOffsiteLine = model.game.tl.getOffsiteX(model.game.ball.plAtBallLast.iHA == 0) / (float)model.game.ptPitch.X;
+              if (model.game.ball.plAtBall != null) {
+                fPlOffsite = [
+                   model.game.ball.plAtBall.ptPos.X                         / (float)   model.game.ptPitch.X,
+                  (model.game.ball.plAtBall.ptPos.Y + model.game.ptPitch.Y) / (float)(2*model.game.ptPitch.Y)
+                ];
+              }
+              await InvokeAsync(StateHasChanged);
+
+              /*
+              bRunning = false;
+              return;
+              */
+
+            if (bOffsiteWait) await wait(1000);
+              /*
+              fOffsiteLine = -1f;
+              fPlOffsite = null;
+              await InvokeAsync(StateHasChanged);
+              */
+            }
+
+            //await InvokeAsync(StateHasChanged);
+          } // if (state.evt != ViewGameModel.State.Event.Wait)
+
+          if (state.iGameSpeedUsed > 2) await wait(state.iGameSpeedUsed);
+        } else if (state.evt != null) {
+          await getGameData();
+          if (MainLayout.headline != null) await MainLayout.headline.Refresh();
+          await InvokeAsync(StateHasChanged);
+        }
+      }
+
+      bFirstCall = false;
+    }  // while (!bFinished)
+
+    // Final update player, ball & comments
+    if (state != null) {
+      if (player   != null && gd != null) await player.update(state.ltPlayer, gd.sJerseyColors, _sPlActive: sPlActive);
+      if (ball     != null)               await ball.update(state.gBall, 0);
+      if (comments != null)               await comments.update(state.ltComments);
+      //ltScoutedPlayer = Controllers.Member.ViewGameController.GetScoutedPlayer(_usr, model.game.data.dt);
+    } else {
+      bShowPitch = false;
+      state = await CornerkickApp.Controllers.Member.ViewGameController.getState(_usr, bPlayerAtBallDetails: false);
+    }
+
+    await getGameData();
+    setChartData();
+    if (model.gD != null && model.bOwnLiveGame) {
+      ltTableTeam = (await CornerkickApp.Controllers.Member.TeamController.getTableTeam(_usr, model.gD.nPlStart, 0, 0)).ToList();
+    }
+
+    if (MainLayout.headline != null) {
+      if (bFinished && clb != null) {
+        MainLayout.headline.Refresh(clb, iBalanceStart: iBalanceStart, iBalanceSecretStart: iBalanceSecretStart);
+      } else {
+        await MainLayout.headline.Refresh();
+      }
+    }
+
+    bRunning = false;
+
+    await InvokeAsync(StateHasChanged);
+  }
+
+  private async Task GoToDesk()
+  {
+    NavigationManager.NavigateTo("/member/desk");
+  }
+
+  private async Task getGameData()
+  {
+    if (_usr == null) return;
+
+    gd = await CornerkickApp.Controllers.Member.ViewGameController.getStatistics(_usr, iState: iState, bAddFMList: bTeamInfos);
+    if (gd == null) return;
+
+    int iMin = (int)gd.fMinute;
+    sMin = iMin.ToString() + ":" + ((gd.fMinute - iMin) * 60).ToString("00 Min.");
+    nStates = gd.nStates;
+    if (iState < 0) {
+      iState2 = nStates;
+      nStates = Math.Max(nStates, (int)Math.Round(iState2 * (gd.iGameMinutes / Math.Max(gd.fMinute, 1f))));
+    }
+  }
+
+  public static async Task wait(int iDuration)
+  {
+    if (iDuration <= 0) return;
+
+    Task tkDelay = Task.Delay(iDuration);
+    await tkDelay.ConfigureAwait(false);
+    tkDelay.Dispose();
+  }
+
+  async Task loopStates(int jStateStart) {
+    if (bRunning) {
+      bRunning = false;
+      return;
+    }
+    bRunning = true;
+
+    iState = jStateStart;
+
+    while (iState < nStates && bRunning) {
+      await setState(iState + 1);
+      await wait(200);
+    }
+  }
+
+  async Task setState(int jState)
+  {
+    jState = Math.Max(jState, 0);
+    jState = Math.Min(jState, nStates);
+    iState  = jState;
+    iState2 = jState;
+
+    if (_usr == null) return;
+
+    state = await CornerkickApp.Controllers.Member.ViewGameController.getState(_usr, iState: iState2);
+
+    // Update player & ball
+    if (state != null) {
+      if (player   != null && gd != null) await player.update(state.ltPlayer, gd.sJerseyColors, _sPlActive: sPlActive);
+      if (ball     != null)               await ball.update(state.gBall, 0);
+      if (comments != null)               await comments.update(state.ltComments, bReset: true);
+    }
+
+    await getGameData();
+    setChartData();
+    await GetHeatmap();
+    await GetShootLines();
+
+    await InvokeAsync(StateHasChanged);
+  }
+
+  protected void setChartData()
+  {
+    if (gd != null && dataH != null && dataA != null && dataGoalH != null && dataGoalA != null) {
+      // Abs. chart data goals / xgoals
+      dataGoalH[0].fValue = -gd.iGoalsH;
+      dataGoalA[0].fValue =  gd.iGoalsA;
+      dataGoalH[1].fValue = -gd.fGoalsX[0];
+      dataGoalA[1].fValue =  gd.fGoalsX[1];
+      /*
+      fChartMinMax = Math.Max(gd.iGoalsH, gd.iGoalsA);
+      fChartMinMax = Math.Max(fChartMinMax, gd.fGoalsX[0]);
+      fChartMinMax = Math.Max(fChartMinMax, gd.fGoalsX[1]);
+      */
+
+      // Abs. chart data shoots
+      /*
+      fChartShootsFactor = Math.Max(gd.iShoots[0], gd.iShoots[1]);
+      dataGoalH[2].fValue = -fChartMinMax * (gd.iShoots[0] / fChartShootsFactor);
+      dataGoalA[2].fValue =  fChartMinMax * (gd.iShoots[1] / fChartShootsFactor);
+      dataGoalH[3].fValue = -fChartMinMax * (gd.iShootsOnGoal[0] / fChartShootsFactor);
+      dataGoalA[3].fValue =  fChartMinMax * (gd.iShootsOnGoal[1] / fChartShootsFactor);
+      */
+      dataGoalH[2].fValue = -gd.iShoots[0];
+      dataGoalA[2].fValue =  gd.iShoots[1];
+      dataGoalH[3].fValue = -gd.iShootsOnGoal[0];
+      dataGoalA[3].fValue =  gd.iShootsOnGoal[1];
+      fChartMinMax = Math.Max(gd.iShoots[0], gd.iShoots[1]);
+      fChartMinMax = Math.Max(fChartMinMax, 1f);
+
+      // Relative chart data
+      /*
+      if (gd.iShoots      [0] + gd.iShoots      [1] > 0) dataH[0].fValue = gd.iShoots      [0] / (float)(gd.iShoots      [0] + gd.iShoots      [1]);
+      if (gd.iShootsOnGoal[0] + gd.iShootsOnGoal[1] > 0) dataH[1].fValue = gd.iShootsOnGoal[0] / (float)(gd.iShootsOnGoal[0] + gd.iShootsOnGoal[1]);
+      */
+      if (gd.iPossession  [0] + gd.iPossession  [1] > 0) dataH[0].fValue = gd.iPossession  [0] / (float)(gd.iPossession  [0] + gd.iPossession  [1]) + (float)1e-5;
+      if (gd.iDuels       [0] + gd.iDuels       [1] > 0) dataH[1].fValue = gd.iDuels       [0] / (float)(gd.iDuels       [0] + gd.iDuels       [1]) + (float)2e-5;
+      if (gd.iFouls       [0] + gd.iFouls       [1] > 0) dataH[2].fValue = gd.iFouls       [0] / (float)(gd.iFouls       [0] + gd.iFouls       [1]) + (float)3e-5;
+      if (gd.iCornerkick  [0] + gd.iCornerkick  [1] > 0) dataH[3].fValue = gd.iCornerkick  [0] / (float)(gd.iCornerkick  [0] + gd.iCornerkick  [1]) + (float)4e-5;
+      if (gd.iOffsite     [0] + gd.iOffsite     [1] > 0) dataH[4].fValue = gd.iOffsite     [0] / (float)(gd.iOffsite     [0] + gd.iOffsite     [1]) + (float)5e-5;
+      if (gd.fPassGood    [0] + gd.fPassGood    [1] > 0) dataH[5].fValue = gd.fPassGood    [0] / (float)(gd.fPassGood    [0] + gd.fPassGood    [1]) + (float)6e-5;
+
+      for (int i = 0; i < dataH.Length; i++) dataA[i].fValue = 1f - dataH[i].fValue;
+    }
+  }
+
+  private async Task SetShootLines(int iSl)
+  {
+    if (model == null) return;
+    model.iShoots = iSl;
+
+    ltShootLines.Clear();
+    await GetShootLines();
+
+    //if (player   != null) await player.clear();
+
+    await InvokeAsync(StateHasChanged);
+  }
+  private async Task GetShootLines()
+  {
+    if (model == null) return;
+
+    ltShootLines.Clear();
+    await InvokeAsync(StateHasChanged);
+
+    if (model.iShoots < 0) return;
+    
+    gd = await CornerkickApp.Controllers.Member.ViewGameController.getStatistics(_usr, iState: iState, iAllShoots: model.iShoots, iHeatmap: model.iHeatmap, bAddFMList: false);
+    if (gd == null) return;
+
+    ltShootLines = gd.ltDrawLineShoot;
+    /*
+    if (iAllShoots >= 0) {
+      byte iHA = 0;
+      int iPlIx = -1;
+      Controllers.Member.ViewGameController.getStatisticHAPlayerIx(model.iShoots, gd.nPlStart, out iHA, out iPlIx);
+
+      for (int iSt = 0; iSt < game.data.ltState.Count; iSt++) {
+        CornerkickGame.Game.State stateTmp = game.data.ltState[iSt];
+        ltShootLines.AddRange(Controllers.Member.ViewGameController.getShootLine(stateTmp, game, iHA, iPlIx));
+
+        if (iState >= 0 && iSt >= iState) break; // If review --> stop at selected state
+      }
+    } else {
+      ltShootLines = Controllers.Member.ViewGameController.getShootLine(state, game);
+    }
+    */
+  }
+
+  private Task SetHeatmap(int iHm)
+  {
+    if (model == null) return Task.CompletedTask;
+    model.iHeatmap = iHm;
+
+    ltHeatmap.Clear();
+    StateHasChanged();
+
+    GetHeatmap();
+
+    //if (player   != null) player.clear();
+
+    StateHasChanged();
+
+    return Task.CompletedTask;
+  }
+  private Task GetHeatmap()
+  {
+    if (model == null) return Task.CompletedTask;
+
+    if (model.iHeatmap < 0) return Task.CompletedTask;
+    
+    //gd = await CornerkickApp.Controllers.Member.ViewGameController.getStatistics(_usr, iState: iState, iHeatmap: iHm, bAddFMList: false);
+    if (gd == null) return Task.CompletedTask;
+
+    byte iHA = 0;
+    int iPlIx = -1;
+    Controllers.Member.ViewGameController.getStatisticHAPlayerIx(model.iHeatmap, gd.nPlStart, out iHA, out iPlIx);
+    ltHeatmap = Controllers.Member.ViewGameController.getDivHeatmap(_usr, iHA, iState, iPlIx);
+
+    return Task.CompletedTask;
+  }
+
+  string FormatAsPercent(object value)
+  {
+    double fValue = (double)value;
+
+    if (fValue < 0.001) return "";
+
+    return fValue.ToString("P1", CornerkickApp.Controllers.Member.MemberController.getCi(_usr));
+  }
+  string FormatAsFloatAbs(object value)
+  {
+    if (value == null) return "";
+
+    double fValue;
+    if (!double.TryParse(value.ToString(), out fValue)) return "";
+    fValue = Math.Abs(fValue);
+
+    if (fValue < 0.001) return "";
+
+    //return fValue.ToString("G3", CornerkickApp.Controllers.Member.MemberController.getCi(_usr));
+    return fValue.ToString("0.##", CornerkickApp.Controllers.Member.MemberController.getCi(_usr));
+  }
+
+  string FormatAsMinute(object value)
+  {
+    if (value != null) {
+      try {
+        return Convert.ToDateTime(value).ToString("mm:ss");
+#if false
+        string? s = value.ToString();
+        if (string.IsNullOrEmpty(s)) return "";
+
+        TimeSpan ts = TimeSpan.Parse(s);
+        return ts.TotalMinutes.ToString("0");
+        //return ts.TotalMinutes.ToString("00") + ":" + ts.Seconds.ToString();
+#endif
+      } catch (Exception ex) {
+        Console.WriteLine(ex.Message);
+      }
+    }
+
+    return string.Empty;
+  }
+
+  private async Task setSituation1()
+  {
+    bStop = true;
+
+    if (_usr?.game == null) return;
+
+    _usr.game.resetGame();
+
+    CornerkickGame.Player plShoot = _usr.game.player[1][_usr.game.data.nPlStart - 1];
+    plShoot.ptPos = new System.Drawing.Point(22, 1);
+    _usr.game.ball.ptPos     = plShoot.ptPos;
+    _usr.game.ball.ptPosLast = plShoot.ptPos;
+    _usr.game.ball.plAtBall = plShoot;
+    _usr.game.ball.setPos();
+
+    CornerkickGame.Player plKeeper = _usr.game.tl.getKeeper(true);
+    plKeeper.ptPos = new System.Drawing.Point(3, 0);
+
+    state = await CornerkickApp.Controllers.Member.ViewGameController.getState(_usr);
+    if (state == null) return;
+
+    if (player   != null && gd != null) await player.update(state.ltPlayer, gd.sJerseyColors, _sPlActive: sPlActive);
+    if (ball     != null)               await ball  .update(state.gBall, 0);
+
+    await InvokeAsync(StateHasChanged);
+  }
+
+  private async Task setSituation2()
+  {
+    bStop = true;
+
+    if (_usr?.game == null) return;
+
+    _usr.game.resetGame();
+
+    CornerkickGame.Player plShoot = _usr.game.player[1][_usr.game.data.nPlStart - 1];
+    plShoot.ptPos = new System.Drawing.Point(30, 1);
+    _usr.game.ball.ptPos     = plShoot.ptPos;
+    _usr.game.ball.ptPosLast = plShoot.ptPos;
+    _usr.game.ball.plAtBall = plShoot;
+    _usr.game.ball.setPos();
+
+    state = await CornerkickApp.Controllers.Member.ViewGameController.getState(_usr);
+    if (state == null) return;
+
+    if (player   != null && gd != null) await player.update(state.ltPlayer, gd.sJerseyColors, _sPlActive: sPlActive);
+    if (ball     != null)               await ball  .update(state.gBall, 0);
+
+    await InvokeAsync(StateHasChanged);
+  }
+
+  private async Task setSituation3()
+  {
+    bStop = true;
+
+    if (_usr?.game == null) return;
+
+    _usr.game.resetGame();
+
+    CornerkickGame.Player plShoot = _usr.game.player[1][_usr.game.data.nPlStart - 1];
+    plShoot.ptPos = new System.Drawing.Point(22, 1);
+    CornerkickGame.Player plDef = _usr.game.player[0][2];
+    plDef.ptPos = new System.Drawing.Point(12, 1);
+    _usr.game.ball.ptPos     = plShoot.ptPos;
+    _usr.game.ball.ptPosLast = plShoot.ptPos;
+    _usr.game.ball.plAtBall = plShoot;
+    _usr.game.ball.setPos();
+
+    CornerkickGame.Player plKeeper = _usr.game.tl.getKeeper(true);
+    plKeeper.ptPos = new System.Drawing.Point(3, 0);
+
+    state = await CornerkickApp.Controllers.Member.ViewGameController.getState(_usr);
+    if (state == null) return;
+
+    if (player   != null && gd != null) await player.update(state.ltPlayer, gd.sJerseyColors, _sPlActive: sPlActive);
+    if (ball     != null)               await ball  .update(state.gBall, 0);
+
+    await InvokeAsync(StateHasChanged);
+  }
+
+  private void ToggleHexGrid(ChangeEventArgs? e = null)
+  {
+    if (grid == null) return;
+
+    bShowHexGrid = !bShowHexGrid;
+
+    if (bShowHexGrid) grid.ShowAsync();
+    else              grid.HideAsync();
+  }
+
+  private void TogglePlayerPath(ChangeEventArgs? e = null)
+  {
+    bShowPlayerPath = !bShowPlayerPath;
+    ShowPath();
+  }
+
+  private string GetPathSvg(List<System.Drawing.Point> path)
+  {
+    if (gd == null || edField.Width == 0 || edField.Height == 0 || path == null || path.Count < 2) return string.Empty;
+
+    double scaleX = edField.Width  / (double)gd.ptPitch.X;
+    double scaleY = edField.Height / (double)(gd.ptPitch.Y * 2);
+
+    var sb = new System.Text.StringBuilder();
+    for (int i = 0; i < path.Count; i++) {
+      double x = (path[i].X) * scaleX;
+      double y = (path[i].Y + gd.ptPitch.Y) * scaleY;
+      if (i == 0) sb.Append($"M{x.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)},{y.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)} ");
+      else        sb.Append($"L{x.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)},{y.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)} ");
+    }
+    return sb.ToString();
+  }
+
+  private string[] convertPointToSvgPix(System.Drawing.Point pt)
+  {
+    if (gd == null || edField.Width == 0 || edField.Height == 0) return [string.Empty, string.Empty];
+
+    double scaleX = edField.Width  / (double)gd.ptPitch.X;
+    double scaleY = edField.Height / (double)(gd.ptPitch.Y * 2);
+
+    double x = (pt.X) * scaleX;
+    double y = (pt.Y + gd.ptPitch.Y) * scaleY;
+
+    return [x.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture), y.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)];
+  }
+
+  public async Task ShowPath()
+  {
+    if (bShowPlayerPath) {
+      UpdatePath();
+    } else {
+      ltPathsH.Clear();
+      ltPathsA.Clear();
+    }
+  }
+
+  public async Task UpdatePath()
+  {
+    if (_usr?.game == null) return;
+    if (!bShowPlayerPath) return;
+
+    ltPathsH.Clear();
+    ltPathsA.Clear();
+
+    for (int iHA = 0; iHA < 2; iHA++) {
+      int iPl = 0;
+      foreach (CornerkickGame.Player pl in _usr.game.player[iHA]) {
+        if (iPl >= _usr.game.data.nPlStart) break;
+
+        // A*-Pfad berechnen (z. B. über Field.FindPathAStar)
+        var path = _usr.game.field.FindPath(pl.ptPos, pl.ptPosTarget);
+
+        if (path != null) {
+          if (iHA == 0) ltPathsH.Add(path);
+          else          ltPathsA.Add(path);
+        }
+
+        iPl++;
+      }
+    }
+
+    await InvokeAsync(StateHasChanged);
+  }
+
+  private void ToggleOffsiteWait(ChangeEventArgs? e = null)
+  {
+    bOffsiteWait = !bOffsiteWait;
+  }
+
+}

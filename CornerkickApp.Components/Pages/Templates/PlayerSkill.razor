@@ -1,0 +1,74 @@
+﻿@using CornerkickApp.Shared.Models
+
+<div class="div_skill" style="position: relative; top: 0px; left: 0px; width: 100%">
+  <div class="myPb" style="position: absolute; top: 0px; left: 0px; height: 100%; width: @((fSkillScouted / 10f).ToString("0%")); background-color: @sColor"></div>
+  @if (iScSkillCount < 1) {
+    <div style="position: relative; top: 0px; left: 0px; width: 100%; z-index: 5">
+      <b>@(fSkillScouted > 0f ? fSkillScouted.ToString("0.0") : "?")</b>
+    </div>
+  } else {
+    <button class="bnShowScoutingDetails btn btn-outline-secondary" style="position: relative; height: 100%; margin: -0.5rem; display: inline-flex; align-items: center; color: black; font-weight: bold; z-index: 5" @onclick="showScoutingDetails" disabled="@Silent">
+      @(fSkillScouted > 0f ? fSkillScouted.ToString("0.0") : "?")
+      <span class="badge badge-primary" style="position:absolute; padding:2px; right:0px; color: blue">@iScSkillCount</span>
+    </button>
+  }
+</div>
+
+@code {
+  [Parameter] public CornerkickManager.User? usr { get; set; }
+  [Parameter] public int iPlayerId { get; set; }
+  [Parameter] public int iSkillIx { get; set; }
+  [Parameter] public bool Silent { get; set; }
+  [Parameter] public Action? ActDeleteScoutingData { get; set; }
+
+  float fSkillScouted = 0f;
+  int iScSkillCount;
+  string sColor = "";
+  CornerkickManager.Main.Staff? _staff;
+  CornerkickManager.Player? _pl;
+
+  protected override async Task OnInitializedAsync()
+  {
+    await base.OnInitializedAsync();
+
+    if (usr != null) {
+      _pl = CkAppShared.ckMng.ltPlayer.Find(p => p.plGame.iId == iPlayerId);
+
+      if (_pl != null) {
+        CornerkickManager.Club? _clb = Controllers.Member.MemberController.ckClub(usr);
+
+        _staff = Controllers.Member.ClubController.getClubStaff(_clb);
+
+        update();
+      }
+    }
+  }
+
+  public async Task update(CornerkickManager.Player? pl = null, int jSkillIx = -1, CornerkickManager.Main.Staff? staff = null)
+  {
+    if (pl != null) _pl = pl;
+    if (_pl == null) return;
+
+    if (jSkillIx >= 0) iSkillIx = jSkillIx;
+    if (staff != null) _staff = staff;
+
+    fSkillScouted = _staff != null ? _staff.getScoutedSkill(_pl.plGame, iSkillIx) : 0f;
+    if (fSkillScouted > 0f) {
+      iScSkillCount = _staff != null ? _staff.getScoutingData(_pl.plGame, iSkillIx).Count : 0; // Indicator for scouting button
+      sColor = Controllers.Member.PlayerController.getColorFromValue(-1, fSkillScouted);
+    }
+
+    if (ActDeleteScoutingData != null) ActDeleteScoutingData();
+
+    await InvokeAsync(StateHasChanged);
+  }
+
+  private async Task showScoutingDetails()
+  {
+    if (Silent) return;
+
+    //if (modalSkillDetails != null) modalSkillDetails.Show();
+    if (MainLayout.ckScoutingReport != null) await MainLayout.ckScoutingReport.Show(_pl, _staff, iSkillIx, action: () => update());
+    //Components.Shared.Components.ScoutingReport.Show(_pl, _staff, iSkillIx);
+  }
+}

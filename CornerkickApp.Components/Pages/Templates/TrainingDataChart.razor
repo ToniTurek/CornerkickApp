@@ -1,0 +1,97 @@
+﻿@using CornerkickApp.Shared.Models
+
+@if (_ltTrainingData != null && _ltTrainingData.Length > 0 && _ltTrainingData[0].Length > 0 && _ltTrainingData[0][0] != null && _ltTrainingData[0][0].Count > 1) {
+  <div id="divTeamDataChartContainer" style="height: 300px; width: 100%">
+    <RadzenChart Style="height:100%">
+      @{
+        string[] sFillColors = new string[] { "red", "#00BFFF", "gold" };
+        foreach (List<CkAppShared.DataPointTD>[] ltdp0 in _ltTrainingData) {
+          if (ltdp0 == null) continue;
+
+          int i = 0;
+          foreach (List<CkAppShared.DataPointTD> ltlg in ltdp0) {
+            if (ltlg != null && ltlg.Count > 0) {
+              string sFillCl = sFillColors[i++];
+              <RadzenLineSeries Data="@ltlg" CategoryProperty="X" ValueProperty="Y" Stroke="@sFillCl" StrokeWidth="1">
+                <TooltipTemplate Context="data">
+                  @if (data.X.HasValue && data.Y.HasValue) {
+                    <u>@(data.X.Value.ToString("dd.MM HH:mm"))</u>
+                    <br />
+                    @(String.Format("{0:P2}", data.Y))
+                  }
+                  @if (!string.IsNullOrEmpty(data.Z)) {
+                    @((MarkupString)(" - " + data.Z))
+                  }
+                </TooltipTemplate>
+                <ChildContent>
+                  <RadzenMarkers MarkerType="MarkerType.Circle" Size="6" Fill="@sFillCl" StrokeWidth="0" />
+                </ChildContent>
+              </RadzenLineSeries>
+            }
+          }
+        }
+      }
+      <RadzenCategoryAxis Visible="true" Formatter="@FormatAsDate" Step="TimeSpan.FromDays(1)">
+        <RadzenGridLines Visible="true" Stroke="#ccc" LineType="Radzen.Blazor.LineType.Dashed" />
+      </RadzenCategoryAxis>
+      <RadzenValueAxis FormatString="{0:P0}">
+        <RadzenGridLines Visible="true" Stroke="#ccc" LineType="Radzen.Blazor.LineType.Dashed" />
+      </RadzenValueAxis>
+      <RadzenLegend Visible="false" />
+    </RadzenChart>
+  </div>
+
+  @if (Preview) {
+    <label id="lbPlotExpected" style="position: absolute; top: 0px; right: 0px">
+      <input type="checkbox" @oninput="GetDataAsync" style="margin-left: 4px">
+      Vorschau
+    </label>
+  }
+  @if (TrainingCamps) {
+    <select name="Camp" id="selectCamp" @onchange="GetDataAsync" style="position: absolute; top: 20px; right: 0px; width: 80px; display: none">
+      <option value="0">aus</option>
+      @{
+        foreach (CornerkickManager.TrainingCamp.Camp camp in CkAppShared.ckMng.tcp.ltCamps) {
+          <option value="@camp.iId.ToString()">@camp.sName</option>
+        }
+      }
+    </select>
+  }
+} else {
+  <div style="text-align: center; margin-top: 100px">Keine Trainingsdaten vorhanden</div>
+}
+
+@code {
+  [Parameter] public Action? ActGetData { get; set; }
+  [Parameter] public bool Preview { get; set; }
+  [Parameter] public bool TrainingCamps { get; set; }
+
+  List<CkAppShared.DataPointTD>[][]? _ltTrainingData;
+
+  public async Task draw(List<CkAppShared.DataPointTD>[]? ltTrainingData)
+  {
+    if (ltTrainingData != null) _ltTrainingData = new List<CkAppShared.DataPointTD>[][] { ltTrainingData };
+    await InvokeAsync(StateHasChanged);
+  }
+
+  public async Task draw(List<CkAppShared.DataPointTD>[][]? ltTrainingData)
+  {
+    _ltTrainingData = ltTrainingData;
+    await InvokeAsync(StateHasChanged);
+  }
+
+  async Task GetDataAsync()
+  {
+    if (ActGetData != null) ActGetData();
+    await Task.CompletedTask;
+  }
+
+  string FormatAsDate(object value)
+  {
+    if (value != null) {
+      return Convert.ToDateTime(value).ToString("dd.MM");
+    }
+
+    return string.Empty;
+  }
+}

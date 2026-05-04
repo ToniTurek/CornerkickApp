@@ -1,0 +1,101 @@
+{
+  "injuries": [
+    /*
+     Categories:
+       0: Muscle
+       1: Tendons & Cartilage
+       2: Fracture
+       3: Internist
+    */
+    {
+      "name": "Zerrung",
+      "category": 0,
+      "days_min": 3,
+      "days_max": 15
+    },
+    {
+      "name": "Erkältung",
+      "category": 3,
+      "days_min": 4,
+      "days_max": 8
+    },
+    {
+      "name": "COVID-19",
+      "category": 3,
+      "days_min": 7,
+      "days_max": 21
+    },
+    {
+      "name": "Bänderdehnung",
+      "category": 1,
+      "days_min": 5,
+      "days_max": 20
+    },
+    {
+      "name": "Jochbeinbruch",
+      "category": 2,
+      "days_min": 5,
+      "days_max": 20
+    },
+    {
+      "name": "Magen-Darm-Virus",
+      "category": 3,
+      "days_min": 5,
+      "days_max": 20
+    },
+    {
+      "name": "Muskelfaserriss",
+      "category": 0,
+      "days_min": 7,
+      "days_max": 30
+    },
+    {
+      "name": "Zehenbruch",
+      "category": 2,
+      "days_min": 7,
+      "days_max": 30
+    },
+    {
+      "name": "Nasenbeinbruch",
+      "category": 2,
+      "days_min": 7,
+      "days_max": 30
+    },
+    {
+      "name": "Aussenbandanriss",
+      "category": 1,
+      "days_min": 20,
+      "days_max": 60
+    },
+    {
+      "name": "Aussenbandriss",
+      "category": 1,
+      "days_min": 60,
+      "days_max": 120
+    },
+    {
+      "name": "Kreuzbandriss",
+      "category": 1,
+      "days_min": 120,
+      "days_max": 240
+    },
+    {
+      "name": "Leistenbruch",
+      "category": 2,
+      "days_min": 120,
+      "days_max": 240
+    },
+    {
+      "name": "Knorpelschaden",
+      "category": 1,
+      "days_min": 300,
+      "days_max": 400
+    },
+    {
+      "name": "Archillessehnenriss",
+      "category": 1,
+      "days_min": 300,
+      "days_max": 400
+    }
+  ]
+}

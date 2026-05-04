@@ -1,0 +1,108 @@
+﻿@if (edField != null && edField.Height > 0 && edField.Width > 0 && ltHexPolygons?.Count > 0) {
+  <svg style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:2"
+        viewBox="0 0 @edField.Width @edField.Height" preserveAspectRatio="none">
+    @foreach (var pts in ltHexPolygons) {
+      <polygon points="@pts" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1" />
+    }
+
+    <!-- X-Achse (oben) -->
+    @for (int col = 0; col <= ptPitch.X; col++) {
+      int iColDraw = col - (ptPitch.X / 2);
+      if (iColDraw % 4 == 0) {
+        double hexW = edField.Width / (double)ptPitch.X;
+        //double hexR = hexW / 2.0;
+        double cx = col * hexW/* + hexR*/;
+        double y = (edField.Height / (ptPitch.Y * 2.0)) + 4; // Abstand von oben in px
+        <svg:text x="@cx.ToString("0.000", System.Globalization.CultureInfo.InvariantCulture)" y="@y.ToString("0.000", System.Globalization.CultureInfo.InvariantCulture)" text-anchor="middle" font-size="12" fill="black" opacity="0.7" style="user-select:none;">@iColDraw</svg:text>
+      }
+    }
+
+    <!-- Y-Achse (links) -->
+    @for (int row = 0; row <= ptPitch.Y * 2; row++) {
+      int iRowDraw = row - ptPitch.Y;
+      if (iRowDraw % 2 == 0) {
+        double yStep = edField.Height / (ptPitch.Y * 2.0);
+        double cy = (row * yStep) + 4;
+        double x = 8; // Abstand von links in px
+        <svg:text x="@x.ToString("0.000", System.Globalization.CultureInfo.InvariantCulture)" y="@(cy.ToString("0.000", System.Globalization.CultureInfo.InvariantCulture))" text-anchor="middle" font-size="12" fill="black" opacity="0.7" style="user-select:none;">@iRowDraw</svg:text>
+      }
+    }
+  </svg>
+}
+
+@code {
+  [Parameter] public Components.Pages.Member.ViewGame.ElemDimension? edField { get; set; }
+  [Parameter] public System.Drawing.Point ptPitch { get; set; }
+  
+  List<string> ltHexPolygons = new();
+
+  public async Task ShowAsync()
+  {
+    BuildHexGrid();
+    await InvokeAsync(StateHasChanged);
+  }
+
+  public async Task HideAsync()
+  {
+    ltHexPolygons.Clear();
+    await InvokeAsync(StateHasChanged);
+  }
+
+  private void BuildHexGrid()
+  {
+    ltHexPolygons.Clear();
+    if (edField == null || edField.Width <= 0 || edField.Height <= 0) return;
+
+    int pitchX = Math.Max(1, ptPitch.X / 2);
+    int pitchY = Math.Max(1, ptPitch.Y * 2);
+
+    double svgW = edField.Width;
+    double svgH = edField.Height;
+
+    // 1:1-Mapping: jede ptPitch-Einheit = 1 Hex-Zelle
+    double hexW = svgW / pitchX;
+    double hexR = hexW / 2.0;
+    double hexH = Math.Sqrt(3.0) * hexR;
+
+    // Y-Skalierung: Hex-Zentren gleichmäßig auf svgH verteilen
+    double yStep = svgH / pitchY;
+
+    /*
+          /2\
+       /       \
+    3             1
+    |             |
+    4             0
+       \       /
+          \5/
+    */
+    for (int row = 0; row <= pitchY; row++) {
+      double cy = row * yStep;
+      for (int col = 0; col <= pitchX; col++) {
+        // Versatz für jede zweite Reihe (odd-q layout)
+        double cx = col * hexW + ((row % 2 == 1) ? hexR : 0);
+
+        // Hexagon-Ecken berechnen
+        var pts = new System.Text.StringBuilder();
+        for (int i = 0; i < 6; i++) {
+          double angle = (60 * i) - 30;
+
+          // Set angle for points 0, 1 and 3, 4 to 0° and 180°
+          double angleX = angle;
+          if (i != 2 && i != 5) {
+            if (i < 2) angleX =   0.0;
+            else       angleX = 180.0;
+          }
+
+          double x = cx + hexR * Math.Cos((Math.PI / 180.0) * angleX);
+          double y = cy + hexR * Math.Sin((Math.PI / 180.0) * angle);
+          if (i > 0) pts.Append(" ");
+          pts.Append(x.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture));
+          pts.Append(",");
+          pts.Append(y.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture));
+        }
+        ltHexPolygons.Add(pts.ToString());
+      }
+    }
+  }
+}

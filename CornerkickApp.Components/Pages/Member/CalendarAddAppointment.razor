@@ -1,0 +1,128 @@
+﻿@using CornerkickApp.Shared.Models
+
+@inject DialogService DialogService
+
+<head>
+  <style>
+    select {
+      width: 200px;
+    }
+  </style>
+</head>
+
+<RadzenTemplateForm TItem="CalendarModel.Appointment" Data="@model" Submit=@OnSubmit>
+  <h4>@model.dtStart.ToString("dd.MM.yyyy HH:mm")</h4>
+  <table style="border-spacing: 10px">
+    <tr>
+      <td>Art:</td>
+      <td>
+        @*<RadzenDropDown @bind-Value=@selected_option Data=@options Style="width: 100%; max-width: 400px;" Name="DropDownBindValue" />*@
+        <Blazorise.Select TValue="int" SelectedValue="@iSelectedOption" SelectedValueChanged="@update">
+          @foreach (LayoutModel.SelectListItem sli in options) {
+            <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+          }
+        </Blazorise.Select>
+      </td>
+    </tr>
+    <tr>
+      <td>Start:</td>
+      <td>
+        <RadzenDatePicker Name="dtStart" @bind-Value="@model.dtStart" ShowTime="@(iSelectedOption != 1)" Style="width: 12rem;" MinutesStep="15" Disabled="@(iSelectedOption == 1)" TimeOnly="@(iSelectedOption != 1)" />
+        <RadzenRequiredValidator Component="dtStart" Text="Start is required" />
+      </td>
+    </tr>
+  </table>
+  @*
+  <RadzenStack Orientation="Radzen.Orientation.Horizontal" AlignItems="Radzen.AlignItems.Center" Wrap="Radzen.FlexWrap.Wrap">
+    <RadzenLabel Text="Titel" Style="width: 4rem;" />
+    <RadzenTextBox @bind-Value="@model.sTitle" Name="sTitle" Style="width: 12rem;" />
+    <RadzenRequiredValidator Component="sTitle" Text="Title is required" />
+  </RadzenStack>
+  *@
+  <hr>
+  @*
+  <RadzenStack Orientation="Radzen.Orientation.Horizontal" AlignItems="Radzen.AlignItems.Center" Wrap="Radzen.FlexWrap.Wrap">
+    <RadzenLabel Text="Ende" Style="width: 4rem;" />
+    <RadzenDatePicker Name="dtEnd" @bind-Value="@model.dtEnd" Style="width: 12rem;" MinutesStep="15" Disabled="true" />
+  </RadzenStack>
+  *@
+  @if (iSelectedOption == 0) {
+    <CalendarTestgame @ref="calTestgame" iClubUserId="@iClubUserId"></CalendarTestgame>
+  } else if (iSelectedOption == 1) {
+    <CalendarTrainingscamp @ref="calCamp" iClubUserId="@iClubUserId" dtStart="@dtStart"></CalendarTrainingscamp>
+  } else if (iSelectedOption == 3) {
+    <CalendarPlayerMeeting @ref="calPlMtg" iClubUserId="@iClubUserId"></CalendarPlayerMeeting>
+  }
+  <RadzenStack Orientation="Radzen.Orientation.Horizontal" JustifyContent="Radzen.JustifyContent.End">
+    <RadzenButton ButtonType="Radzen.ButtonType.Submit" Text="hinzufügen" />
+  </RadzenStack>
+</RadzenTemplateForm>
+
+@code {
+  [Parameter]
+  public DateTime dtStart { get; set; }
+
+  [Parameter]
+  public DateTime dtEnd { get; set; }
+
+  [Parameter]
+  public int iClubUserId { get; set; }
+
+  [Parameter]
+  public byte iUserRespLvl { get; set; }
+
+  CalendarModel.Appointment model = new CalendarModel.Appointment();
+
+  CalendarTestgame calTestgame = new CalendarTestgame();
+  CalendarTrainingscamp calCamp = new CalendarTrainingscamp();
+  CalendarPlayerMeeting calPlMtg = new CalendarPlayerMeeting();
+
+  List<LayoutModel.SelectListItem> options = new List<LayoutModel.SelectListItem>() {
+      new LayoutModel.SelectListItem() { Value = "3", Text = "Mit Spieler sprechen" },
+      new LayoutModel.SelectListItem() { Value = "0", Text = "Testspiel vereinbaren" }
+    };
+  int iSelectedOption = 3;
+
+  protected override async Task OnInitializedAsync()
+  {
+    await base.OnInitializedAsync();
+
+    if (iUserRespLvl >= CkAppShared.iUserRespTrainingCamps) {
+      options.Add(new LayoutModel.SelectListItem() { Value = "1", Text = "Trainingslager planen" });
+      options.Add(new LayoutModel.SelectListItem() { Value = "2", Text = "Ereignis planen"});
+    }
+  }
+
+  private Task update(int jSelectedOption)
+  {
+    iSelectedOption = jSelectedOption;
+
+    return Task.CompletedTask;
+  }
+
+  protected override void OnParametersSet()
+  {
+    model.dtStart = dtStart;
+    model.dtEnd = dtEnd;
+  }
+
+  void OnSubmit(CalendarModel.Appointment model)
+  {
+    model.iType = iSelectedOption;
+
+    if        (iSelectedOption == 0) {
+      model.iIdReturn = calTestgame.iSelectedClubId;
+      model.sTitle = "Testspiel " + calTestgame.selected_club;
+    } else if (iSelectedOption == 1) {
+      model.iIdReturn = calCamp.iSelectedCampId;
+      model.sTitle = "Trainingslager " + calCamp.selected_camp;
+      model.dtEnd = dtStart.Date.AddDays(calCamp.nDays).AddHours(12);
+    } else if (iSelectedOption == 3) {
+      model.iIdReturn  = calPlMtg.iSelectedPlId;
+      model.iIdReturn2 = calPlMtg.iMtgType;
+      model.sTitle = "Einzelgespräch " + calPlMtg.selected_player;
+    }
+
+    DialogService.Close(model);
+  }
+}

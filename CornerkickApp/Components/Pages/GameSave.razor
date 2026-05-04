@@ -1,0 +1,122 @@
+﻿@page "/gamesave"
+
+@using CornerkickApp.Shared.Models
+@using CornerkickApp.Components.Shared.Components
+@using Blazorise.Modules
+@inject NavigationManager NavigationManager
+
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    /* Set background color to all buttons */
+    .btn-group .btn {
+      background-color: yellow !important;
+    }
+
+    /* Set background color of active button */
+    .btn-group .btn.active {
+      background-color: #ffcc00 /*#ff4d4d*/ !important;
+    }
+
+    /* Set background color on hover */
+    .btn-group .btn:hover {
+      background-color: #ff9933 !important;
+    }
+  </style>
+</head>
+
+<body class="@sClassDisabled">
+  <div style="position: relative; max-width: 1000px">
+    <h4>Lokale Spielstände</h4>
+    <hr />
+    <div asp-validation-summary="All" class="text-danger"></div>
+
+    <div class="p-3 form-group" style="margin-bottom: 6px">
+      <ListCkFiles @ref=lcf ltFilesCk=ltFilesCk action="selectGame"></ListCkFiles>
+
+      <input class="form-control" placeholder="Neuer Spielstand" style="width: 100%; min-width: 100%" value="@Path.GetFileNameWithoutExtension(sFileCkSelected)" autocorrect="off" autocapitalize="none" @oninput="(e) => OnCheckedValueChanged(e.Value != null ? e.Value.ToString() : null)" />
+    </div>
+
+    <div>
+      <button class="btn btn-primary" style="width: 100%; font-size: 120%; background-color: rgb(@CkAppShared.sClCkRgb); border-color: darkgreen" @onclick="saveGame" disabled="@bSaveButtonDisabled">
+        <Blazorise.Icon Name="Blazorise.IconName.Save" />
+        speichern
+      </button>
+    </div>
+
+    <GameSaveOnline @ref=gso GameToUpload="@sFileCkSelected"></GameSaveOnline>
+  </div>
+</body>
+</html>
+
+@code {
+  private List<string[]> ltFilesCk;
+  private string? sFileCkSelected;
+  private bool bSaveButtonDisabled = true;
+  ListCkFiles? lcf { get; set; }
+
+  GameSaveOnline? gso { get; set; }
+
+  private string sClassDisabled = "";
+
+  protected override async Task OnInitializedAsync()
+  {
+    ltFilesCk = await Services.StartGameService.getFilesToLoad();
+  }
+
+  Task OnCheckedValueChanged(string? value)
+  {
+    sFileCkSelected = value;
+    enableSaveButton();
+
+    return Task.CompletedTask;
+  }
+
+  private void selectGame(string? sFileCk)
+  {
+    OnCheckedValueChanged(sFileCk);
+
+    if (gso != null) gso.update(sFileCkSelected);
+
+    StateHasChanged();
+  }
+
+  private void enableSaveButton()
+  {
+    bSaveButtonDisabled = string.IsNullOrEmpty(sFileCkSelected);
+  }
+
+  private async Task saveGame()
+  {
+    if (string.IsNullOrEmpty(sFileCkSelected)) return;
+
+    try {
+      // Add extension if not already
+      if (!Path.GetExtension(sFileCkSelected).Equals(".ckx")) sFileCkSelected += ".ckx";
+
+      // Check if save directory already exists
+      string sDirSave = Path.Combine(CornerkickApp.Controllers.App.getDocumentsDir, "save");
+      if (!Directory.Exists(sDirSave)) Directory.CreateDirectory(sDirSave);
+
+      // Update to full path if not already
+      if (!Path.IsPathRooted(sFileCkSelected)) sFileCkSelected = Path.Combine(sDirSave, sFileCkSelected);
+
+      CornerkickManager.IO.Return retSave = await CkAppShared.ckMng.io.saveAsync(sFileCkSelected);
+      if (!retSave.bOk) CkAppShared.ckMng.tl.writeLog(retSave.sError, bError: true);
+
+      CkAppShared.sFileCk = sFileCkSelected;
+
+      if (retSave.bOk) {
+        NavigationManager.NavigateTo("/member/desk", true);
+      } else if (!string.IsNullOrEmpty(retSave.sError)) {
+        await CkDialog.ckDialog.Show("ERROR", retSave.sError, sButtonCancelText2: "");
+      } else if (!string.IsNullOrEmpty(retSave.sWarning)) {
+        await CkDialog.ckDialog.Show("ERROR", retSave.sWarning, sButtonCancelText2: "");
+      }
+    } catch (Exception e) {
+      string sErrorMsg = "ERROR saving game. Message: " + e.Message + Environment.NewLine + e.StackTrace;
+      CkAppShared.ckMng.tl.writeLog(sErrorMsg);
+    }
+  }
+}

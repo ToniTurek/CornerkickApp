@@ -1,0 +1,563 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <TargetFrameworks>net9.0-android;net9.0-ios;net9.0-maccatalyst</TargetFrameworks>
+    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net9.0-windows10.0.19041.0</TargetFrameworks>
+
+    <!-- Uncomment to also build the tizen app. You will need to install tizen by following this: https://github.com/Samsung/Tizen.NET -->
+    <!-- <TargetFrameworks>$(TargetFrameworks);net8.0-tizen</TargetFrameworks> -->
+
+    <!-- Note for MacCatalyst:
+      The default runtime is maccatalyst-x64, except in Release config, in which case the default is maccatalyst-x64;maccatalyst-arm64.
+      When specifying both architectures, use the plural <RuntimeIdentifiers> instead of the singular <RuntimeIdentifier>.
+      The Mac App Store will NOT accept apps with ONLY maccatalyst-arm64 indicated;
+      either BOTH runtimes must be indicated or ONLY macatalyst-x64. -->
+    <!-- For example: <RuntimeIdentifiers>maccatalyst-x64;maccatalyst-arm64</RuntimeIdentifiers> -->
+
+    <OutputType>Exe</OutputType>
+    <RootNamespace>CornerkickApp</RootNamespace>
+    <UseMaui>true</UseMaui>
+    <SingleProject>true</SingleProject>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <EnableDefaultCssItems>false</EnableDefaultCssItems>
+    <Nullable>enable</Nullable>
+
+    <!-- Display name -->
+    <ApplicationTitle>CornerkickApp</ApplicationTitle>
+
+    <!-- App Identifier -->
+    <ApplicationId>com.companyname.CornerkickApp</ApplicationId>
+
+    <!-- Versions -->
+    <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
+
+    <!-- To develop, package, and publish an app to the Microsoft Store, see: https://aka.ms/MauiTemplateUnpackaged -->
+    <WindowsPackageType>MSIX</WindowsPackageType>
+
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">15.0</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">35.0</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
+    <TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tizen'">6.5</SupportedOSPlatformVersion>
+    <Configurations>Debug;Release;PublishWin</Configurations>
+    <Platforms>AnyCPU;x64;x86</Platforms>
+    <DefaultLanguage>de</DefaultLanguage>
+    <PackageCertificateThumbprint>3E4D3DA5C89BD77FCD7D16636879D7ED4123038B</PackageCertificateThumbprint>
+    <AppxPackageSigningEnabled>False</AppxPackageSigningEnabled>
+    <GenerateAppInstallerFile>False</GenerateAppInstallerFile>
+    <AppxPackageSigningTimestampDigestAlgorithm>SHA256</AppxPackageSigningTimestampDigestAlgorithm>
+    <AppxAutoIncrementPackageRevision>False</AppxAutoIncrementPackageRevision>
+    <AppxSymbolPackageEnabled>True</AppxSymbolPackageEnabled>
+    <GenerateTestArtifacts>False</GenerateTestArtifacts>
+    <HoursBetweenUpdateChecks>0</HoursBetweenUpdateChecks>
+    <GenerateTemporaryStoreCertificate>True</GenerateTemporaryStoreCertificate>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net9.0-android|AnyCPU'">
+    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationId>com.cornerkick.maui</ApplicationId>
+    <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
+    <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net9.0-android|x64'">
+    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationId>com.cornerkick.maui</ApplicationId>
+    <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
+    <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net9.0-android|x86'">
+    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationId>com.cornerkick.maui</ApplicationId>
+    <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
+    <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net9.0-ios|AnyCPU'">
+    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationId>com.cornerkick.maui</ApplicationId>
+    <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
+    <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net9.0-ios|x64'">
+    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationId>com.cornerkick.maui</ApplicationId>
+    <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
+    <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net9.0-ios|x86'">
+    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationId>com.cornerkick.maui</ApplicationId>
+    <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
+    <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net9.0-maccatalyst|AnyCPU'">
+    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationId>com.cornerkick.maui</ApplicationId>
+    <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
+    <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net9.0-maccatalyst|x64'">
+    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationId>com.cornerkick.maui</ApplicationId>
+    <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
+    <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net9.0-maccatalyst|x86'">
+    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationId>com.cornerkick.maui</ApplicationId>
+    <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
+    <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net9.0-windows10.0.19041.0|AnyCPU'">
+    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationId>com.cornerkick.maui</ApplicationId>
+    <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
+    <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net9.0-windows10.0.19041.0|x64'">
+    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationId>com.cornerkick.maui</ApplicationId>
+    <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
+    <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net9.0-windows10.0.19041.0|x86'">
+    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationId>com.cornerkick.maui</ApplicationId>
+    <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
+    <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net9.0-android|AnyCPU'">
+    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationId>com.cornerkick.maui</ApplicationId>
+    <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
+    <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='PublishWin|net9.0-android|AnyCPU'">
+    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationId>com.cornerkick.maui</ApplicationId>
+    <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
+    <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net9.0-android|x64'">
+    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationId>com.cornerkick.maui</ApplicationId>
+    <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
+    <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='PublishWin|net9.0-android|x64'">
+    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationId>com.cornerkick.maui</ApplicationId>
+    <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
+    <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net9.0-android|x86'">
+    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationId>com.cornerkick.maui</ApplicationId>
+    <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
+    <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='PublishWin|net9.0-android|x86'">
+    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationId>com.cornerkick.maui</ApplicationId>
+    <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
+    <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net9.0-ios|AnyCPU'">
+    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationId>com.cornerkick.maui</ApplicationId>
+    <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
+    <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='PublishWin|net9.0-ios|AnyCPU'">
+    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationId>com.cornerkick.maui</ApplicationId>
+    <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
+    <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net9.0-ios|x64'">
+    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationId>com.cornerkick.maui</ApplicationId>
+    <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
+    <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='PublishWin|net9.0-ios|x64'">
+    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationId>com.cornerkick.maui</ApplicationId>
+    <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
+    <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net9.0-ios|x86'">
+    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationId>com.cornerkick.maui</ApplicationId>
+    <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
+    <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='PublishWin|net9.0-ios|x86'">
+    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationId>com.cornerkick.maui</ApplicationId>
+    <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
+    <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net9.0-maccatalyst|AnyCPU'">
+    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationId>com.cornerkick.maui</ApplicationId>
+    <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
+    <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='PublishWin|net9.0-maccatalyst|AnyCPU'">
+    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationId>com.cornerkick.maui</ApplicationId>
+    <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
+    <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net9.0-maccatalyst|x64'">
+    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationId>com.cornerkick.maui</ApplicationId>
+    <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
+    <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='PublishWin|net9.0-maccatalyst|x64'">
+    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationId>com.cornerkick.maui</ApplicationId>
+    <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
+    <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net9.0-maccatalyst|x86'">
+    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationId>com.cornerkick.maui</ApplicationId>
+    <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
+    <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='PublishWin|net9.0-maccatalyst|x86'">
+    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationId>com.cornerkick.maui</ApplicationId>
+    <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
+    <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net9.0-windows10.0.19041.0|AnyCPU'">
+    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationId>com.cornerkick.maui</ApplicationId>
+    <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
+    <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='PublishWin|net9.0-windows10.0.19041.0|AnyCPU'">
+    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationId>com.cornerkick.maui</ApplicationId>
+    <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
+    <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net9.0-windows10.0.19041.0|x64'">
+    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationId>com.cornerkick.maui</ApplicationId>
+    <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
+    <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='PublishWin|net9.0-windows10.0.19041.0|x64'">
+    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationId>com.cornerkick.maui</ApplicationId>
+    <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
+    <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net9.0-windows10.0.19041.0|x86'">
+    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationId>com.cornerkick.maui</ApplicationId>
+    <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
+    <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='PublishWin|net9.0-windows10.0.19041.0|x86'">
+    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationId>com.cornerkick.maui</ApplicationId>
+    <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
+    <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- App Icon -->
+    <!-- <MauiIcon Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) != 'android'" Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\logo_64.png" Color="#1F9E45" /> -->
+    <MauiIcon Include="Resources\AppIcon\logo_64.png" Color="#1F9E45" />
+
+    <!-- Splash Screen -->
+    <MauiSplashScreen Include="Resources\Splash\ck_splash.png" Color="#1F9E45" />
+
+    <!-- Images -->
+    <MauiImage Include="Resources\Images\*" />
+    <MauiImage Update="Resources\Images\dotnet_bot.svg" BaseSize="168,208" />
+
+    <!-- Custom Fonts -->
+    <MauiFont Include="Resources\Fonts\*" />
+
+    <!-- Raw Assets (also remove the "Resources\Raw" prefix) -->
+    <MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="Resources\Assets\BadgeLogo.scale-100.png" />
+    <None Remove="Resources\Assets\BadgeLogo.scale-125.png" />
+    <None Remove="Resources\Assets\BadgeLogo.scale-150.png" />
+    <None Remove="Resources\Assets\BadgeLogo.scale-200.png" />
+    <None Remove="Resources\Assets\BadgeLogo.scale-400.png" />
+    <None Remove="Resources\Assets\ckSplashScreen.scale-100.png" />
+    <None Remove="Resources\Assets\ckSplashScreen.scale-125.png" />
+    <None Remove="Resources\Assets\ckSplashScreen.scale-150.png" />
+    <None Remove="Resources\Assets\ckSplashScreen.scale-200.png" />
+    <None Remove="Resources\Assets\ckSplashScreen.scale-400.png" />
+    <None Remove="Resources\Assets\ck_pakage_logo.scale-100.png" />
+    <None Remove="Resources\Assets\ck_pakage_logo.scale-125.png" />
+    <None Remove="Resources\Assets\ck_pakage_logo.scale-150.png" />
+    <None Remove="Resources\Assets\ck_pakage_logo.scale-200.png" />
+    <None Remove="Resources\Assets\ck_pakage_logo.scale-400.png" />
+    <None Remove="Resources\Assets\ck_symbol.scale-100.png" />
+    <None Remove="Resources\Assets\ck_symbol.scale-125.png" />
+    <None Remove="Resources\Assets\ck_symbol.scale-150.png" />
+    <None Remove="Resources\Assets\ck_symbol.scale-200.png" />
+    <None Remove="Resources\Assets\ck_symbol.scale-400.png" />
+    <None Remove="Resources\Assets\ck_symbol.targetsize-16.png" />
+    <None Remove="Resources\Assets\ck_symbol.targetsize-24.png" />
+    <None Remove="Resources\Assets\ck_symbol.targetsize-256.png" />
+    <None Remove="Resources\Assets\ck_symbol.targetsize-32.png" />
+    <None Remove="Resources\Assets\ck_symbol.targetsize-48.png" />
+    <None Remove="Resources\Assets\ck_tile_big.scale-100.png" />
+    <None Remove="Resources\Assets\ck_tile_big.scale-125.png" />
+    <None Remove="Resources\Assets\ck_tile_big.scale-150.png" />
+    <None Remove="Resources\Assets\ck_tile_big.scale-200.png" />
+    <None Remove="Resources\Assets\ck_tile_big.scale-400.png" />
+    <None Remove="Resources\Assets\ck_tile_medium.scale-100.png" />
+    <None Remove="Resources\Assets\ck_tile_medium.scale-125.png" />
+    <None Remove="Resources\Assets\ck_tile_medium.scale-150.png" />
+    <None Remove="Resources\Assets\ck_tile_medium.scale-200.png" />
+    <None Remove="Resources\Assets\ck_tile_medium.scale-400.png" />
+    <None Remove="Resources\Assets\ck_tile_small.scale-100.png" />
+    <None Remove="Resources\Assets\ck_tile_small.scale-125.png" />
+    <None Remove="Resources\Assets\ck_tile_small.scale-150.png" />
+    <None Remove="Resources\Assets\ck_tile_small.scale-200.png" />
+    <None Remove="Resources\Assets\ck_tile_small.scale-400.png" />
+    <None Remove="Resources\Assets\ck_tile_wide.scale-100.png" />
+    <None Remove="Resources\Assets\ck_tile_wide.scale-125.png" />
+    <None Remove="Resources\Assets\ck_tile_wide.scale-150.png" />
+    <None Remove="Resources\Assets\ck_tile_wide.scale-200.png" />
+    <None Remove="Resources\Assets\ck_tile_wide.scale-400.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Resources\Assets\BadgeLogo.scale-100.png" />
+    <Content Include="Resources\Assets\BadgeLogo.scale-125.png" />
+    <Content Include="Resources\Assets\BadgeLogo.scale-150.png" />
+    <Content Include="Resources\Assets\BadgeLogo.scale-200.png" />
+    <Content Include="Resources\Assets\BadgeLogo.scale-400.png" />
+    <Content Include="Resources\Assets\ckSplashScreen.scale-100.png" />
+    <Content Include="Resources\Assets\ckSplashScreen.scale-125.png" />
+    <Content Include="Resources\Assets\ckSplashScreen.scale-150.png" />
+    <Content Include="Resources\Assets\ckSplashScreen.scale-200.png" />
+    <Content Include="Resources\Assets\ckSplashScreen.scale-400.png" />
+    <Content Include="Resources\Assets\ck_pakage_logo.scale-100.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </Content>
+    <Content Include="Resources\Assets\ck_pakage_logo.scale-125.png" />
+    <Content Include="Resources\Assets\ck_pakage_logo.scale-150.png" />
+    <Content Include="Resources\Assets\ck_pakage_logo.scale-200.png" />
+    <Content Include="Resources\Assets\ck_pakage_logo.scale-400.png" />
+    <Content Include="Resources\Assets\ck_symbol.scale-100.png" />
+    <Content Include="Resources\Assets\ck_symbol.scale-125.png" />
+    <Content Include="Resources\Assets\ck_symbol.scale-150.png" />
+    <Content Include="Resources\Assets\ck_symbol.scale-200.png" />
+    <Content Include="Resources\Assets\ck_symbol.scale-400.png" />
+    <Content Include="Resources\Assets\ck_symbol.targetsize-16.png" />
+    <Content Include="Resources\Assets\ck_symbol.targetsize-24.png" />
+    <Content Include="Resources\Assets\ck_symbol.targetsize-256.png" />
+    <Content Include="Resources\Assets\ck_symbol.targetsize-32.png" />
+    <Content Include="Resources\Assets\ck_symbol.targetsize-48.png" />
+    <Content Include="Resources\Assets\ck_tile_big.scale-100.png" />
+    <Content Include="Resources\Assets\ck_tile_big.scale-125.png" />
+    <Content Include="Resources\Assets\ck_tile_big.scale-150.png" />
+    <Content Include="Resources\Assets\ck_tile_big.scale-200.png" />
+    <Content Include="Resources\Assets\ck_tile_big.scale-400.png" />
+    <Content Include="Resources\Assets\ck_tile_medium.scale-100.png" />
+    <Content Include="Resources\Assets\ck_tile_medium.scale-125.png" />
+    <Content Include="Resources\Assets\ck_tile_medium.scale-150.png" />
+    <Content Include="Resources\Assets\ck_tile_medium.scale-200.png" />
+    <Content Include="Resources\Assets\ck_tile_medium.scale-400.png" />
+    <Content Include="Resources\Assets\ck_tile_small.scale-100.png" />
+    <Content Include="Resources\Assets\ck_tile_small.scale-125.png" />
+    <Content Include="Resources\Assets\ck_tile_small.scale-150.png" />
+    <Content Include="Resources\Assets\ck_tile_small.scale-200.png" />
+    <Content Include="Resources\Assets\ck_tile_small.scale-400.png" />
+    <Content Include="Resources\Assets\ck_tile_wide.scale-100.png" />
+    <Content Include="Resources\Assets\ck_tile_wide.scale-125.png" />
+    <Content Include="Resources\Assets\ck_tile_wide.scale-150.png" />
+    <Content Include="Resources\Assets\ck_tile_wide.scale-200.png" />
+    <Content Include="Resources\Assets\ck_tile_wide.scale-400.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\CornerkickApp.Components\Pages\Member\Component.razor" Link="Component.razor" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Maui" Version="12.3.0" />
+    <PackageReference Include="Microsoft.Maui.Controls" Version="9.0.120" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="9.0.120" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CornerkickApp.Components\CornerkickApp.Components.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Properties\Resources.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Update="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <ItemGroup>
+    <MauiAsset Update="Resources\Raw\AboutAssets.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </MauiAsset>
+    <MauiAsset Update="Resources\Raw\account_names.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </MauiAsset>
+    <MauiAsset Update="Resources\Raw\buildings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </MauiAsset>
+    <MauiAsset Update="Resources\Raw\cup_round_names.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </MauiAsset>
+    <MauiAsset Update="Resources\Raw\doping.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </MauiAsset>
+    <MauiAsset Update="Resources\Raw\formations.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </MauiAsset>
+    <MauiAsset Update="Resources\Raw\injuries.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </MauiAsset>
+    <MauiAsset Update="Resources\Raw\merchandising.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </MauiAsset>
+    <MauiAsset Update="Resources\Raw\nations.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </MauiAsset>
+    <MauiAsset Update="Resources\Raw\news.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </MauiAsset>
+    <MauiAsset Update="Resources\Raw\position_names.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </MauiAsset>
+    <MauiAsset Update="Resources\Raw\skill_category_names.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </MauiAsset>
+    <MauiAsset Update="Resources\Raw\skill_names.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </MauiAsset>
+    <MauiAsset Update="Resources\Raw\sponsor.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </MauiAsset>
+    <MauiAsset Update="Resources\Raw\sponsor_special.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </MauiAsset>
+    <MauiAsset Update="Resources\Raw\stadium.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </MauiAsset>
+    <MauiAsset Update="Resources\Raw\staff.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </MauiAsset>
+    <MauiAsset Update="Resources\Raw\training.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </MauiAsset>
+    <MauiAsset Update="Resources\Raw\trainingcamps.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </MauiAsset>
+    <MauiAsset Update="Resources\Raw\user_responsibility_level_names.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </MauiAsset>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net9.0-android'">
+    <PackageReference Include="Xamarin.AndroidX.DocumentFile">
+      <Version>1.0.1.33</Version>
+    </PackageReference>
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,556 @@
+﻿@using CornerkickApp.Components.Shared.Components
+@using CornerkickApp.Shared.Models
+
+@inherits LayoutComponentBase
+@inject NavigationManager NavMng
+@inject Controllers.Shared.MyAuthenticationStateProvider _auth
+
+<style>
+  li.nav-item.dropdown.game > a.nav-link.dropdown-toggle {
+    color: red;
+  }
+</style>
+<div class="brand-no-sidebar">
+  @{
+    string sHome = bIsLoggedIn ? "/member/desk" : "";
+  }
+  <a class="navbar-brand" href="@sHome" @onclick="(() => ToggleNavMenu(-9))">
+    <img src="@CkAppShared.sContentDir/Images/logo_64_no_bottom-line.png" alt="logo" style="width: 40px">
+  </a>
+</div>
+<nav class="navbar navbar-expand-sm navbar-toggleable-sm">
+  <div class="container" style="flex-wrap: nowrap; padding-right: 0">
+    @{
+      if (CkAppShared.bWebApp || CkAppShared.ckMng?.ltUser?.Count > 0) {
+        if (!CkAppShared.bWebApp) {
+          <button class="navbar-toggler" style="position: relative; background: rgba(255,255,255,0.1); opacity: @(saveButtonDisabled ? "0.5" : "1.0")" @onclick="saveGame" hidden="@saveButtonHidden" disabled="@saveButtonDisabled">
+            <Icon Name="Blazorise.IconName.Save" />
+          </button>
+        }
+        <button class="navbar-toggler" style="position: relative; background-color: @(bLiveGame ? "red" : "")" type="button" @onclick="(() => ToggleNavMenu(-1))">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+      }
+    }
+    <div class="@NavMenuCssClass" style="background-color: @(bLiveGame ? "yellow" : "rgb(" + CkAppShared.sClCkRgb + ")")">
+      <ul class="navbar-nav mr-auto">
+        @{
+          if (CkAppShared.bWebApp || CkAppShared.ckMng?.ltUser?.Count > 0) {
+            <li class="nav-item dropdown show @(bLiveGame ? "game" : "")">
+              <NavLink class="nav-link dropdown-toggle" @onclick="() => ToggleNavMenu(0)">
+                <Icon Name="Blazorise.IconName.CalendarDay" IconSize="Blazorise.IconSize.x2" />Saison
+              </NavLink>
+              @if (expandSubNav[0]) {
+                <li class="dropdown-menu show" aria-labelledby="navbarDropdown" @onclick="() => ToggleNavMenu(-9)">
+                  <li class="nav-item">
+                    <NavLink class="nav-link" href="member/calendar">
+                      <Icon Name="Blazorise.IconName.CalendarDay" />Kalender
+                    </NavLink>
+                  </li>
+                  @*
+                  <li class="nav-item">
+                    <NavLink class="nav-link" href="member/league">
+                      <Icon Name="Blazorise.IconName.ListOl" />Liga
+                    </NavLink>
+                    <div class="dropdown-divider"></div>
+                  </li>
+                  *@
+                  @{
+                    if (CkAppShared.ckMng?.ltCups != null) {
+                      bool bFirst = true;
+                      foreach (CornerkickManager.Cup c in CkAppShared.ckMng.ltCups.OrderBy(c => c.iId)) {
+                        if ((
+                              c.iId == CkAppShared.iCupIdInt ||
+                              (c.iId2 == iLand && (c.iId == CkAppShared.iCupIdNatCup || c.iId3 == iDiv)) ||
+                              (CkAppShared.bWebApp && _usr == null && c.iId == CkAppShared.iCupIdLeague && c.iId2 == 36)
+                            ) && c.getClubsTotal() > 0) {
+                        //if ((c.iId == CkAppShared.iCupIdInt || (c.iId2 == iLand && (c.iId == CkAppShared.iCupIdLeague || c.iId == CkAppShared.iCupIdNatCup))) && c.getClubsTotal() > 0) {
+                        //if ((c.iId == CkAppShared.iCupIdInt || ((c.iId == CkAppShared.iCupIdLeague || c.iId == CkAppShared.iCupIdNatCup) && c.iId2 == iLand && _usr?.club != null && c.getParticipants().Contains(_usr.club))) && c.getClubsTotal() > 0) {
+                          string sCupLink = "member/cup/" + c.iId.ToString() + "/" + c.iId2.ToString() + "/" + c.iId3.ToString();
+                          string sCupNatName = c.sName;
+                          if (bFirst) {
+                            bFirst = false;
+                            <div class="dropdown-divider"></div>
+                          }
+                          <li class="nav-item">
+                            <NavLink class="nav-link" href="@sCupLink" >
+                              <Icon Name="c.settings.bKo ? Blazorise.Icons.FontAwesome.FontAwesomeIcons.Trophy : Blazorise.IconName.ListOl" />@sCupNatName
+                            </NavLink>
+                          </li>
+                        }
+                      }
+                      /*
+                      List<CornerkickManager.Cup> ltCupsNatCup = CkAppShared.ckMng.ltCups.FindAll(c => c.iId == CkAppShared.iCupIdNatCup && c.iId2 >= 0 && c.iId3 >= 0);
+                      if (ltCupsNatCup != null && ltCupsNatCup.Count > 0) {
+                        foreach (CornerkickManager.Cup c in ltCupsNatCup) {
+                          if (c.getClubsTotal() > 0) {
+                            string sCupNatLink = "member/cup/" + c.iId3.ToString();
+                            string sCupNatName = c.sName;
+                            <li class="nav-item">
+                              <NavLink class="nav-link" href="@sCupNatLink" >
+                                <Icon Name="Blazorise.Icons.FontAwesome.FontAwesomeIcons.Trophy" />@sCupNatName
+                              </NavLink>
+                            </li>
+                          }
+                        }
+                      }
+                      */
+                    }
+                  }
+                </li>
+              }
+            </li>
+          }
+        }
+
+        @if (bIsLoggedIn) {
+          <li class="nav-item dropdown show @(bLiveGame ? "game" : "")">
+            <NavLink class="nav-link dropdown-toggle" @onclick="() => ToggleNavMenu(1)">
+              <Icon Name="Blazorise.IconName.Users" IconSize="Blazorise.IconSize.x2" />Mannschaft
+            </NavLink>
+            @if (expandSubNav[1]) {
+              <li class="dropdown-menu show" aria-labelledby="navbarDropdown" @onclick="() => ToggleNavMenu(-9)">
+                <li class="nav-item">
+                  <NavLink class="nav-link" href="member/team">
+                    <img src="@CornerkickApp.Shared.Models.CkAppShared.sContentDir/Icons/menu/pitch_white.png" width="20" height="27" style="margin-left: 11px; margin-right: 11px" />
+                    Aufstellung
+                  </NavLink>
+                </li>
+                <li class="nav-item">
+                  <NavLink class="nav-link" href="member/tactic">
+                    <Icon Name="Blazorise.IconName.SliderHorizontal" />Taktik
+                  </NavLink>
+                </li>
+                <li class="nav-item">
+                  <NavLink class="nav-link" href="member/training">
+                    <Icon Name="Blazorise.IconName.Dumbbell" />Mannschaftstraining
+                  </NavLink>
+                </li>
+                @if (iUserRespLevel >= CkAppShared.iUserRespJouth) {
+                  <li class="nav-item">
+                    <NavLink class="nav-link" href="member/jouth">
+                      <Icon Name="Blazorise.Icons.FontAwesome.FontAwesomeIcons.Child" />Jugendspieler
+                    </NavLink>
+                  </li>
+                }
+                @if (iUserRespLevel >= CkAppShared.iUserRespPlayerContractsFast) {
+                  <li class="nav-item">
+                    <NavLink class="nav-link" href="member/contracts">
+                      <Icon Name="Blazorise.Icons.FontAwesome.FontAwesomeIcons.AddressCard" />Verträge
+                    </NavLink>
+                  </li>
+                }
+              </li>
+            }
+          </li>
+          <li class="nav-item dropdown show @(bLiveGame ? "game" : "")">
+            <NavLink class="nav-link dropdown-toggle" @onclick="() => ToggleNavMenu(2)">
+              <Icon Name="Blazorise.IconName.Shield" IconSize="Blazorise.IconSize.x2" />Verein
+            </NavLink>
+            @if (expandSubNav[2]) {
+              <li class="dropdown-menu show" aria-labelledby="navbarDropdown" @onclick="() => ToggleNavMenu(-9)">
+                <li class="nav-item">
+                  <NavLink class="nav-link" href="/member/club">
+                    <Icon Name="Blazorise.IconName.Circle" />Übersicht
+                  </NavLink>
+                </li>
+                <li class="nav-item">
+                  <NavLink class="nav-link" href="/member/staff">
+                    <Icon Name="Blazorise.Icons.FontAwesome.FontAwesomeIcons.AddressBook" />Personal
+                  </NavLink>
+                </li>
+                @if (iUserRespLevel >= CkAppShared.iUserRespFinance) {
+                  <li class="nav-item">
+                    <NavLink class="nav-link" href="/member/finance">
+                      <Icon Name="Blazorise.Icons.FontAwesome.FontAwesomeIcons.ChartLine" />Finanzen
+                    </NavLink>
+                  </li>
+                }
+                @if (iUserRespLevel >= CkAppShared.iUserRespSponsors) {
+                  <li class="nav-item">
+                    <NavLink class="nav-link" href="/member/sponsors">
+                      <Icon Name="Blazorise.IconName.MoneyBillAlt" />Sponsoren
+                    </NavLink>
+                  </li>
+                }
+                @if (iUserRespLevel >= CkAppShared.iUserRespMerchandising) {
+                  <li class="nav-item">
+                    <NavLink class="nav-link" href="/member/merchandising">
+                      <Icon Name="Blazorise.IconName.Flag" />Merchandising
+                    </NavLink>
+                  </li>
+                }
+                @if (iUserRespLevel >= CkAppShared.iUserRespStadiumShow) {
+                  <li class="nav-item">
+                    <NavLink class="nav-link" href="/member/stadium">
+                      <div style="margin-left: 10px; margin-right: 10px">
+                        <svg width="18pt" height="18pt" version="1.1" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+                          <g>
+                            <path fill="rgba(255,255,255,.55)" d="m65.777 36.59v-1.4258l14.371-4.3789-14.371-3.0117v-0.25c0-0.65625-0.53125-1.1836-1.1836-1.1836-0.65625 0-1.1836 0.53125-1.1836 1.1836v9.0586c0.19922 0 0.39453-0.003906 0.59375-0.003906 0.59375 0 1.1797 0.003906 1.7734 0.011719z" />
+                            <path fill="rgba(255,255,255,.55)" d="m20.676 39.18 14.066-5.2734-14.531-2.1016-0.015626-0.25c-0.039062-0.65234-0.60156-1.1484-1.2578-1.1094-0.65234 0.039063-1.1484 0.60156-1.1094 1.2578l0.69141 11.023c0.75-0.22656 1.5273-0.44531 2.332-0.65625z" />
+                            <path fill="rgba(255,255,255,.55)" d="m44.32 29.332 14.109-5.1602-14.512-2.2188-0.015625-0.25c-0.035156-0.65234-0.59375-1.1562-1.2461-1.1172-0.65234 0.035156-1.1562 0.59375-1.1172 1.2461l0.91406 16.672c0.78125-0.074218 1.5664-0.14453 2.3633-0.21094z" />
+                            <path fill="rgba(255,255,255,.55)" d="m43.93 67.574c-5.3672-1.8203-8.6406-4.1953-8.6406-6.8047 0-5.7266 15.684-10.371 35.031-10.371 19.348 0 35.031 4.6406 35.031 10.371 0 1.5156-1.125 2.9492-3.0977 4.25 11.863-2.4609 19.348-6.0469 19.348-10.039 0-7.3047-24.84-13.238-55.82-13.457-0.58984-0.003907-1.1797-0.011719-1.7773-0.011719-0.19922 0-0.39453 0.003906-0.59375 0.003906-6.5156 0.015625-12.77 0.28125-18.594 0.76562-0.79688 0.066406-1.582 0.13672-2.3633 0.21094-8.3477 0.78906-15.723 2.0195-21.594 3.5703-0.80859 0.21484-1.5859 0.43359-2.332 0.65625-7.5938 2.2773-12.129 5.1445-12.129 8.2617 0 5.7695 15.617 10.691 37.531 12.594z" />
+                            <path fill="rgba(255,255,255,.55)" d="m7.1367 65.402 8.1641 37.328c1.8359 0.40234 3.7383 0.78125 5.6992 1.1367 0.26953-9.0664 0.74219-18.578 1.3242-18.637 0-1.0859 0.87891-1.9688 1.9688-1.9688 1.082-0.11328 2.1445 1.543 2.375 3.7031 0.39062 0 1.5977 7.9922 2.9805 18.266 4.793 0.64453 9.8555 1.1562 15.125 1.5234 0.32812-9.3867 0.82812-18.18 1.4336-18.246 0-1.2695 1.0273-2.2969 2.2969-2.2969 1.2617-0.13281 2.5 1.8008 2.7695 4.3242 0.39453 0 1.5078 7.0156 2.8477 16.703 3.2383 0.11328 6.5312 0.17969 9.8828 0.17969 3.3477 0 6.6406-0.066407 9.8828-0.17969 1.3398-9.6875 2.4531-16.703 2.8477-16.703 0.26953-2.5234 1.5078-4.457 2.7695-4.3242 1.2695 0 2.2969 1.0273 2.2969 2.2969 0.60547 0.066407 1.1055 8.8594 1.4336 18.246 5.2695-0.36719 10.332-0.87891 15.125-1.5234 1.3828-10.277 2.5859-18.266 2.9805-18.266 0.23047-2.1602 1.293-3.8203 2.375-3.7031 1.0859 0 1.9688 0.87891 1.9688 1.9688 0.58594 0.0625 1.0547 9.5742 1.3242 18.637 1.9609-0.35547 3.8633-0.73438 5.6992-1.1367l8.1641-37.328c-7.1172 4.6484-29.875 9.8789-56.871 9.8867-26.996-0.007812-49.754-5.2383-56.863-9.8867z" />
+                          </g>
+                        </svg>
+                      </div>
+                      Stadion
+                    </NavLink>
+                  </li>
+                }
+                @if (iUserRespLevel >= CkAppShared.iUserRespBuildingsShow) {
+                  <li class="nav-item">
+                    <NavLink class="nav-link" href="/member/buildings">
+                      <Icon Name="Blazorise.IconName.Building" />Vereinsgelände
+                    </NavLink>
+                  </li>
+                }
+              </li>
+            }
+          </li>
+          <li class="nav-item dropdown show @(bLiveGame ? "game" : "")">
+            <NavLink class="nav-link dropdown-toggle" @onclick="() => ToggleNavMenu(3)">
+              <Icon Name="Blazorise.IconName.Desktop" IconSize="Blazorise.IconSize.x2" />Büro
+            </NavLink>
+            @if (expandSubNav[3]) {
+              <li class="dropdown-menu show" aria-labelledby="navbarDropdown" @onclick="() => ToggleNavMenu(-9)">
+                <li class="nav-item">
+                  <NavLink class="nav-link" href="/member/user">
+                    <Icon Name="Blazorise.IconName.UserCircle" />Persönliches
+                  </NavLink>
+                </li>
+                @if (CkAppShared.bWebApp) {
+                  <li class="nav-item">
+                    <NavLink class="nav-link" href="/member/mail">
+                      <Icon Name="Blazorise.IconName.Mail" />Postfach
+                    </NavLink>
+                  </li>
+                }
+                @if (bNation) {
+                  <li class="nav-item">
+                    <NavLink class="nav-link" href="/member/transfer">
+                      <Icon Name="Blazorise.IconName.UserPlus" />Spielernominierungen
+                    </NavLink>
+                  </li>
+                } else if (iUserRespLevel >= CkAppShared.iUserRespTransfers) {
+                  <li class="nav-item">
+                    <NavLink class="nav-link" href="/member/transfer">
+                      <Icon Name="Blazorise.IconName.UserPlus" />Transfermarkt
+                    </NavLink>
+                  </li>
+                }
+                @if (iUserRespLevel >= CkAppShared.iUserRespStatistic) {
+                  <li class="nav-item">
+                    <div @onclick="() => expandSubSubNav[0] = !expandSubSubNav[0]" @onclick:stopPropagation="true">
+                      <NavLink class="nav-link dropdown-toggle">
+                        <Icon Name="Blazorise.IconName.ChartArea" />Statistik
+                      </NavLink>
+                      @if (expandSubSubNav[0]) {
+                        <li class="dropdown-menu show" aria-labelledby="navbarDropdown" @onclick="() => ToggleNavMenu(-9)">
+                          <li class="nav-item">
+                            <NavLink class="nav-link" href="/member/statisticplayer">
+                              <Icon Name="Blazorise.IconName.Users" />Spieler
+                            </NavLink>
+                          </li>
+                          <li class="nav-item">
+                            <NavLink class="nav-link" href="/member/statisticclubs">
+                              <Icon Name="Blazorise.IconName.Shield" />Vereine
+                            </NavLink>
+                          </li>
+                        </li>
+                      }
+                    </div>
+                  </li>
+                }
+                <li class="nav-item">
+                  <div class="dropdown-divider"></div>
+                  <NavLink class="nav-link" href="/member/viewgame/x">
+                    <Icon Name="Blazorise.IconName.Clock" />Livespiel
+                  </NavLink>
+                </li>
+                @if (!CkAppShared.bWebApp) {
+                  @if (!saveAsButtonHidden) {
+                    <li class="nav-item">
+                      <div class="dropdown-divider"></div>
+                      <NavLink class="nav-link" href="/gamesave">
+                        <Icon Name="Blazorise.IconName.Save" />Spiel speichern
+                      </NavLink>
+                    </li>
+                  }
+                  <li class="nav-item">
+                    <NavLink class="nav-link" href="/gameload">
+                      <Icon Name="Blazorise.IconName.FolderOpen" />Spiel laden
+                    </NavLink>
+                  </li>
+                  <li class="nav-item">
+                    <div class="dropdown-divider"></div>
+                    <NavLink class="nav-link" href="/member/settings">
+                      <Icon Name="Blazorise.IconName.Settings" />Optionen
+                    </NavLink>
+                  </li>
+                }
+                <li class="nav-item">
+                  <NavLink class="nav-link" href="/usermanual">
+                    <Icon Name="Blazorise.Icons.FontAwesome.FontAwesomeIcons.QuestionCircle" />Anleitung
+                  </NavLink>
+                </li>
+                <li class="nav-item">
+                  <NavLink class="nav-link" href="/privacy">
+                    <Icon Name="Blazorise.Icons.FontAwesome.FontAwesomeIcons.FileText" />Impressum
+                  </NavLink>
+                </li>
+                <div class="dropdown-divider"></div>
+                @if (CkAppShared.bWebApp) {
+                  <li class="nav-item hide-screen">
+                    <NavLink class="nav-link" href="Account/Logout">
+                      <form action="Account/Logout" method="post">
+                        <AntiforgeryToken />
+                        <button type="submit" class="link">
+                          <i class="fas fa-solid fa-arrow-right-from-bracket"></i>Logout
+                        </button>
+                      </form>
+                    </NavLink>
+                  </li>
+                } else {
+                  <li class="nav-item">
+                    <NavLink class="nav-link" @onclick="endGame">
+                      <Icon Name="Blazorise.IconName.Eject" />Beenden
+                    </NavLink>
+                  </li>
+                }
+              </li>
+            }
+          </li>
+        } else {
+          <div class="hide-screen">
+            <div class="dropdown-divider"></div>
+            <li class="nav-item">
+              <NavLink class="nav-link" href="/privacy">
+                <Icon Name="Blazorise.Icons.FontAwesome.FontAwesomeIcons.FileText" />Impressum
+              </NavLink>
+            </li>
+            <div class="dropdown-divider"></div>
+            <li class="nav-item">
+              <NavLink class="nav-link" href="Account/Register">
+               <i class="fas fa-solid fa-registered"></i>registrieren
+              </NavLink>
+            </li>
+            <li class="nav-item">
+              <NavLink class="nav-link" href="Account/Login">
+                <i class="fas fa-solid fa-right-to-bracket"></i>anmelden
+              </NavLink>
+            </li>
+          </div>
+        }
+      </ul>
+    </div>
+  </div>
+</nav>
+
+@code {
+  [Parameter] public bool bLiveGame { get; set; }
+
+  private CornerkickManager.User? _usr;
+  int iLand = -1;
+  int iDiv = -1;
+  bool bNation = false;
+  bool collapseNavMenu = true;
+  bool expandSubNavSettings;
+  bool[] expandSubNav = new bool[5];
+  bool[] expandSubSubNav = new bool[1];
+  string baseMenuClass = "navbar-collapse d-sm-inline-flex flex-sm-row-reverse";
+  string NavMenuCssClass => baseMenuClass + (collapseNavMenu ? " collapse" : "");
+
+  public bool saveButtonHidden = false;
+  public bool saveAsButtonHidden = false;
+  bool saveButtonDisabled = false;
+
+  int iUserRespLevel = 0;
+
+  bool bIsLoggedIn { get; set; }
+  string sHeadline { get; set; } = "";
+
+  public static class AppConstants
+  {
+#if DEBUG
+    public const bool IS_DEBUG = true;
+#else
+    public const bool IS_DEBUG = false;
+#endif
+  }
+
+  /*
+  private string _userId;
+  //private IEnumerable<System.Security.Claims.Claim> _claims = Enumerable.Empty<System.Security.Claims.Claim>();
+
+  protected override async Task OnParametersSetAsync()
+  {
+    await GetClaimsPrincipalData();
+    await base.OnParametersSetAsync();
+    }
+  private async Task GetClaimsPrincipalData()
+  {
+    var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+    var user = authState.User;
+
+    if (user.Identity.IsAuthenticated) {
+      //_authMessage = $"{user.Identity.Name} is authenticated.";
+      //_claims = user.Claims;
+      //_userId = $"User Id: {user.FindFirst(c => c.Type == "sub")?.Value}";
+      }
+    }
+  */
+
+  protected override async Task OnInitializedAsync()
+  {
+#if _WebApp
+    var identity = await _auth.GetIdentity();
+
+    if (identity != null) {
+      bIsLoggedIn = identity.IsAuthenticated;
+    }
+#else
+    bIsLoggedIn = CkAppShared.ckMng.ltUser.Count > 0;
+#endif
+
+    if (bIsLoggedIn) {
+      await refresh(bGetUser: true);
+    }
+  }
+
+  public async Task refresh(bool bGetUser = false)
+  {
+    if (bGetUser) {
+#if _WebApp
+      _usr = Controllers.Member.MemberController.ckUser(_auth.GetUserId().Result);
+#else
+      _usr = CkAppShared.ckMng.ltUser[CkAppShared.iUserActive];
+#endif
+    }
+
+    if (_usr != null) {
+      iUserRespLevel = _usr.iResp;
+
+      CornerkickManager.Club? _clb = CornerkickApp.Controllers.Member.MemberController.ckClub(_usr);
+
+      if (_clb != null) {
+        iLand = _clb.iLand;
+        iDiv = _clb.iDivision;
+        bNation = _clb.bNation;
+      }
+
+#if !_WebApp
+      setSaveButtonVisibility();
+#endif
+    }
+    await InvokeAsync(StateHasChanged);
+  }
+  public Task close()
+  {
+    Task tk = ToggleNavMenu(-9);
+    refresh();
+    return tk;
+  }
+  private Task ToggleNavMenu(int i)
+  {
+    if (i < 0) {
+      if (i == -1) collapseNavMenu = !collapseNavMenu;
+      else         collapseNavMenu = true;
+
+      for (int j = 0; j < expandSubNav.Length; j++) expandSubNav[j] = false;
+    } else {
+      for (int j = 0; j < expandSubNav.Length; j++) {
+        if (j == i) expandSubNav[j] = !expandSubNav[j];
+        else        expandSubNav[j] = false;
+      }
+
+      /*
+      if (!expandSubNav[i]) {
+        collapseNavMenu = true;
+      }
+      */
+    }
+
+    return Task.CompletedTask;
+  }
+  public Task setSaveButtonVisibility()
+  {
+    saveButtonHidden = string.IsNullOrEmpty(CkAppShared.sFileCk) || Controllers.Member.MemberController.checkUserGame2(_usr);
+    saveAsButtonHidden = Controllers.Member.MemberController.checkUserGame2(_usr);
+    StateHasChanged();
+    return Task.CompletedTask;
+  }
+
+#if _WebApp
+  private async Task saveGame()
+  {
+  }
+
+  public async Task endGame()
+  {
+  }
+#else
+  private async Task saveGame()
+  {
+    if (string.IsNullOrEmpty(CkAppShared.sFileCk)) return;
+
+    try {
+      saveButtonDisabled = true;
+      await InvokeAsync(StateHasChanged);
+
+      CkAppShared.ckMng.tl.writeLog("Fast saving " + CkAppShared.sFileCk);
+      CornerkickManager.IO.Return retSave = await CkAppShared.ckMng.io.saveAsync(CkAppShared.sFileCk);
+      if (retSave.bOk) {
+        bool bUploadOk = false;
+        if (CkAppShared.sFileCk.Contains(".online")) {
+          //string sUploadResult = Controllers.Member.MemberController.uploadGameAsync(CkAppShared.sFileCk, _auth, as3, AmazonS3Service).Result;
+          //bUploadOk = string.IsNullOrEmpty(sUploadResult);
+        }
+
+        if (MainLayout.ckToast != null) {
+          MainLayout.toastMessage = "Spielstand <b>" + Path.GetFileNameWithoutExtension(CkAppShared.sFileCk) + "</b> gespeichert" + (bUploadOk ? " und hochgeladen" : "");
+          await MainLayout.ckToast.Show();
+        }
+        //await CommunityToolkit.Maui.Alerts.Toast.Make($"Spiel gespeichert", ToastDuration.Long).Show();
+      } else if (!string.IsNullOrEmpty(retSave.sError)) {
+        CkAppShared.ckMng.tl.writeLog(retSave.sError, bError: true);
+      } else if (!string.IsNullOrEmpty(retSave.sWarning)) {
+        CkAppShared.ckMng.tl.writeLog(retSave.sWarning, bError: true);
+      }
+    } catch (Exception e) {
+      string sErrorMsg = "ERROR saving game. Message: " + e.Message + Environment.NewLine + e.StackTrace;
+      CkAppShared.ckMng.tl.writeLog(sErrorMsg);
+    }
+
+    saveButtonDisabled = false;
+    await InvokeAsync(StateHasChanged);
+  }
+
+  public async Task endGame()
+  {
+    await CkDialog.ckDialog.Show(
+      "Spiel beenden?",
+      "Möchten Sie das aktuelle Spiel beenden? Nicht gespeicherte Daten gehen verloren.",
+      actionOnOk: () => {
+        //CkAppShared.ckMng.tl.writeLog("Game ended by user.");
+        clearCkMng();
+        CkAppShared.sFileCk = "";
+        saveButtonHidden = true;
+        saveAsButtonHidden = true;
+        NavMng.NavigateTo("/", forceLoad: true);
+      }
+    );
+  }
+
+  public static void clearCkMng()
+  {
+    CkAppShared.ckMng.ltUser.Clear();
+    CkAppShared.ckMng.ltClubs.Clear();
+    CkAppShared.ckMng.ltPlayer.Clear();
+    CkAppShared.ckMng.ltCups.Clear();
+    CkAppShared.ckMng.ltTransfer.Clear();
+    CkAppShared.ckMng.ltStadiums.Clear();
+  }
+#endif
+
+}

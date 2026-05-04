@@ -1,0 +1,84 @@
+﻿@using CornerkickApp.Shared.Models
+
+@if (_ltHistData != null && _ltHistData.Count > 0 && _ltHistData[0].Length > 0) {
+  <div style="max-width: 100%; overflow-x: auto">
+    <table class="table table-bordered compact" style="white-space: nowrap">
+      <thead>
+        <tr style="font-weight: bold;">
+          <td style="text-align: center;">Datum</td>
+          <td style="text-align: center;">Training</td>
+          <td colspan="2" style="text-align: center;">Kondi. [%]</td>
+          <td colspan="2" style="text-align: center;">Frische [%]</td>
+          <td colspan="2" style="text-align: center;">Moral [%]</td>
+        </tr>
+      </thead>
+      <tbody>
+        @for (int i = 0; i < _ltHistData.Count; i++) {
+          CkAppShared.DataPointTD[]? dp = _ltHistData[i];
+
+          if (dp != null && dp[0] != null && dp[1] != null && dp[2] != null && dp[0].X.HasValue && dp[0].Y.HasValue) {
+            float[] d = new float[] { 0f, 0f, 0f };
+            if (i + 1 < _ltHistData.Count) {
+              CkAppShared.DataPointTD[]? dpLast = _ltHistData[i + 1];
+              if (dpLast != null && dpLast[0] != null && dpLast[1] != null && dpLast[2] != null && dpLast[0].Y.HasValue && dpLast[1].Y.HasValue && dpLast[2].Y.HasValue) {
+                d = new float[]{
+                  (float)(dp[0].Y.Value - dpLast[0].Y.Value),
+                  (float)(dp[1].Y.Value - dpLast[1].Y.Value),
+                  (float)(dp[2].Y.Value - dpLast[2].Y.Value)
+                };
+              }
+            }
+
+            <tr style="font-size: 95%;">
+              <td style="display: none;">@dp[0].X.Value.ToUniversalTime()</td>
+              <td style="text-align: center;">@dp[0].X.Value.ToString("dd.MM HH.mm")</td>
+              <td style="text-align: center;">@dp[0].Z</td>
+              <td style="text-align: right; color: @(Controllers.Member.PlayerController.getColorFromValue( 0, (float)dp[0].Y.Value))">@((100 * dp[0].Y.Value).ToString("0.00"))</td>
+              <td style="text-align: right; color: @(Controllers.Member.PlayerController.getColorFromValue(99, d[0]))">@((100 * d[0]).ToString("+0.00;-0.00;0.0"))</td>
+              <td style="text-align: right; color: @(Controllers.Member.PlayerController.getColorFromValue( 0, (float)dp[1].Y.Value))">@((100 * dp[1].Y.Value).ToString("0.00"))</td>
+              <td style="text-align: right; color: @(Controllers.Member.PlayerController.getColorFromValue(99, d[1]))">@((100 * d[1]).ToString("+0.00;-0.00;0.0"))</td>
+              <td style="text-align: right; color: @(Controllers.Member.PlayerController.getColorFromValue( 0, (float)dp[2].Y.Value))">@((100 * dp[2].Y.Value).ToString("0.00"))</td>
+              <td style="text-align: right; color: @(Controllers.Member.PlayerController.getColorFromValue(99, d[2]))">@((100 * d[2]).ToString("+0.00;-0.00;0.0"))</td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+}
+
+@code {
+  List<CkAppShared.DataPointTD[]>? _ltHistData { get; set; }
+
+  public async Task draw(int iPlayerId)
+  {
+    _ltHistData = convert(CornerkickApp.Controllers.Member.PlayerController.GetTrainingHistoryData(iPlayerId));
+    if (_ltHistData != null) _ltHistData = _ltHistData.OrderByDescending(d => d[0].X).ToList();
+    await InvokeAsync(StateHasChanged);
+  }
+
+  public async Task draw(List<CkAppShared.DataPointTD>[]? ltHistData)
+  {
+    _ltHistData = convert(ltHistData);
+    await InvokeAsync(StateHasChanged);
+  }
+
+  private List<CkAppShared.DataPointTD[]>? convert(List<CkAppShared.DataPointTD>[]? ltHistData)
+  {
+    if (ltHistData == null) return null;
+
+    List<CkAppShared.DataPointTD[]>? ltHistDataConv = new List<CkAppShared.DataPointTD[]>();
+
+    for (int i = 0; i < ltHistData[0].Count; i++) {
+      ltHistDataConv.Add(
+        new CkAppShared.DataPointTD[] {
+          new CkAppShared.DataPointTD { X = ltHistData[0][i].X, Y = ltHistData[0][i].Y, Z = ltHistData[0][i].Z },
+          new CkAppShared.DataPointTD { X = ltHistData[1][i].X, Y = ltHistData[1][i].Y, Z = ltHistData[1][i].Z },
+          new CkAppShared.DataPointTD { X = ltHistData[2][i].X, Y = ltHistData[2][i].Y, Z = ltHistData[2][i].Z }
+        }
+      );
+    }
+
+    return ltHistDataConv;
+  }
+}

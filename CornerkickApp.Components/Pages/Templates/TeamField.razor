@@ -1,0 +1,77 @@
+﻿@if (_edField != null && _edField.Height > 0 && _edField.Width > 0) {
+  <svg style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:2"
+       viewBox="0 0 @_edField.Width @_edField.Height" preserveAspectRatio="none">
+    @foreach (var mm in _ltManMarkings) {
+        var pathEnd = convertPointToSvgPix(mm.ptPlOpp);
+        <path d="@GetPathSvg(mm)" stroke="orange" stroke-width="@(mm.iPlIx == _iSelPlIx ? "4" : "2")" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="@(mm.iPlIx == _iSelPlIx ? "1" : "0.85")" />
+        <circle cx="@pathEnd[0].ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)" cy="@pathEnd[1].ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)" r="6" fill="orange"></circle>
+      }
+    }
+  </svg>
+}
+
+@code {
+  [Parameter] public System.Drawing.Point ptPitch { get; set; }
+
+  //List<System.Drawing.Point[]> _ltManMarkings = new();
+  List<TeamField.ManMarking> _ltManMarkings = new();
+  Components.Pages.Member.ViewGame.ElemDimension? _edField { get; set; }
+  int _iSelPlIx { get; set; } = -1;
+
+  public class ManMarking
+  {
+    public System.Drawing.Point ptPl { get; set; } = new System.Drawing.Point();
+    public System.Drawing.Point ptPlOpp { get; set; } = new System.Drawing.Point();
+    public int iPlIx { get; set; } = -1;
+  }
+
+  public async Task ShowAsync(List<TeamField.ManMarking> ltManMarkings, Components.Pages.Member.ViewGame.ElemDimension? edField, int iSelPlIx)
+  {
+    _ltManMarkings = ltManMarkings;
+    _edField = edField;
+    _iSelPlIx = iSelPlIx;
+
+    await InvokeAsync(StateHasChanged);
+  }
+
+  private string GetPathSvg(ManMarking mm)
+  {
+    return GetPathSvg([mm.ptPl, mm.ptPlOpp]);
+  }
+  private string GetPathSvg(System.Drawing.Point[] path)
+  {
+    if (_edField == null) return string.Empty;
+    if (_edField.Width == 0 || _edField.Height == 0 || path == null || path.Length < 2) return string.Empty;
+
+    double[] scale = getSvgScaling();
+
+    var sb = new System.Text.StringBuilder();
+    for (int i = 0; i < path.Length; i++) {
+      double[] xy = convertPointToSvgPix(path[i], scale);
+      if (i == 0) sb.Append($"M{xy[0].ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)},{xy[1].ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)} ");
+      else        sb.Append($"L{xy[0].ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)},{xy[1].ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)} ");
+    }
+    return sb.ToString();
+  }
+
+  private double[] getSvgScaling()
+  {
+    if (_edField == null) return [0.0, 0.0];
+    if (_edField.Width == 0 || _edField.Height == 0) return [0.0, 0.0];
+
+    return [
+      _edField.Width  / (double)(ptPitch.Y * 2),
+      _edField.Height / (double) ptPitch.X
+    ];
+  }
+
+  private double[] convertPointToSvgPix(System.Drawing.Point pt, double[]? scale = null)
+  {
+    if (scale == null) scale = getSvgScaling();
+
+    double x = (pt.Y + ptPitch.Y) * scale[0];
+    double y = (ptPitch.X - pt.X) * scale[1];
+
+    return [x, y];
+  }
+}

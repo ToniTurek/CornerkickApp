@@ -1,0 +1,43 @@
+﻿@if (ltFilesCk != null && ltFilesCk.Count > 0) {
+  <RadioGroup TValue="string" Name="files" Buttons="true" class="btn-group-vertical btn-group-toggle" @bind-CheckedValue="@sFileCkSelected">
+    @foreach (string[] sFileCk in ltFilesCk) {
+      <Radio TValue="string" Group="ckfiles" Value="@(sFileCk[1])">
+        @sFileCk[0]
+        @if (sFileCk.Length > 2) {
+          string[] sSplit = sFileCk[2].Split();
+          @if (sSplit.Length > 1) {
+            <div style="position: absolute; top: 0; right: 2px; height: 100%; font-size: 75%; display: flex; flex-direction: column; align-items: flex-end; justify-content: center">
+              <span>@sSplit[0]</span>
+              <span>@sSplit[1] Uhr</span>
+            </div>
+          }
+        }
+      </Radio>
+    }
+  </RadioGroup>
+} else {
+  <label style="width: 100%; text-align: center; color: lightgray">kein Spielstand verfügbar</label>
+}
+
+@code {
+  [Parameter]
+  public List<string[]> ltFilesCk { get; set; }
+
+  [Parameter]
+  public Action<string> action { get; set; }
+
+  string _s = "";
+  private string? sFileCkSelected {
+    get { return _s; }
+    set {
+      _s = value;
+      action(value);
+    }
+  }
+
+  public async Task update(string? _sFileCk = null)
+  {
+    sFileCkSelected = _sFileCk;
+    await InvokeAsync(StateHasChanged);
+  }
+}

@@ -1,0 +1,501 @@
+﻿@page "/database"
+
+@using CornerkickApp.Components.Shared.Components
+@using CornerkickApp.Shared.Models
+@using Blazorise.Modules
+@using CommunityToolkit.Maui.Core
+@using CommunityToolkit.Maui.Storage
+@using CommunityToolkit.Maui.Alerts
+
+@inject NavigationManager NavigationManager
+@inject IFolderPickerService folderPickerService
+
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    /* Set background color to all buttons */
+    .btn-group .btn {
+      background-color: #ff8080 !important;
+    }
+
+    button.submit {
+      width: 100%;
+      font-size: 110%;
+      background-color: rgb(@(CkAppShared.sClCkRgb));
+      opacity: 0.9;
+      border-color: darkgreen;
+    }
+
+    button.submit:hover {
+      background-color: rgb(@(CkAppShared.sClCkRgb));
+      opacity: 1.0 !important;
+    }
+
+    /* Set background color of active button */
+    .btn-group .btn.active {
+      background-color: red /*#ff4d4d*/ !important;
+    }
+
+    /* Set background color on hover */
+    .btn-group .btn:hover {
+      background-color: #e60000 !important;
+    }
+
+    input[type="checkbox"].larger {
+      width: 20px;
+      height: 20px;
+      background: green;
+    }
+
+  </style>
+</head>
+<body>
+  <div class="@(bWorking ? "disabled" : "")" style="position: relative; max-width: 1000px">
+    <h4>Datensatz auswählen</h4>
+    <hr />
+
+    <div class="p-3 form-group" style="margin-bottom: 6px">
+      <RadioGroup TValue="string" Name="files" Buttons="true" class="btn-group-vertical btn-group-toggle" @bind-CheckedValue="@sFileCkSelected">
+        @{
+          if (ltFilesCk != null) {
+            foreach (string[] sFileCk in ltFilesCk) {
+              <Radio TValue="string" Group="filesdb" Value="@(sFileCk[1])">
+                <div style="display: flex; justify-content: space-between; align-items: center">
+                  @if (sFileCk.Length > 4 && sFileCk[4].Equals("XML")) {
+                    <img height=24 src="./_content/CornerkickApp.Components/Content/Images/xml.png" />
+                  }
+                  <span style="width: -webkit-fill-available; height:fit-content; font-size: 110%">@sFileCk[0]</span>
+                  <label>
+                    Medien:
+                    <input type="checkbox" class="larger" onclick="return false;" checked="@(sFileCk.Length > 3 && !string.IsNullOrEmpty(@sFileCk[3]))" />
+                  </label>
+                </div>
+                @if (sFileCk.Length > 3) {
+                  <span style="position: absolute; left: 0px; bottom: 0px; width: 100%; font-size: 60%">@sFileCk[3]</span>
+                }
+              </Radio>
+            }
+          }
+        }
+      </RadioGroup>
+    </div>
+
+    <button class="btn btn-primary submit" id="bnSubmit" style="width: 100%; font-size: 120%;" @onclick ="() => loadDatabase(false)">weiter &raquo;</button>
+
+    @*
+    <InputFile OnChange="importDb" style="width: 100%; margin-top: 16px" accept="*.ckdbx" />
+    *@
+    @*
+    <Field Style="width: 100%; margin-top: 16px">
+      <FileEdit Changed="@PickFolder" Placeholder="Mediendaten importieren" />
+    </Field>
+    <input type="file" id="ctrl" webkitdirectory directory @onchange="(EventArgs) => importDbMedia2(EventArgs)" />
+    <input type="file" @onclick="PickFolder" />
+    *@
+    <div style="display: flex; margin-top: 1.5rem">
+      @{
+        if (string.IsNullOrEmpty(sFileCkSelected)) {
+          <Button Color="Blazorise.Color.Success" Clicked="@(() => loadDatabase(true))" Style="flex-grow: 1; color: white">
+            <Blazorise.Icon Name="Blazorise.IconName.Edit" />
+            Neuer Datensatz
+          </Button>
+        } else {
+          <Button Color="Blazorise.Color.Warning" Clicked="@(() => loadDatabase(true))" Style="flex-grow: 1; margin-right: 4px; color: white">
+            <Blazorise.Icon Name="Blazorise.IconName.Edit" />
+            Datensatz editieren
+          </Button>
+          <Button Color="Blazorise.Color.Danger" Clicked="@deleteDb" Style="flex-grow: 1" Disabled="@(sFileCkSelected.Equals("default"))">
+            <Blazorise.Icon Name="Blazorise.IconName.Delete" />
+            Datensatz löschen
+          </Button>
+        }
+      }
+    </div>
+
+    <h5 style="margin-top: 20px">Externe Daten importieren</h5>
+    @{
+#if ANDROID
+      string sFilter = "application/octet-stream";
+#else
+      string sFilter = ".ckdbx";
+#endif
+    }
+    <div style="width: fit-content; margin-top: 16px">
+      <Field Style="width: 100%">
+        <FileEdit Changed="@importDb" Written="@OnWritten" Progressed="@OnProgressed" Ended="@OnEnded" Filter="@sFilter" Placeholder="Datensatz importieren" />
+      </Field>
+      <button class="btn btn-secondary" style="width: 100%; white-space: nowrap" @onclick="importDbMedia">Mediendaten importieren</button>
+    </div>
+  </div>
+</body>
+</html>
+
+@code {
+  private readonly IFolderPicker folderPicker;
+  private List<string[]> ltFilesCk { get; set; } = new List<string[]>();
+  private string sFileCkSelected { get; set; } = "";
+
+  private bool bWorking { get; set; }
+
+#if ANDROID
+#else
+  public Database(IFolderPicker folderPicker)
+  {
+    this.folderPicker = folderPicker;
+  }
+#endif
+
+  protected override async Task OnInitializedAsync()
+  {
+    await base.OnInitializedAsync();
+
+    await getFilesDb();
+  }
+
+  private async Task getFilesDb()
+  {
+    string sDbInfo = "Standard Datensatz - ";
+    foreach (int iN in CornerkickApp.Services.StartGameService.iNationsDefaultDb) {
+      sDbInfo += CornerkickManager.Main.sLandShort[iN] + "(2), ";
+    }
+    sDbInfo = sDbInfo.Trim();
+    sDbInfo = sDbInfo.Remove(sDbInfo.Length - 1, 1);
+
+    ltFilesCk = new List<string[]> { new string[] { sDbInfo, "default" } };
+    ltFilesCk.AddRange(await Services.StartGameService.getFilesToLoad(bDatabase: true));
+  }
+
+  private async Task loadDatabase(bool bEditor = false)
+  {
+    bWorking = true;
+    await InvokeAsync(StateHasChanged);
+
+    loadDatabaseWork(bEditor: bEditor);
+  }
+  private async Task loadDatabaseWork(bool bEditor = false)
+  {
+    if (string.IsNullOrEmpty(sFileCkSelected)) {
+      NavigationManager.NavigateTo("/editor/");
+    } else {
+      Progress<int[]> progressIndicator = new Progress<int[]>(ReportProgress);
+
+      bool bOk = await Services.StartGameService.loadDatabase(progressIndicator, sFileCkSelected: sFileCkSelected);
+
+      bWorking = false;
+      if (MainLayout.ckProgressBar != null) await MainLayout.ckProgressBar.stop();
+      await InvokeAsync(StateHasChanged);
+
+      if (bOk) NavigationManager.NavigateTo(bEditor ? "/editor/" + Path.GetFileName(sFileCkSelected) : "/newgame");
+    }
+  }
+
+  private void ReportProgress(int[] value)
+  {
+    if (CornerkickManager.Main.sLand != null && value[0] < CornerkickManager.Main.sLand.Length) {
+      string sProgressInfo = "Erstelle Liga: " + CornerkickManager.Main.sLand[value[0]] + ", " + (value[1] + 1).ToString() + " Liga ...";
+      int iProgress = ((100 * (value[2] + 1)) / (1 * CkAppShared.iNations.Length));
+      if (MainLayout.ckProgressBar != null) MainLayout.ckProgressBar.update(iProgress, sProgressInfo);
+
+      //Update the UI to reflect the progress value that is passed back.
+      //StateHasChanged();
+      //await InvokeAsync(StateHasChanged);
+    }
+  }
+
+  void ReportProgressCountMedia(int[] value)
+  {
+    int iProgress = value[1];
+    while (iProgress > 100) {
+      iProgress -= 100;
+    }
+    string sProgressInfo = "Zähle Mediendaten \"" + sMediaImgTypeDir[value[2]] + "\" ... " + value[1].ToString();
+    if (MainLayout.ckProgressBar != null) MainLayout.ckProgressBar.update(iProgress, sProgressInfo);
+
+    //Update the UI to reflect the progress value that is passed back.
+    //StateHasChanged();
+  }
+
+  void ReportProgressImportMedia(int[] value)
+  {
+    int iProgress = (100 * (value[1] + 1)) / value[0];
+    string sProgressInfo = "Importiere Mediendaten \"" + sMediaImgTypeDir[value[2]] + "\" ... " + iProgress.ToString() + "%";
+    if (MainLayout.ckProgressBar != null) MainLayout.ckProgressBar.update(iProgress, sProgressInfo);
+
+    //Update the UI to reflect the progress value that is passed back.
+    //StateHasChanged();
+  }
+
+  async Task importDb(FileChangedEventArgs e)
+  {
+    bWorking = true;
+    await InvokeAsync(StateHasChanged);
+
+    foreach (var file in e.Files) {
+      try {
+        // A stream is going to be the destination stream we're writing to.
+        using (var stream = new MemoryStream()) {
+          // Here we're telling the FileEdit where to write the upload result
+          await file.WriteToStreamAsync(stream);
+
+          // Once we reach this line it means the file is fully uploaded.
+          // In this case we're going to offset to the beginning of file
+          // so we can read it.
+          stream.Seek(0, SeekOrigin.Begin);
+
+          string sDbDir = Path.Combine(Controllers.App.getDocumentsDir, "database");
+          if (!Directory.Exists(sDbDir)) Directory.CreateDirectory(sDbDir);
+          using (FileStream DestinationStream = File.Create(Path.Combine(sDbDir, Path.GetFileName(file.Name)))) {
+            await stream.CopyToAsync(DestinationStream);
+          }
+
+          /*
+          string sMediaDir = Path.Combine(file.RelativePath, "media_", Path.GetFileNameWithoutExtension(file.Name));
+          if (File.Exists(sMediaDir)) CopyFilesRecursively(sMediaDir, sDbDir);
+          */
+
+          /*
+          // Use the stream reader to read the content of uploaded file,
+          // in this case we can assume it is a textual file.
+          using (var reader = new StreamReader(stream)) {
+            fileContent = await reader.ReadToEndAsync();
+            }
+          */
+        }
+      } catch (Exception ex) {
+        Console.WriteLine(ex.Message);
+
+        string sError = "File: " + file.Name + " Error: " + ex.Message;
+
+        await CkDialog.ckDialog.Show(
+          "Fehler",
+          sError,
+          sButtonCancelText2: ""
+        );
+      } finally {
+        this.StateHasChanged();
+        Task.Run(() => getFilesDb()).Wait();
+      }
+    }
+
+    bWorking = false;
+    await InvokeAsync(StateHasChanged);
+  }
+
+  /*
+  async Task PickFolder()
+  {
+    CancellationTokenSource source = new();
+    CancellationToken token = source.Token;
+
+    var result = await folderPicker.PickAsync(token);
+    result.EnsureSuccess();
+    await CommunityToolkit.Maui.Alerts.Toast.Make($"Folder picked: Name - {result.Folder.Name}, Path - {result.Folder.Path}", ToastDuration.Long).Show(token);
+    }
+  */
+
+  private async Task importDbMedia()
+  {
+    CancellationTokenSource source = new();
+    CancellationToken token = source.Token;
+
+    string pickResult = await folderPickerService.PickFolderAsync();
+    if (string.IsNullOrEmpty(pickResult)) return;
+
+    bWorking = true;
+    await InvokeAsync(StateHasChanged);
+
+    string SelectedFolder;
+    string SelectedFolderName;
+
+    // Android-implementation liefert aktuell URI (content://...), andere Plattformen liefern Pfad
+    if (pickResult.StartsWith("content://")) {
+      SelectedFolder = pickResult;
+      // robustere Extraktion des letzten Segments
+      var idx = pickResult.LastIndexOf("%2F");
+      SelectedFolderName = idx >= 0 ? pickResult[(idx + 3)..] : pickResult;
+    } else {
+      SelectedFolder = pickResult;
+      SelectedFolderName = Path.GetFileName(SelectedFolder);
+    }
+
+    string sDbDir = Path.Combine(Controllers.App.getDocumentsDir, "database");
+    if (!Directory.Exists(sDbDir)) Directory.CreateDirectory(sDbDir);
+
+    string sTargetDir = Path.Combine(sDbDir, SelectedFolderName);
+
+    await importDbMedia2(SelectedFolder, sTargetDir, token);
+    /*
+    await CkDialog.ckDialog.Show(
+    "Info",
+    "Mediendaten im Ordner <b>" + result.Folder.Name + "</b><ul><li>Cup Wappen: " + iFileCounts[0].ToString() + "</li><li>Club Wappen: " + iFileCounts[1].ToString() + "</li><li>Spielerportraits: " + iFileCounts[2].ToString() + "</li></ul>",
+    //sButtonCancelText2: "",
+    sButtonOkText2: "Importieren",
+    actionOnOk: () => importDbMedia2(result.Folder.Path, sTargetDir, token),
+    bKeepOpen2: false
+    );
+    */
+  }
+
+  private async Task importDbMedia2(string sSourceDir, string sTargetDir, CancellationToken token)
+  {
+    string sText = "Mediendaten im Ordner: <b>" + Path.GetFileName(sTargetDir) + "</b>";
+
+    Progress<int[]> progressIndicatorCount = new Progress<int[]>(ReportProgressCountMedia);
+#if ANDROID
+    int[] iFileCounts = await CornerkickApp.Platforms.Android.DatabaseTools.copyMediaDataAndroid(sSourceDir, progress: progressIndicatorCount, bCount: true, sMediaImgDir: StartGameService.sMediaImgDir, sMediaImgTypeDir: StartGameService.sMediaImgTypeDir);
+#else
+    int[] iFileCounts = await StartGameService.copyMediaData(sSourceDir, progress: progressIndicatorCount, bCount: true);
+#endif
+    int iFilesTotal = 0;
+    foreach (int iCount in iFileCounts) iFilesTotal += iCount;
+
+    sText += "<br /><ul><li>Cup Wappen: " + iFileCounts[0].ToString() + "</li><li>Club Wappen: " + iFileCounts[1].ToString() + "</li><li>Spielerportraits: " + iFileCounts[2].ToString() + "</li></ul>";
+    bool bFolderExist = Directory.Exists(sTargetDir);
+    if (bFolderExist) sText += "<br />Medienordner <b>" + Path.GetFileName(sTargetDir) + "</b> existiert bereits. Vorhandenen Ordner löschen oder Daten integrieren?";
+
+    Progress<int[]> progressIndicator = new Progress<int[]>(ReportProgressImportMedia);
+
+    await CkDialog.ckDialog.Show(
+      bFolderExist ? "Warnung" : "Info",
+      sText,
+      //sButtonCancelText2: "",
+      sButtonOkText2: bFolderExist ? "Löschen" : "Importieren",
+      sButton3Text2: bFolderExist ? "Integrieren" : "",
+      actionOnOk: () => copyMediaData(sSourceDir, sTargetDir, progressIndicator, token, iFilesTotal: iFilesTotal),
+      actionOn3: () => copyMediaData(sSourceDir, sTargetDir, progressIndicator, token, bClean: false, iFilesTotal: iFilesTotal),
+      actionOnCancel: () => {
+        if (MainLayout.ckProgressBar != null) MainLayout.ckProgressBar.stop();
+        bWorking = false;
+        InvokeAsync(StateHasChanged);
+      }
+    );
+  }
+
+  void OnWritten(FileWrittenEventArgs e)
+  {
+    Console.WriteLine($"File: {e.File.Name} Position: {e.Position} Data: {Convert.ToBase64String(e.Data)}");
+  }
+
+  void OnProgressed(FileProgressedEventArgs e)
+  {
+    string sProgressInfo = $"Importiere Datenbank {e.File.Name.Replace(".ckdbx", "")} ... {e.Percentage.ToString("0.0")}%";
+    Console.WriteLine(sProgressInfo);
+    int iProgress = (int)e.Percentage;
+    if (MainLayout.ckProgressBar != null) MainLayout.ckProgressBar.update(iProgress, sProgressInfo);
+  }
+
+  void OnEnded(FileEndedEventArgs e)
+  {
+    Console.WriteLine($"Datenbank {e.File.Name.Replace(".ckdbx", "")} importiert");
+    if (MainLayout.ckProgressBar != null) MainLayout.ckProgressBar.stop();
+  }
+
+  const string sMediaImgDir = "images";
+  const string sMediaSoundsDir = "sounds";
+  readonly static string[] sMediaImgTypeDir = new string[] { "cup_emblems", "emblems", "portraits" };
+  private async Task copyMediaData(string sourcePath, string targetPath, IProgress<int[]> progress, CancellationToken token, bool bClean = true, int iFilesTotal = -1)
+  {
+    CkAppShared.ckMng.tl.writeLog("Import media from " + sourcePath + " to " + targetPath);
+
+    //int iFilesTotal = Directory.GetFiles(sourcePath, "*", SearchOption.AllDirectories).Length;
+    if (iFilesTotal < 0) iFilesTotal = StartGameService.GetMediaFileCounts(sourcePath)[0];
+
+    if (iFilesTotal < 1) {
+      await CkDialog.ckDialog.Show(
+        "Import Mediendaten",
+        "Im ausgewählten Ordner wurden keine Daten gefunden.",
+        sButtonCancelText2: ""
+      );
+      bWorking = false;
+      if (MainLayout.ckProgressBar != null) await MainLayout.ckProgressBar.stop();
+      await InvokeAsync(StateHasChanged);
+      return;
+    }
+
+#if ANDROID
+    int[] iFileCounts = await Platforms.Android.DatabaseTools.copyMediaDataAndroid(sourcePath, targetPath: targetPath, progress: progress, bClean: bClean, iFilesTotal: iFilesTotal, sMediaImgDir: StartGameService.sMediaImgDir, sMediaImgTypeDir: StartGameService.sMediaImgTypeDir);
+#else
+    int[] iFileCounts = await StartGameService.copyMediaData(sourcePath, targetPath, progress, bClean);
+#endif
+
+    // Inform user
+    //await CommunityToolkit.Maui.Alerts.Toast.Make($"Mediendaten \"{Path.GetFileName(sMediaDir)}\" importiert", ToastDuration.Long).Show(token);
+    await CkDialog.ckDialog.Show(
+      "Import Mediendaten",
+      "Mediendaten <b>" + Path.GetFileName(targetPath) + "</b> importiert.<br /><ul><li>Cup Wappen: " + iFileCounts[0].ToString() + "</li><li>Club Wappen: " + iFileCounts[1].ToString() + "</li><li>Spielerportraits: " + iFileCounts[2].ToString() + "</li></ul>",
+      sButtonCancelText2: ""
+    );
+
+    await getFilesDb();
+
+    bWorking = false;
+    if (MainLayout.ckProgressBar != null) await MainLayout.ckProgressBar.stop();
+
+    await InvokeAsync(StateHasChanged);
+  }
+
+  private static async Task CopyFilesRecursively(string sourcePath, string targetPath)
+  {
+    //Now Create all of the directories
+    foreach (string dirPath in Directory.GetDirectories(sourcePath, "*", SearchOption.AllDirectories)) {
+      try {
+        Directory.CreateDirectory(dirPath.Replace(sourcePath, targetPath));
+      } catch (Exception ex) {
+        CkAppShared.ckMng.tl.writeLog("Error creating directory " + dirPath + " while importing media." + Environment.NewLine + ex.Message + Environment.NewLine + ex.StackTrace, bError: true);
+      }
+    }
+
+    //Copy all the files & Replaces any files with the same name
+#if ANDROID
+  PermissionStatus statusRead  = await Permissions.RequestAsync<Permissions.StorageRead>();
+  PermissionStatus statusWrite = await Permissions.RequestAsync<Permissions.StorageWrite>();
+
+  if (statusRead == PermissionStatus.Granted && statusWrite == PermissionStatus.Granted) {
+#endif
+    foreach (string newPath in Directory.GetFiles(sourcePath, "*.*", SearchOption.AllDirectories)) {
+      try {
+        CkAppShared.ckMng.tl.writeLog("Import media " + newPath + " from " + sourcePath + " to " + targetPath);
+        File.Copy(newPath, newPath.Replace(sourcePath, targetPath), true);
+      } catch (Exception ex) {
+        CkAppShared.ckMng.tl.writeLog("Error importing media file: " + newPath + Environment.NewLine + ex.Message + Environment.NewLine + ex.StackTrace, bError: true);
+      }
+    }
+#if ANDROID
+    }
+#endif
+  }
+
+  private async Task deleteDb()
+  {
+    await CkDialog.ckDialog.Show(
+      "Datensatz löschen", "Der Datensatz <b>" + Path.GetFileNameWithoutExtension(sFileCkSelected) + "</b> wird unwiderruflich gelöscht.<br><br>Fortfahren?",
+      sButtonOkText2: "löschen",
+      //      actionOnOk: () => CkDialog.ckDialog.CloseModal(0)
+      actionOnOk: () => delDatabaseWork(sFileCkSelected)
+    );
+
+    await InvokeAsync(StateHasChanged);
+  }
+
+  private Task delDatabaseWork(string _sFileCkSelected)
+  {
+    if (string.IsNullOrEmpty(_sFileCkSelected)) return Task.CompletedTask;
+
+    bWorking = true;
+
+    StateHasChanged();
+
+    if      (File     .Exists(_sFileCkSelected)) File     .Delete(_sFileCkSelected);
+    else if (Directory.Exists(_sFileCkSelected)) Directory.Delete(_sFileCkSelected, true);
+
+    Task.Run(() => getFilesDb()).Wait();
+
+    sFileCkSelected = "";
+
+    bWorking = false;
+
+    StateHasChanged();
+    return Task.CompletedTask;
+  }
+}

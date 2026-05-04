@@ -1,0 +1,559 @@
+﻿@page "/member/sponsors"
+
+@using CornerkickApp.Controllers.Member
+@using CornerkickApp.Components.Pages.Templates
+@using CornerkickApp.Components.Shared.Components
+@using CornerkickApp.Shared.Models
+
+@inject IJSRuntime JS
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject Controllers.Shared.MyAuthenticationStateProvider _auth
+
+<PageTitle>Sponsoren</PageTitle>
+
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    div.row {
+      margin-right: 0;
+    }
+  </style>
+</head>
+
+<body>
+  @if (model != null && _usr != null) {
+    <Blazorise.Tabs SelectedTab="@selectedTab" SelectedTabChanged="@OnSelectedTabChanged">
+      <Items>
+        <Blazorise.Tab Style="@CkAppShared.sCssStyleClubColors" Name="tabMainSponsor">Hauptsponsor</Blazorise.Tab>
+        <Blazorise.Tab Style="@CkAppShared.sCssStyleClubColors" Name="tabBoards">Banden</Blazorise.Tab>
+        <Blazorise.Tab Style="@CkAppShared.sCssStyleClubColors" Name="tabSpecial" hidden="@(_usr.iResp < CkAppShared.iUserRespSponsorsSpecial)">Spezialsponsoren</Blazorise.Tab>
+      </Items>
+      <Content>
+        <Blazorise.TabPanel Name="tabMainSponsor">
+          <div style="margin-top: 10px; width: 100%; max-width: 600px">
+            <div id="divJerseyContainer" class="image" style="position: relative; aspect-ratio: 1.15; margin-bottom: 2%; background-color: @model.sColorJersey" align="center">
+              <img style="position: absolute; top: 0px; left: 0px; width: 100%" src="@CornerkickApp.Shared.Models.CkAppShared.sContentDir/Icons/jersey.png" />
+              @if (@model.sEmblem != null) {
+                <div id="divJerseyEmblem" style="position: absolute; height: 15%; top: 25%; left: 60%">
+                  <img src="@model.sEmblem" alt="Wappen" style="width: 100%; height: 100%; object-fit: contain">
+                </div>
+              }
+              <div id="divSponsorMain" style="position: relative; width: 50%; aspect-ratio: 1.5; top: 45%; border: 1px solid #ddd; border-radius: 4px; padding: 5px">
+                <div style="position: absolute; height: 100%; width: 100%; display: flex; align-items: center; justify-content:center; font-size: x-large">@sSponsorMainName</div>
+                @((MarkupString)sSponsorMainImg)
+              </div>
+            </div>
+
+            <div style="overflow-x: auto">
+              <DataGrid TItem="SponsorModel.TableItemSponsorMain"
+                        Data="@ltSponsorMain"
+                        Style="white-space: nowrap; margin: 0"
+                        PageSize="20"
+                        Narrow
+                        RowStyling="OnRowStyling"
+                        Responsive
+                        Sortable
+                        SortMode="DataGridSortMode.Single"
+                        RowSelectable=@((x) => x.Item.bOffer)
+                        SelectedRowChanged="selectSponsorMain">
+                <DataGridColumns>
+                  <DataGridColumn Field="@nameof(SponsorModel.TableItemSponsorMain.iIndex)" Displayable="false" Sortable="false" />
+                  <DataGridColumn Field="@nameof(SponsorModel.TableItemSponsorMain.iId)" Displayable="false" Sortable="false" />
+                  <DataGridColumn Field="@nameof(SponsorModel.TableItemSponsorMain.bOffer)" Displayable="false" Sortable="false" />
+                  <DataGridColumn Field="@nameof(SponsorModel.TableItemSponsorMain.sName)" Caption="Sponsor" />
+                  <DataGridColumn Field="@nameof(SponsorModel.TableItemSponsorMain.iMoneyYear)" Caption="Prämie [€/a]" DisplayFormat="{0:N0}" TextAlignment="Blazorise.TextAlignment.End" />
+                  <DataGridColumn Field="@nameof(SponsorModel.TableItemSponsorMain.iMoneyVic)" Caption="Siegpr. [€]" DisplayFormat="{0:N0}" TextAlignment="Blazorise.TextAlignment.End" />
+                  <DataGridColumn Field="@nameof(SponsorModel.TableItemSponsorMain.iMoneyCupWin)" Caption="Meisterpr. [€]" DisplayFormat="{0:N0}" TextAlignment="Blazorise.TextAlignment.End" />
+                  <DataGridColumn Field="@nameof(SponsorModel.TableItemSponsorMain.iYears)" Caption="Lz [a]" TextAlignment="Blazorise.TextAlignment.Center" />
+                  <DataGridColumn Field="@nameof(SponsorModel.TableItemSponsorMain.fMood)" Caption="VB" TextAlignment="Blazorise.TextAlignment.Center">
+                    <DisplayTemplate>
+                      @(context.bOffer? context.fMood.ToString("0.0%") : "-")
+                    </DisplayTemplate>
+                  </DataGridColumn>
+                </DataGridColumns>
+                <EmptyTemplate>
+                  <div class="box">
+                    Keine Angebote ...
+                  </div>
+                </EmptyTemplate>
+                <LoadingTemplate>
+                  <div class="box">
+                    <progress class="progress is-small is-primary" max="100" />
+                  </div>
+                </LoadingTemplate>
+              </DataGrid>
+            </div>
+
+            <button class="btn btn-primary" @onclick="openNego" disabled="@(model.sponsorMain.iId > 0 || !(selectedSponsorMain != null && selectedSponsorMain.fMood > 0f))">verhandeln</button>
+            <button class="btn btn-primary" @onclick="takeSponsor" disabled="@(model.sponsorMain.iId > 0 || !(selectedSponsorMain != null && selectedSponsorMain.fMood > 0f))">Sponsor wählen</button>
+            <button class="btn btn-secondary" disabled="@(model.sponsorMain.iId > 0 || !(selectedSponsorMain != null && selectedSponsorMain.fMood > 0f))">Angebot ablehnen</button>
+          </div>
+        </Blazorise.TabPanel>
+        <Blazorise.TabPanel Name="tabBoards">
+          <div style="margin-top: 10px">
+            <div style="max-width: fit-content; overflow-x: auto">
+              <DataGrid TItem="SponsorModel.TableItemSponsorBoard"
+                        Data="@ltSponsorBoard"
+                        Style="white-space: nowrap; margin: 0"
+                        PageSize="20"
+                        Narrow
+                        RowStyling="OnRowStyling"
+                        Responsive
+                        Sortable
+                        SortMode="DataGridSortMode.Single"
+                        RowSelectable=@((x) => x.Item.bOffer)
+                        SelectedRowChanged="selectSponsorBoard">
+                <DataGridColumns>
+                  <DataGridColumn Field="@nameof(SponsorModel.TableItemSponsorBoard.iIndex)" Displayable="false" Sortable="false" />
+                  <DataGridColumn Field="@nameof(SponsorModel.TableItemSponsorBoard.iId)" Displayable="false" Sortable="false" />
+                  <DataGridColumn Field="@nameof(SponsorModel.TableItemSponsorBoard.bOffer)" Displayable="false" Sortable="false" />
+                  <DataGridColumn Field="@nameof(SponsorModel.TableItemSponsorBoard.sName)" Caption="Sponsor" />
+                  <DataGridColumn Field="@nameof(SponsorModel.TableItemSponsorBoard.iMoneyVicHome)" Caption="Prämie/Heimspiel [€] *" DisplayFormat="{0:N0}" TextAlignment="Blazorise.TextAlignment.End" />
+                  <DataGridColumn Field="@nameof(SponsorModel.TableItemSponsorBoard.nBoards)" Caption="Banden" DisplayFormat="{0:N0}" TextAlignment="Blazorise.TextAlignment.Center" />
+                  <DataGridColumn Field="@nameof(SponsorModel.TableItemSponsorBoard.iYears)" Caption="Lz [a]" TextAlignment="Blazorise.TextAlignment.Center" />
+                  <DataGridColumn Field="@nameof(SponsorModel.TableItemSponsorBoard.fMood)" Caption="VB" TextAlignment="Blazorise.TextAlignment.Center">
+                    <DisplayTemplate>
+                      @(context.bOffer? context.fMood.ToString("0.0%") : "-")
+                    </DisplayTemplate>
+                  </DataGridColumn>
+                </DataGridColumns>
+                <EmptyTemplate>
+                  <div class="box">
+                    Keine Angebote ...
+                  </div>
+                </EmptyTemplate>
+                <LoadingTemplate>
+                  <div class="box">
+                    <progress class="progress is-small is-primary" max="100" />
+                  </div>
+                </LoadingTemplate>
+              </DataGrid>
+
+              <button class="btn btn-primary" @onclick="openNego" disabled="@(!(selectedSponsorBoard != null && selectedSponsorBoard.fMood > 0f))">verhandeln</button>
+              <button class="btn btn-primary" @onclick="takeSponsor" disabled="@(!(selectedSponsorBoard != null && selectedSponsorBoard.fMood > 0f))">Sponsor wählen</button>
+              <p style="margin-top: 10px; margin-bottom: 0px">* Entspricht Wettbewerbs-Prioritätsfaktor von 1.0</p>
+            </div>
+
+            <div style="margin-top: 2rem; display: flex; flex-wrap: wrap; justify-content: flex-start">
+              @for (int iB = 0; iB < nBoards; iB++) {
+                <div class="sponsorBoard" data-index="@iB.ToString()">
+                  @if (iB < sSponsorBoardImg.Length) {
+                    @((MarkupString)sSponsorBoardImg[iB])
+                  }
+                </div>
+              }
+            </div>
+          </div>
+        </Blazorise.TabPanel>
+        <Blazorise.TabPanel Name="tabSpecial">
+          <div style="margin-top: 10px">
+          </div>
+        </Blazorise.TabPanel>
+      </Content>
+    </Blazorise.Tabs>
+  }
+
+  @if ((selectedSponsorMain != null && offerSponsorMain != null) || (selectedSponsorBoard != null && offerSponsorBoard != null)) {
+    <Blazorise.Modal @ref="modalNego">
+      <Blazorise.ModalContent Centered>
+        <Blazorise.ModalHeader Style="color: white; background-color: rgb(31, 158, 69)">
+          <Blazorise.ModalTitle>
+            Vertragsverhandlung
+          </Blazorise.ModalTitle>
+          <Blazorise.CloseButton />
+        </Blazorise.ModalHeader>
+        <Blazorise.ModalBody Style="overflow: auto">
+          <div style="width: 100%">
+            <table style="width: 100%; table-layout: fixed; margin-bottom: 10px;" class="table table-bordered">
+              <thead>
+                <tr style="background-color: gray">
+                  <td style="text-align: center; font-weight: bold; color: white"></td>
+                  <td style="text-align: center; font-weight: bold; color: white">Geboten</td>
+                  <td style="text-align: center; font-weight: bold; color: white">Ihre Forderung</td>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  @if (selectedSponsorMain != null && offerSponsorMain != null) {
+                    <td style="padding-right: 4px; font-weight: bold; text-align: right;">Prämie/Jahr</td>
+                    <td style="padding-right: 6px; text-align: right;">
+                      <txt id="txtContractMoney2">@selectedSponsorMain.iMoneyYear.ToString("N0") €</txt>
+                    </td>
+                    <td style="text-align: center;">
+                      <RadzenNumeric TValue="int" Format="C0" Value="@offerSponsorMain.iMoneyYear" ValueChanged="OnChangeMoneyYear" Min="0" Step="@(Controllers.Tool.roundIntBy(offerSponsorMain.iMoneyYear, 1).ToString())" TextAlign="TextAlign.Right" Style="font-size: 1rem; color: black" />
+                    </td>
+                  } else if (selectedSponsorBoard != null && offerSponsorBoard != null) {
+                    <td style="padding-right: 4px; font-weight: bold; text-align: right;">Prämie/Heimspiel</td>
+                    <td style="padding-right: 6px; text-align: right;">
+                      <txt id="txtContractMoney2">@selectedSponsorBoard.iMoneyVicHome.ToString("N0") €</txt>
+                    </td>
+                    <td style="text-align: center;">
+                      <RadzenNumeric TValue="int" Format="C0" Value="@offerSponsorBoard.iMoneyVicHome" ValueChanged="OnChangeMoneyVicHome" Min="0" Step="@(Controllers.Tool.roundIntBy(offerSponsorBoard.iMoneyVicHome, 1).ToString())" TextAlign="TextAlign.Right" Style="font-size: 1rem; color: black" />
+                    </td>
+                  }
+                </tr>
+                @if (selectedSponsorMain != null && offerSponsorMain != null) {
+                  <tr>
+                    <td style="padding-right: 4px; font-weight: bold; text-align: right;">Siegprämie</td>
+                    <td style="padding-right: 6px; text-align: right;">
+                      <txt id="txtContractMoney2">@selectedSponsorMain.iMoneyVic.ToString("N0") €</txt>
+                    </td>
+                    <td style="text-align: center;">
+                      <RadzenNumeric TValue="int" Format="C0" Value="@offerSponsorMain.iMoneyVic" ValueChanged="OnChangeMoneyVic" Min="0" Step="@(Controllers.Tool.roundIntBy(offerSponsorMain.iMoneyVic, 1).ToString())" TextAlign="TextAlign.Right" Style="font-size: 1rem; color: black" />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding-right: 4px; font-weight: bold; text-align: right;">Meisterprämie</td>
+                    <td style="padding-right: 6px; text-align: right;">
+                      <txt id="txtContractMoney2">@selectedSponsorMain.iMoneyCupWin.ToString("N0") €</txt>
+                    </td>
+                    <td style="text-align: center;">
+                      <RadzenNumeric TValue="int" Format="C0" Value="@offerSponsorMain.iMoneyCupWin" ValueChanged="OnChangeMoneyCupWin" Min="0" Step="@(Controllers.Tool.roundIntBy(offerSponsorMain.iMoneyCupWin, 1).ToString())" TextAlign="TextAlign.Right" Style="font-size: 1rem; color: black" />
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+            <div style="position: relative; width: 96%; left: 2%; margin-top: 20px;" align="center">
+              @{
+                float fMood = 1f;
+                if      (selectedSponsorMain  != null) fMood = selectedSponsorMain .fMood;
+                else if (selectedSponsorBoard != null) fMood = selectedSponsorBoard.fMood;
+              }
+              <div style="position: relative; display: flex; align-items: center; justify-content: center">
+                <b>Verhandlungsbereitschaft: <span style="font-weight: normal; color: @Controllers.Tool.getColor0_1(fMood)">@fMood.ToString("0%")</span></b>
+                <div style="width: 64px; height: 64px; margin-left: 20px; transform: rotate(@(((1f - fMood) * 180f).ToString("0"))deg);">
+                  <div style="position: absolute; top: 2px; left: 2px; width: 60px; height: 60px">
+                    <img src="@CornerkickApp.Shared.Models.CkAppShared.sContentDir/Icons/thumb.png" width="60" style="background-color: @Controllers.Tool.getColor0_1(fMood)">
+                  </div>
+                  <div style="position: absolute; width: 64px; height: 64px; top: 0px; left: 0px; border: 4px solid white"></div>
+                </div>
+              </div>
+              <button class="btn btn-primary" style="position: relative; width: 100%; margin-top: 4px; z-index: 2" @onclick="negoSponsor">verhandeln</button>
+            </div>
+          </div>
+        </Blazorise.ModalBody>
+        <Blazorise.ModalFooter Flex="Blazorise.Flex.JustifyContent.Between">
+          <Blazorise.Div>
+            <Blazorise.Button Color="Blazorise.Color.Secondary" Clicked="cancelNego">abbrechen</Blazorise.Button>
+          </Blazorise.Div>
+          <Blazorise.Div>
+            <Blazorise.Button Color="Blazorise.Color.Primary" Clicked="takeSponsor">annehmen</Blazorise.Button>
+          </Blazorise.Div>
+        </Blazorise.ModalFooter>
+      </Blazorise.ModalContent>
+    </Blazorise.Modal>
+  }
+</body>
+</html>
+
+@code {
+  private CornerkickManager.User? _usr;
+  private SponsorModel? model;
+
+  string selectedTab = "tabMainSponsor";
+
+  List<SponsorModel.TableItemSponsorMain>? ltSponsorMain { get; set; }
+  private SponsorModel.TableItemSponsorMain? selectedSponsorMain = null;
+  private SponsorModel.TableItemSponsorMain? offerSponsorMain = null;
+
+  private string sSponsorMainName { get; set; } = "";
+  private string sSponsorMainImg { get; set; } = "";
+
+  private const byte nBoards = 12;
+  List<SponsorModel.TableItemSponsorBoard>? ltSponsorBoard { get; set; }
+  private SponsorModel.TableItemSponsorBoard? selectedSponsorBoard = null;
+  private SponsorModel.TableItemSponsorBoard? offerSponsorBoard = null;
+
+  private string[] sSponsorBoardNames { get; set; }
+  private string[] sSponsorBoardImg { get; set; }
+
+  private Blazorise.Modal? modalNego { get; set; }
+
+  protected override async Task OnInitializedAsync()
+  {
+    await base.OnInitializedAsync();
+
+#if _WebApp
+    //_usr = await Http.GetFromJsonAsync<CornerkickManager.User>("member/Member/ckUser");
+    _usr = Controllers.Member.MemberController.ckUser(await _auth.GetUserId());
+#else
+    _usr = CkAppShared.ckMng.ltUser[CkAppShared.iUserActive];
+#endif
+
+    model = CornerkickApp.Controllers.Member.SponsorController.Get(_usr);
+
+    setSponsorMain();
+    setSponsorBoards();
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender) {
+      await InvokeAsync(StateHasChanged);
+    }
+  }
+
+  private Task OnSelectedTabChanged(string name)
+  {
+    selectedTab = name;
+
+    return Task.CompletedTask;
+  }
+
+  private void OnRowStyling(SponsorModel.TableItemSponsorMain ti, DataGridRowStyling styling)
+  {
+    if (!ti.bOffer) styling.Style = "font-weight: bold";
+
+    if (selectedSponsorMain != null && selectedSponsorMain.iId == ti.iId && selectedSponsorMain.iIndex == ti.iIndex) {
+      styling.Style += "; background-color: pink";
+    }
+  }
+
+  private void OnRowStyling(SponsorModel.TableItemSponsorBoard ti, DataGridRowStyling styling)
+  {
+    if (!ti.bOffer) styling.Style = "font-weight: bold";
+
+    if (selectedSponsorBoard != null && selectedSponsorBoard.iId == ti.iId && selectedSponsorBoard.iIndex == ti.iIndex) {
+      styling.Style += "; background-color: pink";
+    }
+  }
+
+  private async Task setSponsorMain()
+  {
+    if (model == null) return;
+    if (_usr == null) return;
+
+    ltSponsorMain = Controllers.Member.SponsorController.GetTableMain(_usr);
+    setSponsorMainBadge(model.sponsorMain.iId);
+  }
+
+  private async Task setSponsorBoards()
+  {
+    if (model == null) return;
+    if (_usr == null) return;
+
+    ltSponsorBoard = Controllers.Member.SponsorController.GetTableBoard(_usr);
+    setSponsorBoardBadges(selectedSponsorBoard == null ? 0 : selectedSponsorBoard.iId);
+  }
+
+  private async Task selectSponsorMain(SponsorModel.TableItemSponsorMain ti)
+  {
+    selectedSponsorBoard = null;
+
+    sSponsorMainImg = "";
+    sSponsorMainName = "";
+
+    if (selectedSponsorMain != null && selectedSponsorMain.iId == ti.iId) {
+      selectedSponsorMain = null;
+      if (model != null) setSponsorMainBadge(model.sponsorMain.iId);
+      return;
+    }
+    selectedSponsorMain = ti;
+    if (model != null) setSponsorMainBadge(selectedSponsorMain.iId);
+
+    offerSponsorMain = new SponsorModel.TableItemSponsorMain();
+    offerSponsorMain.iMoneyYear   = Controllers.Tool.roundInt((int)(1.3 * selectedSponsorMain.iMoneyYear),   1);
+    offerSponsorMain.iMoneyVic    = Controllers.Tool.roundInt((int)(1.3 * selectedSponsorMain.iMoneyVic),    1);
+    offerSponsorMain.iMoneyCupWin = Controllers.Tool.roundInt((int)(1.3 * selectedSponsorMain.iMoneyCupWin), 1);
+
+    ltSponsorMain = Controllers.Member.SponsorController.GetTableMain(_usr);
+  }
+
+  private void setSponsorMainBadge(int iSponsorId)
+  {
+    if (model == null) return;
+
+    if (iSponsorId > 0 && iSponsorId < model.ltSponsorBadgeMain.Count) {
+      sSponsorMainImg = model.ltSponsorBadgeMain[iSponsorId];
+      if (iSponsorId < CkAppShared.ckMng.fz.ltSponsoren.Count) sSponsorMainName = CkAppShared.ckMng.fz.ltSponsoren[iSponsorId].name;
+    }
+  }
+
+  private async Task selectSponsorBoard(SponsorModel.TableItemSponsorBoard ti)
+  {
+    selectedSponsorMain = null;
+
+    if (_usr == null) return;
+    
+    // No sponsor selected
+    if (selectedSponsorBoard != null && selectedSponsorBoard.iId == ti.iId) {
+      selectedSponsorBoard = null;
+      if (model != null) setSponsorBoardBadges(0);
+      return;
+    }
+
+    // Sponsor selected
+    selectedSponsorBoard = ti;
+
+    offerSponsorBoard = new SponsorModel.TableItemSponsorBoard();
+    offerSponsorBoard.iMoneyVicHome = Controllers.Tool.roundInt((int)(1.3 * selectedSponsorBoard.iMoneyVicHome), 1);
+
+    ltSponsorBoard = Controllers.Member.SponsorController.GetTableBoard(_usr);
+
+    if (model != null) setSponsorBoardBadges(selectedSponsorBoard.iId);
+  }
+
+  private void setSponsorBoardBadges(int iId)
+  {
+    if (model == null) return;
+    if (ltSponsorBoard == null) return;
+
+    sSponsorBoardImg = new string[nBoards];
+    sSponsorBoardNames = new string[nBoards];
+
+    int iIx = 0;
+    foreach (SponsorModel.TableItemSponsorBoard spb in ltSponsorBoard) {
+      if (spb.iId > 0 && spb.iId < model.ltSponsorBadgeBoard.Count && !spb.bOffer) {
+        for (int j = 0; j < spb.nBoards; j++) {
+          sSponsorBoardImg[iIx] = model.ltSponsorBadgeBoard[spb.iId];
+          if (spb.iId < CkAppShared.ckMng.fz.ltSponsoren.Count) sSponsorBoardNames[iIx] = CkAppShared.ckMng.fz.ltSponsoren[spb.iId].name;
+
+          iIx++;
+        }
+      }
+    }
+
+    // Add selected board
+    if (selectedSponsorBoard != null) {
+      if (iId > 0 && iId < model.ltSponsorBadgeBoard.Count) {
+        for (int j = 0; j < selectedSponsorBoard.nBoards; j++) {
+          sSponsorBoardImg[iIx] = model.ltSponsorBadgeBoard[iId];
+          if (iId < CkAppShared.ckMng.fz.ltSponsoren.Count) sSponsorBoardNames[iIx] = CkAppShared.ckMng.fz.ltSponsoren[iId].name;
+
+          iIx++;
+        }
+      }
+    }
+  }
+
+  private async Task openNego()
+  {
+    if (modalNego == null) return;
+    await modalNego.Show();
+  }
+
+  private async Task cancelNego()
+  {
+    if (modalNego == null) return;
+    await modalNego.Close(Blazorise.CloseReason.UserClosing);
+  }
+
+  private async Task OnChangeMoneyYear(int iMoneyYear)
+  {
+    if (offerSponsorMain == null) return;
+    offerSponsorMain.iMoneyYear = iMoneyYear;
+  }
+
+  private async Task OnChangeMoneyVic(int iMoneyVic)
+  {
+    if (offerSponsorMain == null) return;
+    offerSponsorMain.iMoneyVic = iMoneyVic;
+  }
+
+  private async Task OnChangeMoneyCupWin(int iMoneyCupWin)
+  {
+    if (offerSponsorMain == null) return;
+    offerSponsorMain.iMoneyCupWin = iMoneyCupWin;
+  }
+
+  private async Task OnChangeMoneyVicHome(int iMoneyVicHome)
+  {
+    if (offerSponsorBoard == null) return;
+    offerSponsorBoard.iMoneyVicHome = iMoneyVicHome;
+  }
+
+  private async Task negoSponsor()
+  {
+    if (_usr != null) {
+      if (selectedSponsorMain != null && offerSponsorMain != null) {
+        float fMoodStart = selectedSponsorMain.fMood;
+        CornerkickManager.Finance.Sponsor? sp = Controllers.Member.SponsorController.Negotiate(
+          _usr,
+          true,
+          selectedSponsorMain.iIndex,
+          selectedSponsorMain.iMoneyYear,
+          selectedSponsorMain.iMoneyVic,
+          selectedSponsorMain.iMoneyCupWin,
+          offerSponsorMain.iMoneyYear,
+          offerSponsorMain.iMoneyVic,
+          offerSponsorMain.iMoneyCupWin,
+          out fMoodStart);
+
+        if (sp != null) {
+          selectedSponsorMain.fMood = sp.fMood;
+          selectedSponsorMain.iMoneyYear   = sp.iGeldJahr;
+          selectedSponsorMain.iMoneyVic    = sp.iMoneyVicHome;
+          selectedSponsorMain.iMoneyCupWin = sp.iGeldMeister;
+
+          if (sp.fMood < 0f) {
+            selectedSponsorMain = null;
+            sSponsorMainImg = "";
+            sSponsorMainName = "";
+            setSponsorMain();
+            cancelNego();
+          }
+        }
+
+        //ltSponsorMain = Controllers.Member.SponsorController.GetTableMain(_usr);
+        setSponsorMain();
+      } else if (selectedSponsorBoard != null && offerSponsorBoard != null) {
+        float fMoodStart = selectedSponsorBoard.fMood;
+        CornerkickManager.Finance.Sponsor? sp = Controllers.Member.SponsorController.Negotiate(
+          _usr,
+          false,
+          selectedSponsorBoard.iIndex,
+          selectedSponsorBoard.iMoneyVicHome,
+          0,
+          0,
+          offerSponsorBoard.iMoneyVicHome,
+          0,
+          0,
+          out fMoodStart);
+
+        if (sp != null) {
+          selectedSponsorBoard.fMood = sp.fMood;
+          selectedSponsorBoard.iMoneyVicHome = sp.iMoneyVicHome;
+
+          if (sp.fMood < 0f) {
+            selectedSponsorBoard = null;
+            setSponsorBoardBadges(0);
+            setSponsorBoards();
+            cancelNego();
+          }
+        }
+
+        setSponsorBoards();
+      }
+    }
+  }
+
+  private async Task takeSponsor()
+  {
+    if (_usr == null) return;
+
+    CornerkickManager.Club? clb = Controllers.Member.MemberController.ckClub(_usr);
+    if (clb == null) return;
+
+    if (selectedSponsorMain != null) {
+      int iBalanceStart = clb.iBalance;
+
+      int iMoney = Controllers.Member.SponsorController.TakeSponsor(_usr, 0, selectedSponsorMain.iIndex);
+      if (iMoney > 0) {
+        selectedSponsorMain = null;
+        //ltSponsorMain = Controllers.Member.SponsorController.GetTableMain(_usr);
+        setSponsorMain();
+        MainLayout.headline.Refresh(clb, iBalanceStart: iBalanceStart);
+      }
+    } else if (selectedSponsorBoard != null) {
+      Controllers.Member.SponsorController.TakeSponsor(_usr, 1, selectedSponsorBoard.iIndex);
+      selectedSponsorBoard = null;
+      //ltSponsorBoard = Controllers.Member.SponsorController.GetTableBoard(_usr);
+      setSponsorBoards();
+      await InvokeAsync(StateHasChanged);
+    }
+  }
+
+}

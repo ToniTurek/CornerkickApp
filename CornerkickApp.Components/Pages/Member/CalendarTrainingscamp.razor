@@ -1,0 +1,136 @@
+﻿@using CornerkickApp.Shared.Models
+
+@if (ltDays.Count < 1) {
+  <div style="position: relative; margin-top: 1rem">
+    <b>Für den ausgewählten Zeitraum sind keine Trainingslager möglich (zu wenige Tage).</b>
+  </div>
+} else {
+  <div>
+    <RadzenLabel Text="Trainingslager:" Component="DropDownBindValue" />
+    <Blazorise.Select TValue="int" SelectedValue="@iSelectedCampId" SelectedValueChanged="@update">
+      @foreach (LayoutModel.SelectListItem sli in ltCamps) {
+        <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+      }
+    </Blazorise.Select>
+    @if (selected_camp_data.HasValue) {
+      <div id="divTblSelectedCamp" style="position: relative; margin-top: 1rem">
+        <u><b>Details Aufenthalt</b></u>
+        <div style="position: relative; display: flex; flex-direction: row; align-items: center">
+          <label style="margin-right: 4px">
+            Übernachtungen:
+          </label>
+          <Blazorise.Select TValue="int" SelectedValue="@nDays" SelectedValueChanged="@updateEndDate">
+            @foreach (LayoutModel.SelectListItem sli in ltDays) {
+              <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+            }
+          </Blazorise.Select>
+        </div>
+        <table style="width: 100%; margin-top: 0.5rem" class="table table-bordered" cellpadding="2">
+          <thead>
+            <tr>
+              <td style="text-align: center; font-weight: bold;">Bonus Kondi.</td>
+              <td style="text-align: center; font-weight: bold;">Bonus Frische</td>
+              <td style="text-align: center; font-weight: bold;">Bonus Moral</td>
+              <td style="text-align: center; font-weight: bold;">Bonus Training</td>
+              <td style="text-align: center; font-weight: bold;">Kosten / Nacht</td>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td align="center" style="white-space: nowrap;">@(selected_camp_data.Value.fBonusCondi.ToString("0.0%"))</td>
+              <td align="center" style="white-space: nowrap;">@(selected_camp_data.Value.fBonusFresh.ToString("0.0%"))</td>
+              <td align="center" style="white-space: nowrap;">@(selected_camp_data.Value.fBonusMoral.ToString("0.0%"))</td>
+              <td align="center" style="white-space: nowrap;">@(selected_camp_data.Value.fBonusF    .ToString("0.0%"))</td>
+              <td align="center" style="white-space: nowrap;">@(selected_camp_data.Value.iCost.ToString("N0")) €</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div id="divTblSelectedCamp" style="position: relative; margin-top: 1rem; width: fit-content">
+        <u><b>Reisedetails</b></u>
+        <table class="table table-bordered" cellpadding="2">
+          <thead>
+            <tr>
+              <td style="text-align: center; font-weight: bold;">Reisekosten</td>
+              <td style="text-align: center; font-weight: bold;">Reisedauer</td>
+              <td style="text-align: center; font-weight: bold;">Reisestrapazen [Frische/h]</td>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td align="center" style="white-space: nowrap;">@(selected_camp_data.Value.iCostTravel.ToString("N0")) €</td>
+              <td align="center" style="white-space: nowrap;">@(selected_camp_data.Value.tsTravel.ToString(@"h\:mm"))</td>
+              <td align="center" style="white-space: nowrap;">@(selected_camp_data.Value.fMalusFreshTravel.ToString("0.0%"))</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div style="position: relative; margin-top: 1rem">
+        <b>Gesamtkosten: @(((selected_camp_data.Value.iCost * nDays) + (selected_camp_data.Value.iCostTravel * 2)).ToString("N0")) €</b>
+      </div>
+    }
+  </div>
+}
+
+@code {
+  [Parameter]
+  public int iClubUserId { get; set; }
+
+  [Parameter]
+  public DateTime dtStart { get; set; }
+
+  public string selected_camp = "";
+  public int iSelectedCampId = -1;
+  private CornerkickManager.TrainingCamp.Camp? selected_camp_data = null;
+  public int nDays = 0;
+
+  private List<LayoutModel.SelectListItem> ltCamps { get; set; } = new List<LayoutModel.SelectListItem>();
+  private List<LayoutModel.SelectListItem> ltDays { get; set; } = new List<LayoutModel.SelectListItem>();
+
+  protected override async Task OnInitializedAsync()
+  {
+    await base.OnInitializedAsync();
+
+    if (CkAppShared.ckMng.ltClubs.Count > 0) {
+      foreach (CornerkickManager.TrainingCamp.Camp camp in CkAppShared.ckMng.tcp.ltCamps) {
+        ltCamps.Add(new LayoutModel.SelectListItem() { Value = camp.iId.ToString(), Text = camp.sName });
+      }
+      iSelectedCampId = int.Parse(ltCamps[0].Value);
+      update(iSelectedCampId);
+
+      int nDays = Controllers.Member.CalendarController.getTrainingscampDays(CkAppShared.ckMng.ltClubs.Find(c => c.iId == iClubUserId), dtStart, iIgnoreGameType: CkAppShared.iCupIdTestgame);
+      for (int iDay = 1; iDay < nDays; iDay++) {
+        ltDays.Add(
+          new LayoutModel.SelectListItem() {
+            Value = iDay.ToString(),
+            Text = iDay.ToString().PadLeft(2) + " (Abreise: " + dtStart.Date.AddDays(iDay).ToLongDateString() + ")"
+          }
+        );
+        //ltDays.Add((iDay + 1).ToString().PadLeft(2) + " (Rückreise: " + dtStart.Date.AddDays(iDay).ToString("d", getCi()) + ")");
+      }
+    }
+  }
+
+  private Task update(int jSelectedCampId)
+  {
+    iSelectedCampId = jSelectedCampId;
+
+    selected_camp_data = CkAppShared.ckMng.tcp.ltCamps.Find(c => c.iId == iSelectedCampId);
+    if (selected_camp_data.HasValue) selected_camp = selected_camp_data.Value.sName;
+
+    updateEndDate(nDays);
+
+    return Task.CompletedTask;
+  }
+
+  private Task updateEndDate(int nDays2)
+  {
+    nDays = nDays2;
+
+    //dtEnd = dtStart.Date.AddDays(nDays).AddHours(12);
+
+    return Task.CompletedTask;
+  }
+
+}

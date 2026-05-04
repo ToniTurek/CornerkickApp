@@ -1,0 +1,422 @@
+﻿@using CornerkickApp.Shared.Models
+@using CornerkickApp.Components.Shared.Components
+
+@inject NavigationManager NavigationManager
+
+<div>
+  <label>
+    Startjahr:
+    <input type="number" value="@CkAppShared.ckMng.dtDatum.Year" style="width: 80px" @onchange="changeYear" />
+  </label>
+  <label>
+    Spieleralter konstant lassen:
+    <input type="checkbox" @onchange="(e) => bPlayerAgeConst = Convert.ToBoolean(e.Value)" />
+  </label>
+  <div>
+    <table>
+      <tr>
+        <td>Datum Saisonstart:</td>
+        <td>@Editor.dtSeasonStart.ToShortDateString()</td>
+      </tr>
+      <tr>
+        <td>Datum Saisonende:</td>
+        <td>@Editor.dtSeasonEnd.ToShortDateString()</td>
+      </tr>
+    </table>
+  </div>
+  @*
+  <label>
+    Anzahl Wettbewerbe: @(CkAppShared.ckMng.ltCups == null ? "0" : CkAppShared.ckMng.ltCups.Count().ToString())
+  </label>
+  *@
+
+  @{
+  if (CkAppShared.ckMng.ltCups != null) {
+    <div class="team" style="position: relative; width: fit-content; max-width: 100%">
+      <DataGrid TItem="CornerkickManager.Cup"
+                Data="@CkAppShared.ckMng.ltCups"
+                Style="white-space:nowrap"
+                PageSize="40"
+                ShowPager
+                Striped
+                Narrow
+                Editable
+                Responsive
+                RowRemoved="deleteCup">
+        <ChildContent>
+          <DataGridColumn Field="@nameof(CornerkickManager.Cup.iId2)" Caption="" TextAlignment="Blazorise.TextAlignment.Center">
+            <DisplayTemplate>
+              @if (context.iId == CkAppShared.iCupIdLeague || context.iId == CkAppShared.iCupIdNatCup) {
+                @((MarkupString)Controllers.Tool.getNatIcon(context.iId2))
+              } else if (context.iId == CkAppShared.iCupIdInt) {
+                <img src="@CkAppShared.sContentDir/Icons/flags/world.png" width="20">
+              } else if (context.iId == CkAppShared.iCupIdWc) {
+                <img src="@CkAppShared.sContentDir/Icons/flags/flag.svg" width="20" height="20" style="color: black">
+              }
+            </DisplayTemplate>
+          </DataGridColumn>
+          <DataGridColumn Field="@nameof(CornerkickManager.Cup.iId)" Caption="Typ" TextAlignment="Blazorise.TextAlignment.Center">
+            <DisplayTemplate>
+              @if (context.iId == -9) {
+                <select value="-9" @onchange="(EventArgs) => { setCupId1(context, EventArgs.Value.ToString()); }" style="width: 100px">
+                  @foreach (LayoutModel.SelectListItem sli in Editor.sliCups) {
+                    <option value="@sli.Value">@sli.Text</option>
+                  }
+                </select>
+              } else {
+                @(Array.IndexOf(Editor.iCupIds, context.iId) < 0 ? context.iId.ToString() : Editor.sCupNames[Array.IndexOf(Editor.iCupIds, context.iId)])
+              }
+            </DisplayTemplate>
+          </DataGridColumn>
+          <DataGridColumn Field="@nameof(CornerkickManager.Cup.iId2)" Caption="Land" TextAlignment="Blazorise.TextAlignment.Center">
+            <DisplayTemplate>
+              @if (context.iId2 == -9) {
+                if ((context.iId == CkAppShared.iCupIdLeague || context.iId == CkAppShared.iCupIdNatCup) && Editor.sliNation != null) {
+                  <select value="@context.iId2" @onchange="(EventArgs) => { setCupId2(context, EventArgs.Value.ToString()); }" style="width: 70px">
+                    @foreach (LayoutModel.SelectListItem sli in Editor.sliNation) {
+                      <option value="@sli.Value">@sli.Text</option>
+                    }
+                  </select>
+                }
+              } else {
+                @(context.iId == CkAppShared.iCupIdInt ? (context.iId2 + 1).ToString() : context.iId2 < 0 ? "-" : CornerkickManager.Main.sLand[context.iId2])
+              }
+            </DisplayTemplate>
+          </DataGridColumn>
+          <DataGridColumn Field="@nameof(CornerkickManager.Cup.iId3)" Caption="SK" TextAlignment="Blazorise.TextAlignment.Center">
+            <DisplayTemplate>
+                @(context.iId3 < 0 ? "-" : context.iId3 + 1)
+            </DisplayTemplate>
+          </DataGridColumn>
+          <DataGridColumn Field="@nameof(CornerkickManager.Cup.sName)" Caption="Name" TextAlignment="Blazorise.TextAlignment.Center">
+            <DisplayTemplate>
+              <input type="text" autocapitalize="on" value="@context.sName" @onchange="(EventArgs) => { setCupName(context, EventArgs.Value.ToString()); }">
+            </DisplayTemplate>
+          </DataGridColumn>
+          @*
+                    <DataGridColumn Field="@nameof(CornerkickManager.Cup.settings.fAttraction)" Caption="Prio." TextAlignment="Blazorise.TextAlignment.Center">
+                      <DisplayTemplate>
+                        <input type="text" value="@context.settings.fAttraction" @onchange="(EventArgs) => { setCupAttrFactor(context, EventArgs.Value.ToString()); }">
+                      </DisplayTemplate>
+                    </DataGridColumn>
+                    *@
+          <DataGridColumn Field="@nameof(CornerkickManager.Cup.sName)" Caption="Vereine" TextAlignment="Blazorise.TextAlignment.Center">
+            <DisplayTemplate>
+              @(context.getClubsTotal().ToString())
+            </DisplayTemplate>
+          </DataGridColumn>
+          <DataGridCommandColumn TItem="CornerkickManager.Cup">
+            <NewCommandTemplate>
+              @*<Button Color="Color.Success" Clicked="@context.Clicked">Neu</Button>*@
+                <Blazorise.Button Color="Blazorise.Color.Success" Clicked="@addCup">Neu</Blazorise.Button>
+            </NewCommandTemplate>
+            <EditCommandTemplate>
+            </EditCommandTemplate>
+            <DeleteCommandTemplate>
+              <Blazorise.Button Color="Blazorise.Color.Danger" Clicked="@context.Clicked">Entf.</Blazorise.Button>
+            </DeleteCommandTemplate>
+          </DataGridCommandColumn>
+        </ChildContent>
+        <EmptyTemplate>
+          <div class="box">
+            Keine Wettbewerbe ...
+          </div>
+        </EmptyTemplate>
+        <LoadingTemplate>
+          <div class="box">
+            <progress class="progress is-small is-primary" max="100" />
+          </div>
+        </LoadingTemplate>
+      </DataGrid>
+    </div>
+    <RadzenScheduler @ref=@scheduler SlotRender=@OnSlotRender style="height: 768px;" Date="@Editor.dtSeasonStart" TItem="CalendarModel.Appointment" Data=@appointments StartProperty="dtStart" EndProperty="dtEnd"
+                     TextProperty="sTitle" SelectedIndex="1" AppointmentRender=@OnAppointmentRender>
+      <Template>
+        <div>
+          @if (context.iType >= 0) {
+            @((MarkupString)Controllers.Tool.getNatIcon(context.iType))
+          }
+          <span> @context.sDescription</span>
+        </div>
+      </Template>
+      <ChildContent>
+        <RadzenMonthView />
+        <RadzenYearPlannerView StartMonth="(Month)(Editor.dtSeasonStart.Month - 1)" />
+          <RadzenYearView StartMonth="(Month)(Editor.dtSeasonStart.Month - 1)" />
+      </ChildContent>
+    </RadzenScheduler>
+  }
+  }
+</div>
+
+@code {
+  [Parameter]
+  public Action<CornerkickManager.Cup> changeCup { get; set; }
+
+  [Parameter]
+  public Action<CornerkickManager.Club, bool> deleteClub { get; set; }
+
+  [Parameter]
+  public Action<int> YearChanged { get; set; }
+
+  bool bPlayerAgeConst = false;
+  RadzenScheduler<CalendarModel.Appointment> scheduler;
+  List<CalendarModel.Appointment> appointments = new List<CalendarModel.Appointment>();
+
+  protected override async Task OnInitializedAsync()
+  {
+    await base.OnInitializedAsync();
+
+    /*
+    appointments = new List<CalendarModel.Appointment>
+    {
+        new CalendarModel.Appointment { dtStart = DateTime.Today.AddDays( -2), dtEnd = DateTime.Today.AddDays(-2), sTitle = "Birthday" },
+        new CalendarModel.Appointment { dtStart = DateTime.Today.AddDays(-11), dtEnd = DateTime.Today.AddDays(-10), sTitle = "Day off" },
+        new CalendarModel.Appointment { dtStart = DateTime.Today.AddDays(-10), dtEnd = DateTime.Today.AddDays(-8), sTitle = "Work from home" },
+        new CalendarModel.Appointment { dtStart = DateTime.Today.AddHours(10), dtEnd = DateTime.Today.AddHours(12), sTitle = "Online meeting" },
+        new CalendarModel.Appointment { dtStart = DateTime.Today.AddHours(10), dtEnd = DateTime.Today.AddHours(13), sTitle = "Skype call" },
+        new CalendarModel.Appointment { dtStart = DateTime.Today.AddHours(14), dtEnd = DateTime.Today.AddHours(14).AddMinutes(30), sTitle = "Dentist appointment" },
+        new CalendarModel.Appointment { dtStart = DateTime.Today.AddDays(  1), dtEnd = DateTime.Today.AddDays(12), sTitle = "Vacation" },
+    };
+    */
+
+            updateCalendar();
+  }
+
+  public async Task update()
+  {
+    await updateCalendar();
+    //await InvokeAsync(StateHasChanged);
+    NavigationManager.NavigateTo(NavigationManager.Uri, forceLoad: true);
+  }
+
+  public async Task updateCalendar()
+  {
+    appointments = new List<CalendarModel.Appointment>();
+    foreach (CornerkickManager.Cup cup in CkAppShared.ckMng.ltCups) {
+      int iMd = 0;
+      foreach (CornerkickManager.Cup.Matchday md in cup.ltMatchdays) {
+        System.Drawing.Color cl = Controllers.Member.CupController.getCupColor(cup);
+        appointments.Add(new CalendarModel.Appointment {
+          dtStart = md.dt,
+          dtEnd = md.dt.AddMinutes(105),
+          sTitle = cup.sName,
+          sDescription = cup.sName + ", " + (++iMd).ToString() + ". Spieltag",
+          iType = cup.iId == CkAppShared.iCupIdLeague || cup.iId == CkAppShared.iCupIdNatCup ? cup.iId2 : -1,
+          sColor = Controllers.Tool.convertToRgb(cl)
+        });
+      }
+    }
+  }
+
+  protected async Task changeYear(ChangeEventArgs args)
+  {
+    if (args.Value == null) return;
+
+    int iYear;
+    if (!int.TryParse(args.Value.ToString(), out iYear)) return;
+
+    if (bPlayerAgeConst) {
+      for (int i = 0; i < CkAppShared.ckMng.ltPlayer.Count; i++) CkAppShared.ckMng.ltPlayer[i].plGame.dtBirthday = CkAppShared.ckMng.ltPlayer[i].plGame.dtBirthday.AddYears(iYear - CkAppShared.ckMng.dtDatum.Year);
+    }
+
+    YearChanged?.Invoke(iYear);
+  }
+
+  private void addCup()
+  {
+    if (CkAppShared.ckMng.ltCups == null) CkAppShared.ckMng.ltCups = new List<CornerkickManager.Cup>();
+
+    CornerkickManager.Cup cupNew = new CornerkickManager.Cup() {
+      sName = "Neuer Wettbewerb",
+      iId  = -9,
+      iId2 = -9
+    };
+
+    // Set defaults
+    cupNew.settings.nGameMin = 90;
+    cupNew.settings.nPlStart = 11;
+    cupNew.settings.nPlRes   =  7;
+    cupNew.settings.fPitchSizeRel = 1f;
+
+    CkAppShared.ckMng.ltCups.Insert(0, cupNew);
+
+    StateHasChanged();
+    //NavigationManager.NavigateTo(NavigationManager.Uri, forceLoad: true);
+  }
+
+  private async Task deleteCup(CornerkickManager.Cup cup)
+  {
+    if (cup == null) return;
+
+    // Remove cup from list of qualitications
+    foreach (CornerkickManager.Cup c in CkAppShared.ckMng.ltCups) {
+      if (c.ltQualification == null) continue;
+      c.ltQualification.RemoveAll(q => q.cup == cup);
+    }
+
+    // Remove cup from global list
+    CkAppShared.ckMng.ltCups.Remove(cup);
+
+    await InvokeAsync(StateHasChanged);
+
+    List<CornerkickManager.Club> ltClubsNoCup = getClubsNoCup();
+
+    if (ltClubsNoCup.Count > 0) {
+      string sText = "Folgende Vereine wurden gefunden, die keinem Wettbewerb zugeordnet sind. Sollen diese ebenfalls gelöscht werden?<br /><ul>";
+      foreach (CornerkickManager.Club clb in ltClubsNoCup) sText += "<li>" + clb.sName + "</li>";
+      sText += "</ul>";
+
+      await CkDialog.ckDialog.Show(
+        "Vereine ohne Wettbewerb löschen?",
+        sText,
+        actionOnOk: () => deleteClubs(ltClubsNoCup)
+      );
+    }
+
+    return;
+  }
+
+  private List<CornerkickManager.Club> getClubsNoCup()
+  {
+    List<CornerkickManager.Club> ltClubsNoCup = new List<CornerkickManager.Club>();
+
+    foreach (CornerkickManager.Club clb in CkAppShared.ckMng.ltClubs) {
+      bool bNoCup = true;
+      foreach (CornerkickManager.Cup cup in CkAppShared.ckMng.ltCups) {
+        if (cup.getParticipants().Contains(clb)) {
+          bNoCup = false;
+          break;
+        }
+      }
+
+      if (bNoCup) ltClubsNoCup.Add(clb);
+    }
+
+    return ltClubsNoCup;
+  }
+
+  protected Task setCupId1(CornerkickManager.Cup cup, string sCupId1)
+  {
+    int iCupId1;
+    if (!int.TryParse(sCupId1, out iCupId1)) return Task.CompletedTask;
+
+    cup.iId = iCupId1;
+
+    if (cup.iId == CkAppShared.iCupIdWc) {
+      cup.iId2 = -1;
+      cup.iId3 = -1;
+
+      // If world cup, add nations for each (1st division) league if not already existing
+      foreach (CornerkickManager.Cup l in CkAppShared.ckMng.ltCups.FindAll(c => c.iId == CkAppShared.iCupIdLeague && c.iId3 == 0)) {
+        CornerkickManager.Club? nation = CkAppShared.ckMng.ltClubs.Find(c => c.bNation && c.iId == l.iId2);
+        if (nation == null) {
+          nation = CornerkickApp.Controllers.App.createNation(CkAppShared.ckMng, l.iId2);
+          CkAppShared.ckMng.ltClubs.Add(nation);
+        }
+      }
+    } else if (cup.iId == CkAppShared.iCupIdInt) {
+      List<CornerkickManager.Cup> ltCupsInt = CkAppShared.ckMng.ltCups.FindAll(c => c.iId == CkAppShared.iCupIdInt && c.iId2 >= 0);
+      cup.iId2 = ltCupsInt != null && ltCupsInt.Count > 0 ? ltCupsInt.Max(c => c.iId2) + 1 : 0;
+    }
+
+    // Set default settings
+    if (cup.iId == CkAppShared.iCupIdLeague) {
+      cup.settings.nGroups = 1;
+      cup.settings.bGroupsTwoGames = true;
+    } else if (cup.iId == CkAppShared.iCupIdNatCup) {
+      cup.settings.bKo = true;
+    } else if (cup.iId == CkAppShared.iCupIdWc) {
+      cup.settings.nGroups = 4;
+      cup.settings.bGroupsTwoGames = false;
+      cup.settings.bKo = true;
+      cup.settings.nQualifierKo = 2;
+      cup.settings.fAttraction = 1.5f;
+      cup.settings.tsTimeOfDay = new TimeSpan(20, 00, 00);
+      cup.settings.iNeutral = 1;
+      cup.settings.nYears = 2;
+      cup.settings.nYellowCardSuspension = 3;
+      cup.ltClubs = new List<CornerkickManager.Club>[cup.settings.nGroups];
+      for (int i = 0; i < cup.settings.nGroups; i++) cup.ltClubs[i] = new List<CornerkickManager.Club>();
+    }
+
+    // Add default quali. for nat. leagues
+    if (cup.iId == CkAppShared.iCupIdLeague) {
+      if (cup.ltQualification == null) cup.ltQualification = new List<CornerkickManager.Cup.Qualification>();
+      cup.ltQualification.Add(new CornerkickManager.Cup.Qualification() {
+          cup = cup,
+          iPlaceFirst = 0,
+          iPlaceLast = 0
+        });
+    }
+
+    changeCup(cup);
+    //StateHasChanged();
+
+    return Task.CompletedTask;
+  }
+
+  protected Task setCupId2(CornerkickManager.Cup cup, string sCupId2)
+  {
+    int iCupId2;
+    if (!int.TryParse(sCupId2, out iCupId2)) return Task.CompletedTask;
+
+    cup.iId2 = iCupId2;
+
+    if (cup.iId == CkAppShared.iCupIdLeague) {
+      int iCupId3 = 0;
+      foreach (CornerkickManager.Cup cupTmp in CkAppShared.ckMng.ltCups) {
+        if (cupTmp.iId == cup.iId && cupTmp.iId2 == cup.iId2 && cupTmp.iId3 >= 0) iCupId3++;
+      }
+
+      cup.iId3 = iCupId3;
+
+      changeCup(cup);
+    } else if (cup.iId == CkAppShared.iCupIdNatCup) {
+      List<CornerkickManager.Cup> ltCupsNatCup = CkAppShared.ckMng.ltCups.FindAll(c => c.iId == CkAppShared.iCupIdNatCup && c.iId2 >= 0 && c.iId3 >= 0);
+      cup.iId3 = ltCupsNatCup != null && ltCupsNatCup.Count > 0 ? ltCupsNatCup.Max(c => c.iId3) + 1 : 0;
+    }
+
+    return Task.CompletedTask;
+  }
+
+  private Task setCupName(CornerkickManager.Cup cup, string sName)
+  {
+    if (cup == null) return Task.CompletedTask;
+
+    cup.sName = sName;
+
+    return Task.CompletedTask;
+  }
+
+  private Task deleteClubs(List<CornerkickManager.Club> ltClubs)
+  {
+    foreach (CornerkickManager.Club clb in ltClubs) deleteClub(clb, true);
+
+    return Task.CompletedTask;
+  }
+
+  void OnSlotRender(SchedulerSlotRenderEventArgs args)
+  {
+    // Past in grey
+    if (args.Start.Date.Date.CompareTo(CkAppShared.ckMng.dtSeasonStart.Date) < 0 || args.Start.Date.CompareTo(CkAppShared.ckMng.dtSeasonEnd.Date) > 0) {
+      args.Attributes["style"] = "background: rgb(200,200,200);";
+    } else if (args.Start.Date.Date.CompareTo(Editor.dtSeasonStart.Date) < 0 || args.Start.Date.CompareTo(Editor.dtSeasonEnd.Date) > 0) {
+      args.Attributes["style"] = "background: rgb(235,235,235);";
+    }
+  }
+
+  void OnAppointmentRender(SchedulerAppointmentRenderEventArgs<CalendarModel.Appointment> args)
+  {
+    // Never call StateHasChanged in AppointmentRender - would lead to infinite loop
+
+    string sColorText = "black";
+    if (!string.IsNullOrEmpty(args.Data.sColor2)) sColorText = args.Data.sColor2;
+
+    //if (args.Data.sTitle == "Birthday") {
+    args.Attributes["style"] = "background: " + args.Data.sColor + "; color: " + sColorText;
+    if (!string.IsNullOrEmpty(args.Data.sClassName)) args.Attributes["class"] = "rz-event-content " + args.Data.sClassName;
+    //}
+  }
+
+}

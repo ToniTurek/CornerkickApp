@@ -1,0 +1,53 @@
+#divNewspaper {
+  position: absolute;
+  top: 0px;
+  right: 0.2rem;
+  width: 100px;
+  aspect-ratio: 100 / 141;
+}
+
+#divNewspaper.open {
+  width: 400px;
+  aspect-ratio: 200 / 141;
+}
+
+#chartContainerLastGames {
+  height: 160px;
+  width: 100%;
+  margin-bottom: 1rem;
+}
+
+#tableDivNews {
+  position: relative;
+  left: 0px;
+  width: fit-content;
+  max-width: 70vw;
+  font-size: 90%;
+  margin-right: 0.5rem;
+  /*flex-grow: 1;*/
+}
+
+@media (max-width: 640.98px) {
+  #divNewspaper {
+    width: 60px;
+  }
+
+  #divNewspaper.open {
+    width: 320px;
+  }
+
+  #pLastGames {
+    margin: 0;
+  }
+
+  #chartContainerLastGames {
+    height: 140px;
+    margin-bottom: 0;
+  }
+}
+
+@media (max-width: 1045px) {
+  #tableDivNews {
+    max-width: 90vw;
+  }
+}

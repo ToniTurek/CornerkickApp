@@ -1,0 +1,98 @@
+﻿@using CornerkickApp.Shared.Models
+
+<div>
+  <RadzenLabel Text="Gegner Testspiel:" Component="DropDownBindValue" />
+  @*
+  <RadzenDropDown @bind-Value=@selected_club Data=@options Style="width: 100%; max-width: 400px;" Name="DropDownBindValue" />
+  *@
+  <div style="display: flex; margin-bottom: 10px">
+    @if (bEmblem != null) {
+      <div style="position: relative; width: 100px; margin-right: 10px; border-style: outset; border-width: 3px; border-color: lightgray">
+        <img style="width: 100%; object-fit: contain" src="data:image/*;base64,@Convert.ToBase64String(bEmblem)" />
+      </div>
+    }
+
+    <div>
+      <Blazorise.Select TValue="int" SelectedValue="@iSelectedCupIx" SelectedValueChanged="@setClubs" Style="margin-bottom: 6px">
+        @foreach (LayoutModel.SelectListItem sli in sliLeagues) {
+          <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+        }
+      </Blazorise.Select>
+      <Blazorise.Select TValue="int" SelectedValue="@iSelectedClubId" SelectedValueChanged="@update">
+        @foreach (LayoutModel.SelectListItem sli in sliClubs) {
+          <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+        }
+      </Blazorise.Select>
+    </div>
+  </div>
+</div>
+
+@code {
+  [Parameter]
+  public int iClubUserId { get; set; }
+
+  //IEnumerable<string> options = new List<string>();
+  public string selected_club = "";
+  public int iSelectedClubId = -1;
+  private byte[]? bEmblem;
+
+  List<LayoutModel.SelectListItem> sliLeagues = new List<LayoutModel.SelectListItem>();
+  private int iSelectedCupIx = -1;
+
+  private List<LayoutModel.SelectListItem> sliClubs { get; set; } = new List<LayoutModel.SelectListItem>();
+
+  protected override async Task OnInitializedAsync()
+  {
+    await base.OnInitializedAsync();
+
+    //options = CkAppShared.ckMng.ltClubs.Select(c => c.sName).Distinct();
+
+    //selected_club = options.First();
+
+    int iCupIx = 0;
+    foreach (CornerkickManager.Cup l in CkAppShared.ckMng.ltCups) {
+      if (l.iId == CkAppShared.iCupIdLeague) {
+        sliLeagues.Add(new LayoutModel.SelectListItem() {
+          Value = iCupIx.ToString(),
+          Text = l.sName
+        });
+      }
+
+      iCupIx++;
+    }
+
+    await setClubs(int.Parse(sliLeagues[0].Value));
+  }
+
+  private Task update(int jSelectedClubId)
+  {
+    iSelectedClubId = jSelectedClubId;
+
+    CornerkickManager.Club? clb = CkAppShared.ckMng.ltClubs.Find(c => c.iId == iSelectedClubId);
+
+    if (clb != null) {
+      selected_club = clb.sName;
+      bEmblem = Controllers.Member.ClubController.getClubEmblemFile(clb);
+    }
+
+    return Task.CompletedTask;
+  }
+
+  protected async Task setClubs(int jCupIx)
+  {
+    if (iSelectedCupIx >= CkAppShared.ckMng.ltCups.Count) return;
+
+    iSelectedCupIx = jCupIx;
+
+    CornerkickManager.Cup l = CkAppShared.ckMng.ltCups[iSelectedCupIx];
+
+    sliClubs = await CornerkickApp.Controllers.Tool.getClubs(l);
+    sliClubs = sliClubs.OrderBy(c => c.Text).ToList();
+    sliClubs.RemoveAll(c => c.Value == iClubUserId.ToString());
+
+    iSelectedClubId = int.Parse(sliClubs[0].Value);
+    selected_club = sliClubs[0].Text;
+    await update(iSelectedClubId);
+  }
+
+}

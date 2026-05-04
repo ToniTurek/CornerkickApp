@@ -1,0 +1,85 @@
+﻿@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@inject NavigationManager NavigationManager
+
+<head>
+  <style>
+    div.top-row > a {
+      color: white !important;
+    }
+
+    div.top-row > button {
+      color: white !important;
+    }
+
+    button.link {
+      background: none !important;
+      border: none;
+      padding: 0 !important;
+      /*optional*/
+      font-family: arial, sans-serif;
+      /*input has OS specific font-family*/
+      /*color: #069;*/
+      color: white;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<CascadingAuthenticationState>
+  <a href="/privacy" class="nav-link privacy hide-mobile">Impressum</a>
+  <AuthorizeView>
+    <Authorized>
+      <a href="Account/Manage/PersonalData" class="hide-mobile" style="margin-right: 1rem">@context.User.Identity?.Name</a>
+      <form action="Account/Logout" method="post" class="hide-mobile">
+          <AntiforgeryToken />
+          <input type="hidden" name="ReturnUrl" value="@currentUrl" />
+          <button type="submit" class="link">
+              <span class="bi bi-arrow-bar-left-nav-menu" aria-hidden="true"></span> Logout
+          </button>
+      </form>
+    </Authorized>
+    <NotAuthorized>
+      <a href="Account/Register" class="hide-mobile" style="margin-right: 0.5rem">registrieren</a>
+      <a href="Account/Login" class="hide-mobile">anmelden</a>
+    </NotAuthorized>
+  </AuthorizeView>
+</CascadingAuthenticationState>
+
+@code {
+  private string? currentUrl;
+
+  protected override async Task OnInitializedAsync()
+  {
+    await base.OnInitializedAsync();
+
+    currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+    NavigationManager.LocationChanged += OnLocationChanged;
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender) {
+      //await JS.InvokeAsync<IJSObjectReference>("import", "./_content/CornerkickApp.Components/js/draw.js");
+      //await JS.InvokeAsync<IJSObjectReference>("import", "./_content/CornerkickApp.Components/js/Formation.js");
+      //await JS.InvokeAsync<IJSObjectReference>("import", "./_content/CornerkickApp.Components/Pages/Member/Team.razor.js");
+    }
+  }
+
+  private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+  {
+    currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
+    StateHasChanged();
+  }
+
+  public void Dispose()
+  {
+    NavigationManager.LocationChanged -= OnLocationChanged;
+  }
+
+  private void BeginLogOut()
+  {
+    NavigationManager.NavigateToLogout("/");
+  }
+}

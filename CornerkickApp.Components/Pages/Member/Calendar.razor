@@ -1,0 +1,417 @@
+﻿@page "/member/calendar"
+
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using System.Globalization
+@using CornerkickApp.Controllers.Member
+@using CornerkickApp.Shared.Models
+@using CornerkickApp.Components.Shared.Components
+
+@inject IJSRuntime JS
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject DialogService DialogService
+@inject Controllers.Shared.MyAuthenticationStateProvider _auth
+
+<PageTitle>Kalender</PageTitle>
+
+<html>
+<head>
+  <style>
+    .rz-view.rz-month-view .rz-event:has(> .eventHideInMonthView) {
+      display: none;
+    }
+
+    .rz-view.rz-year-view .rz-event:has(> .eventHideInYearView) {
+      display: none;
+    }
+
+    .rz-view.rz-planner-view .rz-event:has(> .eventHideInYearView) {
+      display: none;
+    }
+  </style>
+</head>
+
+<body style="width: 100%; height: 90vh; display: flex; flex-direction: column">
+  <label>
+    <input type="checkbox" checked="@bAll" @onchange="(b) => switchAll(b.Value)" />
+    Alle Ereignisse
+  </label>
+  <div style="display: flex; flex: 1 1 auto">
+    <RadzenScheduler @ref=@scheduler SlotRender=@OnSlotRender style="width: 100%; max-width: 1400px; height: auto" Date="@CkAppShared.ckMng.dtDatum" TItem="CalendarModel.Appointment" Data=@appointments
+                     TextProperty="sTitle" StartProperty="dtStart" EndProperty="dtEnd"
+                     LoadData="@OnChangeView"
+                     TodayText="Heute" TodaySelect="@OnTodaySelect" Culture=@(new CultureInfo("de-DE"))
+                     SelectedIndex="CkAppShared.ckMng.dtDatum.Equals(CkAppShared.ckMng.dtSeasonStart) ? 2 : 1"
+                     SlotSelect=@OnSlotSelect AppointmentSelect=@OnAppointmentSelect AppointmentRender=@OnAppointmentRender
+                     AppointmentMove=@OnAppointmentMove>
+      <RadzenDayView  TimeFormat="HH:mm" StartTime="new TimeSpan(8,bMobile ? 00 : 30,00)" MinutesPerSlot="@(bMobile ? 30 : 15)" />
+      <RadzenWeekView TimeFormat="HH:mm" StartTime="new TimeSpan(8,bMobile ? 00 : 30,00)" MinutesPerSlot="@(bMobile ? 30 : 15)" />
+      <RadzenMonthView />
+      <RadzenYearView StartMonth="(Month)(CkAppShared.ckMng.dtSeasonStart.Month - 1)" />
+      <RadzenYearPlannerView StartMonth="(Month)(CkAppShared.ckMng.dtSeasonStart.Month - 1)" />
+    </RadzenScheduler>
+  </div>
+  <div style="display: flex; flex: 0 1 auto">
+    <div style="width:fit-content; margin-top: 6px">
+      <h4>Anfragen Testspiele</h4>
+      <DataGrid TItem="CalendarModel.TableTestGames"
+                Data="@ltTableTestgames"
+                SelectionMode="Blazorise.DataGrid.DataGridSelectionMode.Multiple"
+                Style="white-space:nowrap"
+                PageSize="100"
+                Striped
+                Hoverable
+                Narrow
+                Responsive
+                SelectedRowsChanged="@selectTableTestgame">
+        <ChildContent>
+          <DataGridColumn Field="@nameof(CalendarModel.TableTestGames.iIdTeamOpp)" Sortable="false" Displayable="false" />
+          <DataGridColumn Field="@nameof(CalendarModel.TableTestGames.dt)" Caption="Datum" TextAlignment="Blazorise.TextAlignment.Center" />
+          <DataGridColumn Field="@nameof(CalendarModel.TableTestGames.sTeamH)" Caption="Heim"></DataGridColumn>
+          <DataGridColumn Field="@nameof(CalendarModel.TableTestGames.sTeamA)" Caption="Auswärts"></DataGridColumn>
+        </ChildContent>
+        <EmptyTemplate>
+          <div class="box">
+            Aktuell keine Testspielanfragen
+          </div>
+        </EmptyTemplate>
+        <LoadingTemplate>
+          <div class="box">
+            <progress class="progress is-small is-primary" max="100" />
+          </div>
+        </LoadingTemplate>
+      </DataGrid>
+
+      <button type="submit" id="bnAcceptTestgame" class="btn btn-primary" style="width: 49%; white-space:nowrap" disabled="@(!bTestGameSelected)">Anfrage bestätigen</button>
+      <button type="submit" id="bnDeclineTestgame" class="btn btn-outline-secondary" style="width: 49%; white-space:nowrap" disabled="@(!bTestGameSelected)">Anfrage ablehnen</button>
+    </div>
+  </div>
+
+  <div style="display:none">
+    <div id="dlgEvent" title="Ereignis">
+      <text>Beginn Ereignis:</text>
+      <select name="H" id="selectEventH">
+        @{
+          for (int iH = 0; iH < 24; iH++) {
+            <option value="@iH.ToString()">@iH.ToString("D2")</option>
+          }
+        }
+      </select>
+      <select name="M" id="selectEventM">
+        @{
+          for (int iM = 0; iM < 60; iM += 15) {
+            <option value="@iM.ToString()">@iM.ToString("D2")</option>
+          }
+        }
+      </select>
+
+      <p>Wählen Sie Ihr geplantes Ereignis:</p>
+
+      <select name="Event" id="selectEvent">
+        <option value="1">Krisensitzung</option>
+        <option value="2">Weihnachtsfeier</option>
+        <option value="4">Sommerparty</option>
+        <option value="5">Gehirnwäsche</option>
+        <option value="3">Jugendtag</option>
+      </select>
+    </div>
+  </div>
+</body>
+</html>
+
+@code {
+  private CornerkickManager.User? _usr;
+  private CalendarModel? model;
+  private IJSObjectReference? module;
+
+  MainLayout.BrowserDimension bd { get; set; } = new MainLayout.BrowserDimension();
+  bool bMobile = false;
+  bool bAll = false;
+
+  RadzenScheduler<CalendarModel.Appointment> scheduler;
+  //EventConsole console;
+  //Dictionary<DateTime, string> events = new Dictionary<DateTime, string>();
+  List<CalendarModel.Appointment> appointments = new List<CalendarModel.Appointment>();
+  protected List<CalendarModel.TableTestGames>? ltTableTestgames;
+  bool bTestGameSelected = false;
+  int iDayMonthYear = 0;
+
+  int iSelectMain = 1;
+
+  protected override async Task OnInitializedAsync()
+  {
+    await base.OnInitializedAsync();
+
+#if _WebApp
+    _usr = Controllers.Member.MemberController.ckUser(await _auth.GetUserId());
+#else
+    _usr = CkAppShared.ckMng.ltUser[CkAppShared.iUserActive];
+#endif
+    model = CornerkickApp.Controllers.Member.CalendarController.Model(_usr);
+
+    await update();
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender) {
+      //await JS.InvokeAsync<IJSObjectReference>("import", "./_content/CornerkickApp.Components/js/Player.js");
+      module = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/CornerkickApp.Components/Pages/Member/Calendar.razor.js");
+
+      if (module != null && model != null) {
+        MainLayout.BrowserService browserService = new MainLayout.BrowserService(JS);
+        bd = await browserService.GetDimensions();
+        bMobile = bd.Height < 1000;
+
+        await InvokeAsync(StateHasChanged);
+
+        await module.InvokeAsync<string>("init", JsonSerializer.Serialize(model.tutorial));
+
+        await ShowTutorial();
+      }
+    }
+  }
+
+  protected async Task update()
+  {
+    if (model != null) {
+      await GetCalendarEvents();
+      await GetTableTestgames();
+    }
+  }
+
+  protected async Task switchAll(object o)
+  {
+    if (!bool.TryParse(o.ToString(), out bAll)) return;
+
+    GetCalendarEvents();
+  }
+  protected async Task GetCalendarEvents()
+  {
+    System.Globalization.CultureInfo.CurrentCulture = new System.Globalization.CultureInfo("de-DE", false);
+    /*
+    CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("it-IT");
+    CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("it-IT");
+    CultureInfo.CurrentCulture = new CultureInfo("it-IT");
+    CultureInfo.CurrentUICulture = new CultureInfo("it-IT");
+    Thread.CurrentThread.CurrentCulture = new CultureInfo("it-IT");
+    Thread.CurrentThread.CurrentUICulture = new CultureInfo("it-IT");
+    */
+
+    appointments = (await CornerkickApp.Controllers.Member.CalendarController.getCalendarEvents(bAll ? null : _usr, iDayMonthYear: iDayMonthYear, bMobile: bMobile)).ToList();
+  }
+
+  async Task OnChangeView(SchedulerLoadDataEventArgs args)
+  {
+    iDayMonthYear = 0;
+    if      (args.View.Text.Equals("Month")) iDayMonthYear = 1;
+    else if (args.View.Text.Equals("Year") || args.View.Text.Equals("Planner")) iDayMonthYear = 2;
+    GetCalendarEvents();
+  }
+  /*
+  async Task OnChangeView(ISchedulerView view)
+  {
+    int iDayMonthYear = 0;
+    if      (view.Text.Equals("Month")) iDayMonthYear = 1;
+    else if (view.Text.Equals("Year") || view.Text.Equals("Planner")) iDayMonthYear = 2;
+    GetCalendarEvents(iDayMonthYear: iDayMonthYear);
+  }
+  */
+
+  void OnTodaySelect(SchedulerTodaySelectEventArgs args)
+  {
+    args.Today = CkAppShared.ckMng.dtDatum.Date;
+  }
+
+  void OnSlotRender(SchedulerSlotRenderEventArgs args)
+  {
+    args.Attributes["style"] = "";
+
+    // Highlight today in month view
+    if ((args.View.Text == "Week" || args.View.Text.Equals("Month") || args.View.Text.Equals("Year")) && args.Start.Date.Equals(CkAppShared.ckMng.dtDatum.Date)) {
+      //args.Attributes["style"] = "background: var(--rz-scheduler-highlight-background-color, rgba(255,220,40,.2));";
+      args.Attributes["style"] += "background: #FFE1FF;";
+    }
+
+    // Highlight now
+    if (args.Start.Equals(CkAppShared.ckMng.dtDatum)) {
+      args.Attributes["style"] += "border-top: 2px solid red";
+    }
+
+    // Filter night events
+    /*
+    if (args.View.Text.Equals("Year") && args.Start.Hour != 0 && (args.Start.Hour < 8 || args.Start.Hour > 21)) {
+      args.Attributes["style"] = "display: none";
+    }
+    */
+
+    // Highlight working hours (9-18)
+    /*
+    if ((args.View.Text == "Week" || args.View.Text == "Day") && args.Start.Hour > 8 && args.Start.Hour < 19) {
+      args.Attributes["style"] = "background: var(--rz-scheduler-highlight-background-color, rgba(255,220,40,.2));";
+    }
+    */
+
+    // Past in grey
+    if (args.Start.Date.Date.CompareTo(CkAppShared.ckMng.dtDatum.Date) < 0) {
+      args.Attributes["style"] = "background: rgb(245,245,245);";
+    }
+  }
+
+  async Task OnSlotSelect(SchedulerSlotSelectEventArgs args)
+  {
+    //console.Log($"SlotSelect: Start={args.Start} End={args.End}");
+    if (_usr == null) return;
+
+    // Return if selected slot is in past
+    if (args.Start.CompareTo(CkAppShared.ckMng.dtDatum) < 0) return;
+
+    CornerkickManager.Club? _clb = CornerkickApp.Controllers.Member.MemberController.ckClub(_usr);
+    if (_clb != null) {
+      int iClubUserId = _clb.iId;
+
+      if (args.View.Text != "Year") {
+        if (args.Start.Hour < 1) args.Start = args.Start.AddHours(12);
+        if (args.End  .Hour < 1) args.End   = args.End  .AddHours(14);
+
+        CalendarModel.Appointment data = await DialogService.OpenAsync<CalendarAddAppointment>("Kalendareintrag hinzufügen",
+            new Dictionary<string, object> { { "dtStart", args.Start }, { "dtEnd", args.End }, { "iClubUserId", iClubUserId }, { "iUserRespLvl", _usr.iResp } });
+
+        if (data != null) {
+          //appointments.Add(data);
+          string sRet = "";
+          bool bOk = false;
+        
+          if      (data.iType == 0) bOk = Controllers.Member.CalendarController.addTestGame(_usr, data.dtStart, data.iIdReturn, out sRet);
+          else if (data.iType == 1) bOk = Controllers.Member.CalendarController.bookTrainingscamp(_usr, data.dtStart, data.dtEnd, data.iIdReturn, out sRet);
+          else if (data.iType == 3) bOk = Controllers.Member.CalendarController.addMeeting(_usr, data.iIdReturn, data.iIdReturn2, data.dtStart, out sRet);
+
+          if (!bOk) {
+            await CkDialog.ckDialog.Show("Kalendareintrag nicht hinzugefügt", sRet, sButtonCancelText2: "");
+            return;
+          }
+
+          await update();
+
+          // Either call the Reload method or reassign the Data property of the Scheduler
+          //await MainLayout.ckDialog.Show("Kalendareintrag hinzufügen", sRet, actionOnOk: () => scheduler.Reload());
+          await CkDialog.ckDialog.Show("Kalendareintrag hinzugefügt", sRet, sButtonCancelText2: "");
+
+          // Either call the Reload method or reassign the Data property of the Scheduler
+          //await scheduler.Reload();
+        }
+      }
+    }
+  }
+
+  async Task OnAppointmentSelect(SchedulerAppointmentSelectEventArgs<CalendarModel.Appointment> args)
+  {
+    //console.Log($"AppointmentSelect: Appointment={args.Data.Text}");
+    if (!args.Data.bEditable) return;
+
+    var copy = new CalendarModel.Appointment {
+        dtStart = args.Data.dtStart,
+        dtEnd = args.Data.dtEnd,
+        sTitle = args.Data.sTitle
+      };
+
+    var data = await DialogService.OpenAsync<CalendarEditAppointment>("Edit Appointment", new Dictionary<string, object> { { "Appointment", copy } });
+
+    if (data != null) {
+      // Update the appointment
+      args.Data.dtStart = data.Start;
+      args.Data.dtEnd = data.End;
+      args.Data.sTitle = data.Text;
+    }
+
+    await scheduler.Reload();
+  }
+
+  void OnAppointmentRender(SchedulerAppointmentRenderEventArgs<CalendarModel.Appointment> args)
+  {
+    // Never call StateHasChanged in AppointmentRender - would lead to infinite loop
+
+    string sColorText = "black";
+    if (!string.IsNullOrEmpty(args.Data.sColor2)) sColorText = args.Data.sColor2;
+
+    //if (args.Data.sTitle == "Birthday") {
+    args.Attributes["style"] = "background: " + args.Data.sColor + "; color: " + sColorText;
+    if (!string.IsNullOrEmpty(args.Data.sClassName)) args.Attributes["class"] = "rz-event-content " + args.Data.sClassName;
+    //}
+  }
+
+  async Task OnAppointmentMove(SchedulerAppointmentMoveEventArgs args)
+  {
+    var draggedAppointment = appointments.FirstOrDefault(x => x == args.Appointment.Data);
+
+    if (draggedAppointment != null) {
+      draggedAppointment.dtStart = draggedAppointment.dtStart + args.TimeSpan;
+
+      draggedAppointment.dtEnd = draggedAppointment.dtEnd + args.TimeSpan;
+
+      await scheduler.Reload();
+    }
+  }
+
+  public Task OnModalClosing(Blazorise.ModalClosingEventArgs e)
+  {
+    /*
+    // just set Cancel to prevent modal from closing
+    e.Cancel = ckDialog.cancelClose
+        || e.CloseReason != Blazorise.CloseReason.UserClosing;
+        */
+
+    return Task.CompletedTask;
+  }
+
+  protected async Task GetTableTestgames()
+  {
+    if (_usr != null) {
+      ltTableTestgames = (await CornerkickApp.Controllers.Member.CalendarController.GetTestgames(_usr)).ToList();
+    }
+  }
+
+  private async Task selectTableTestgame(List<CalendarModel.TableTestGames> ttg)
+  {
+  }
+
+  private static void ShowTutorial(CornerkickManager.User _usr, CalendarModel md, NavigationManager navmng)
+  {
+    if (md?.tutorial == null) return;
+    if (MainLayout.tutorial == null) return;
+
+    CkAppShared.Tutorial tt = md.tutorial;
+
+    if (_usr != null && tt != null && tt.bShow) {
+      //if (tt.iLevel == (TutorialController.iTtMainLevelTraining * 10) + 8) tt.iLevel = TutorialController.iTtMainLevelCalendar * 10;
+      if (TutorialController.IsLastSubLevel(tt.iLevel, TutorialController.iTtMainLevelTraining)) tt.iLevel = TutorialController.iTtMainLevelCalendar * 10;
+
+      if ((tt.iLevel / 10) == TutorialController.iTtMainLevelCalendar) {
+        TutorialController.TutorialReturn ttr = TutorialController.getTutorial(
+          _usr,
+          tt.iLevel,
+          _usr.bScouting
+        );
+
+        MainLayout.tutorial.Show(
+          ttr,
+          usr: _usr,
+          iLevel: tt.iLevel,
+          actionOnOk: () => ShowTutorial(_usr, md, navmng),
+          actionOnCancel: () => ShowTutorial(_usr, md, navmng),
+          actionOn3: () => navmng.NavigateTo("/member/desk", forceLoad: true)
+        );
+      }
+    }
+  }
+
+  protected async Task ShowTutorial(int iLevelChange = 0)
+  {
+    if (_usr != null && model?.tutorial != null) {
+      model.tutorial.iLevel += iLevelChange;
+      await Task.Run(() => ShowTutorial(_usr, model, NavigationManager));
+    }
+  }
+
+}

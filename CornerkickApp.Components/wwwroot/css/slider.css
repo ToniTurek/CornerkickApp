@@ -1,0 +1,49 @@
+﻿.slider {
+  -webkit-appearance: none;
+  width: 100%;
+  max-width: 100%;
+  background-color: transparent;
+  outline: none;
+  opacity: 0.7;
+  -webkit-transition: .2s;
+  transition: opacity .2s;
+}
+input[type=range][orient=vertical] {
+  writing-mode: vertical-lr; /* IE */
+  height: 100%;
+  width: 1.5rem;
+  rotate: 180deg;
+}
+
+.slider:hover {
+    opacity: 1;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 1.5rem;
+  height: 1.5rem;
+  background: #4CAF50;
+  cursor: pointer;
+}
+
+.handleOrange::-webkit-slider-thumb {
+  background: orange;
+}
+
+.handleBlue::-webkit-slider-thumb {
+  background: blue;
+}
+
+.handleGreen::-webkit-slider-thumb {
+  background: rgb(31,158,69);
+}
+
+.handleMagenta::-webkit-slider-thumb {
+  background: magenta;
+}
+
+p {
+    margin: 0px;
+}

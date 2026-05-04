@@ -1,0 +1,23 @@
+button.btnTrainingWeekTemplate {
+  position: relative;
+  width: 49%;
+  margin-bottom: 4px;
+}
+
+th.today{
+  border: 3px solid red;
+}
+
+select.ctrTrainingRules {
+  min-width: 60px !important;
+}
+
+td.contain-select {
+  min-width: 80px;
+}
+
+@media (max-width: 640.98px) {
+  button .btnTrainingWeekTemplate {
+    width: 100%;
+  }
+}

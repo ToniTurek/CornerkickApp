@@ -1,0 +1,199 @@
+﻿@using CornerkickApp.Shared.Models
+@using CornerkickApp.Components.Pages.Member
+
+<div style="position: absolute;
+            top:  @((posBall.y - ((fBallWidth * 1.5f) / 2f)).ToString("0.0%", System.Globalization.CultureInfo.InvariantCulture));
+            left: @((posBall.x - ( fBallWidth         / 2f)).ToString("0.0%", System.Globalization.CultureInfo.InvariantCulture));
+            width: @(fBallWidth.ToString("0.0%", System.Globalization.CultureInfo.InvariantCulture));
+            aspect-ratio: 1.0; min-width: 10px; z-index: 9;">
+  <img id="imgBall" src="@CornerkickApp.Shared.Models.CkAppShared.sContentDir/Icons/ball_white.png" alt="Ball" style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%;">
+    @{
+      if (AppConstants.IS_DEBUG && nSteps > 0) {
+        <div style="position: absolute; top: 100%; white-space: nowrap">
+          <p style="margin: 0">
+            @( ptPos.X.ToString() + "/" + ptPos.Y.ToString() )
+            @if (ptPosTarget != null) {
+              @( " (" + ptPosTarget.X.ToString() + "/" + ptPosTarget.Y.ToString() + ")" )
+            }
+          </p>
+          <p style="margin: 0">@( fBallWidth.ToString("0.000") )</p>
+          <p style="margin: 0">@( iStep.ToString() + "/" + nSteps.ToString() )</p>
+        </div>
+      }
+    }
+</div>
+@if (posBallTarget != null) {
+  <div style="position: absolute;
+              top:  @((posBallTarget.y - (0.018f / 2f)).ToString("0.0%", System.Globalization.CultureInfo.InvariantCulture));
+              left: @((posBallTarget.x - (0.012f / 2f)).ToString("0.0%", System.Globalization.CultureInfo.InvariantCulture));
+              width: 1.2%; aspect-ratio: 1.0; border-radius: 50%; z-index: 8; display: block; border: 2px solid rgb(0, 230, 230);">
+  </div>
+}
+@if (AppConstants.IS_DEBUG && posBallDebug != null) {
+  <div style="position: absolute;
+              top:  @((posBallDebug.y - ((fBallWidthDebug * 1.5f) / 2f)).ToString("0.0%", System.Globalization.CultureInfo.InvariantCulture));
+              left: @((posBallDebug.x - ( fBallWidthDebug         / 2f)).ToString("0.0%", System.Globalization.CultureInfo.InvariantCulture));
+              width: @(fBallWidthDebug.ToString("0.0%", System.Globalization.CultureInfo.InvariantCulture));
+              aspect-ratio: 1.0; min-width: 10px; z-index: 9;">
+    <i class="fa-regular fa-futbol fa-lg" style="color: #ff0000;"></i>
+  </div>
+}
+
+@code {
+  [Parameter]
+  public System.Drawing.Point ptPitch { get; set; }
+
+  private ViewGameModel.Position posBall = new ViewGameModel.Position();
+  private ViewGameModel.Position? posBallTarget;
+
+  private float fBallWidth = 0.0125f;
+
+  private ViewGameModel.Position? posBallDebug = null;
+  private float fBallWidthDebug = 0.015f;
+
+  int iStep = 0;
+  int nSteps = 0;
+  Point ptPos = new Point();
+  Point? ptPosTarget = new Point();
+
+  Task? tkInterpBall;
+  //CancellationTokenSource tokenSource2;
+
+  public static class AppConstants
+  {
+#if DEBUG
+    public const bool IS_DEBUG = true;
+#else
+    public const bool IS_DEBUG = false;
+#endif
+  }
+
+  protected override async Task OnInitializedAsync()
+  {
+    await base.OnInitializedAsync();
+
+    fBallWidth *= (CornerkickGame.Game.ptPitch100.X / (float)ptPitch.X);
+  }
+
+  public async Task update(ViewGameModel.Ball gBall, int iGameSpeed)
+  {
+    if (gBall == null) return;
+
+#if DEBUG
+    iStep = 0;
+    nSteps = 0;
+    if (gBall.ptPos != null) {
+      ptPos.X = gBall.ptPos.x;
+      ptPos.Y = gBall.ptPos.y;
+    }
+    posBallDebug = null;
+#endif
+
+    if (gBall.ptTarget != null && gBall.ptTarget.nSteps > 0) {
+      posBallTarget = new ViewGameModel.Position(gBall.ptTarget, ptPitch);
+
+      // Interpolate ball
+      if (iGameSpeed > 0) {
+#if DEBUG
+        iStep = gBall.ptTarget.iStep;
+        nSteps = gBall.ptTarget.nSteps;
+        posBallDebug = new ViewGameModel.Position(gBall.ptTarget, ptPitch);
+#endif
+
+        // Start interpolation at first pass step only
+        if (gBall.ptTarget.nSteps > 0 && (gBall.ptTarget.nSteps - gBall.ptTarget.iStep == 0 || !bInterpolateBallInProgress)) {
+          int nInterpSteps = iGameSpeed / 50;
+          //tokenSource2 = new CancellationTokenSource();
+          //CancellationToken ct = tokenSource2.Token;
+
+          bInterpolateBallBreak = true;
+          //if (tkInterpBall != null) tokenSource2.Cancel();
+          tkInterpBall = interpolateBall(new ViewGameModel.Position(gBall.ptPosLast, ptPitch), !gBall.ptTarget.bLow, nInterpSteps * gBall.ptTarget.nSteps, iGameSpeed * gBall.ptTarget.nSteps);
+        } else if (!bInterpolateBallInProgress || gBall.ptTarget.nSteps == 0) {
+          setBallPos(0, gBall.pos, null, false, 0, 0);
+#if DEBUG
+          posBallDebug = null;
+#endif
+        }
+#if DEBUG
+        setBallPos(0, gBall.pos, null, false, 0, 0, bDebug: true);
+#endif
+      } else { // No interpolation
+        ViewGameModel.Position? pt1 = null;
+        pt1 = new ViewGameModel.Position(gBall.ptTarget, ptPitch);
+
+        setBallPos(gBall.ptTarget.nSteps - gBall.ptTarget.iStep, gBall.pos, pt1, !gBall.ptTarget.bLow, gBall.ptTarget.nSteps, 0);
+      }
+    } else {
+      posBallTarget = null;
+      setBallPos(0, gBall.pos, posBallTarget, false, 0, 0);
+    }
+
+    await InvokeAsync(StateHasChanged);
+  }
+  
+  public Task clear()
+  {
+    //ltPlayer = null;
+    StateHasChanged();
+    return Task.CompletedTask;
+  }
+
+  private void setBallPos(int iB, ViewGameModel.Position pt0, ViewGameModel.Position? pt1, bool bHighPass, int nInterpSteps, int iGameSpeed, bool bDebug = false)
+  {
+    if (posBallTarget != null) pt1 = posBallTarget;
+
+    // Position
+    float fX = pt0.x;
+    float fY = pt0.y;
+    if (pt1 != null && nInterpSteps > 0) {
+      fX = (pt0.x * ((nInterpSteps - iB) / (float)nInterpSteps)) + (pt1.x * (iB / (float)nInterpSteps));
+      fY = (pt0.y * ((nInterpSteps - iB) / (float)nInterpSteps)) + (pt1.y * (iB / (float)nInterpSteps));
+    }
+
+    if (bDebug) {
+#if DEBUG
+      if (posBallDebug == null) posBallDebug = new ViewGameModel.Position();
+      posBallDebug.x = fX;
+      posBallDebug.y = fY;
+#endif
+    } else {
+      posBall.x = fX;
+      posBall.y = fY;
+    }
+
+    // Size
+    if (!bDebug) {
+      float fSizeX = 0.0125f;
+      if (bHighPass && nInterpSteps > 0) {
+        fSizeX += (float)((1.0 - Math.Pow((2.0 * (iB / (float)nInterpSteps)) - 1.0, 2.0)) * 0.01);
+      }
+      fBallWidth = fSizeX * (CornerkickGame.Game.ptPitch100.X / (float)ptPitch.X);
+    }
+  }
+
+  bool bInterpolateBallInProgress = false;
+  bool bInterpolateBallBreak = false;
+  private async Task interpolateBall(ViewGameModel.Position pt0, bool bHighPass, int nInterpSteps, int iGameSpeed, CancellationToken ct = default)
+  {
+    bInterpolateBallInProgress = false;
+    bInterpolateBallBreak = false;
+
+    int iB = 0;
+    while (nInterpSteps > 0 && iB < nInterpSteps && iGameSpeed > 0) {
+      if (ct.IsCancellationRequested) {
+        Console.WriteLine("Task cancelled");
+        ct.ThrowIfCancellationRequested();
+      }
+      if (bInterpolateBallBreak || posBallTarget == null) break;
+
+      bInterpolateBallInProgress = true;
+      setBallPos(iB++, pt0, posBallTarget, bHighPass, nInterpSteps, iGameSpeed);
+      await InvokeAsync(StateHasChanged);
+
+      const float fSlowDownFactor = 0.95f;
+      await ViewGame.wait((int)((iGameSpeed * fSlowDownFactor) / (float)nInterpSteps));
+    }
+  }
+
+}

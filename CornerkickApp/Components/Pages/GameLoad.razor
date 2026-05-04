@@ -1,0 +1,288 @@
+﻿@page "/gameload"
+
+@using CornerkickApp.Shared.Models
+@using CornerkickApp.Components.Shared.Components
+@using Blazorise.Modules
+@inject NavigationManager NavigationManager
+@inject Controllers.Shared.MyAuthenticationStateProvider _auth
+
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    /* Set background color to all buttons */
+    .btn-group .btn {
+      background-color: yellow !important;
+    }
+
+    /* Set background color of active button */
+    .btn-group .btn.active {
+      background-color: #ff9933 /*#ff4d4d*/ !important;
+    }
+
+    /* Set background color on hover */
+    .btn-group .btn:hover {
+      background-color: #ffcc00 !important;
+    }
+  </style>
+</head>
+
+<body class="@sClassDisabled">
+  <div style="position: relative; max-width: 1000px">
+    <h4>Lokale Spielstände</h4>
+    <hr />
+
+    <div class="p-3 form-group" style="margin-bottom: 6px">
+      <ListCkFiles @ref=lcf ltFilesCk="ltFilesCk" action="selectGame"></ListCkFiles>
+
+      <div style="margin-top: 10px">
+        <button class="btn btn-primary" style="width: 100%; font-size: 120%; background-color: rgb(@CkAppShared.sClCkRgb); border-color: darkgreen" @onclick="() => loadGame(sFileCkSelected)" disabled="@string.IsNullOrEmpty(sFileCkSelected)">
+          <Blazorise.Icon Name="Blazorise.IconName.FolderOpen" />
+          laden
+        </button>
+        <button class="btn btn-secondary" style="width: 100%; margin-top: 4px; background-color: lightcoral; border-color:red" @onclick="deleteGame" disabled="@string.IsNullOrEmpty(sFileCkSelected)">
+          <Blazorise.Icon Name="Blazorise.IconName.Delete" />
+          löschen
+        </button>
+      </div>
+    </div>
+    <GameLoadOnline action="selectGameOnline"></GameLoadOnline>
+  </div>
+</body>
+</html>
+
+@code {
+  List<string[]> ltFilesCk;
+  string? sFileCkSelected;
+  ListCkFiles? lcf { get; set; }
+
+  private string sClassDisabled = "";
+  private bool bButtonsDisabled = true;
+
+  protected override async Task OnInitializedAsync()
+  {
+    ltFilesCk = await Services.StartGameService.getFilesToLoad();
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender) {
+    }
+  }
+
+  private void selectGame(string? sFileCk)
+  {
+    sFileCkSelected = sFileCk;
+    StateHasChanged();
+  }
+
+  private void selectGameOnline(string? sFileCk)
+  {
+    ltFilesCk = Services.StartGameService.getFilesToLoad().Result;
+    sFileCkSelected = sFileCk;
+    if (lcf != null) lcf.update(sFileCkSelected);
+    StateHasChanged();
+  }
+
+  private void loadGame2(string? sFileCk)
+  {
+    loadGame(sFileCk);
+  }
+  private async Task loadGame(string? sFileCk)
+  {
+    sClassDisabled = "disabled";
+    await InvokeAsync(StateHasChanged);
+
+    loadGameWork(sFileCk);
+  }
+  private async Task loadGameWork(string? sFileCk)
+  {
+    if (string.IsNullOrEmpty(sFileCk)) return;
+
+    try {
+      string sErrorLoad = await CkAppShared.ckMng.io.loadAsync(sFileCk);
+
+      if (string.IsNullOrEmpty(sErrorLoad)) {
+        CkAppShared.sFileCk = sFileCk;
+
+        // Ensure correct club divisions
+        foreach (CornerkickManager.Club c in CkAppShared.ckMng.ltClubs) {
+          int iDiv = Controllers.Member.LeagueController.getClubDivisionId(c);
+          if (iDiv >= 0) c.iDivision = (byte)iDiv;
+        }
+
+#if DEBUG
+        // DEBUG SECTION
+        foreach (CornerkickManager.Cup c in CkAppShared.ckMng.ltCups) {
+          c.settings.bOffsite = c.settings.fPitchSizeRel > 0.75f;
+          c.settings.bCards = true;
+
+          /*
+          if (c.sName.Contains("Torneo")) {
+            c.settings.bGroupsTwoGames = false;
+            DateTime dt0 = c.ltMatchdays[0].dt;
+            DateTime dt1 = c.ltMatchdays[c.ltMatchdays.Count - 1].dt;
+            c.ltMatchdays.Clear();
+            CkAppShared.ckMng.calcMatchdays(c, dt0, dt1);
+          }
+          */
+        }
+        /*
+        CornerkickManager.Club? c361 = CkAppShared.ckMng.ltClubs.Find(c => c.sName.Contains("Urbanspor"));
+        if (c361 != null) c361.iBalanceSecret = 500000;
+        CornerkickManager.Cup l = CkAppShared.ckMng.ltCups.Find(c => c.sName.Contains("Quali"));
+        l.settings.fAttraction = 0.05f;
+        CornerkickManager.Club cH03 = CkAppShared.ckMng.ltClubs.Find(c => c.sName.Contains("Hertha"));
+        cH03.stadium.sName = "Ernst-Reuter-Sportfeld";
+        foreach (CornerkickManager.Player p in CkAppShared.ckMng.ltPlayer) {
+          p.plGame.fRadOfAction = [-1f, -1f];
+        }
+        foreach (CornerkickManager.Cup c in CkAppShared.ckMng.ltCups) {
+          c.settings.bOffsite = true;
+        }
+        */
+        //while (CkAppShared.ckMng.ltUser[0].club.ltPlayer.Count < 100) CkAppShared.ckMng.ltUser[0].club.ltPlayer.Add(CkAppShared.ckMng.plt.newPlayer(CkAppShared.ckMng.ltUser[0].club));
+        /*
+        CkAppShared.ckMng.dtDatum = CkAppShared.ckMng.dtDatum.AddMinutes(105);
+        foreach (CornerkickManager.Club c in CkAppShared.ckMng.ltClubs) {
+          if (c.user == null) c.ltTactic[0].formation = CkAppShared.ckMng.ltFormationen[CkAppShared.random.Next(CkAppShared.ckMng.ltFormationen.Count)].Clone();
+        }
+        CornerkickManager.Cup l = CkAppShared.ckMng.ltCups.Find(c => c.iId == CkAppShared.iCupIdLeague && c.iId2 == 36 && c.iId3 == 0);
+        l.ltMatchdays[l.ltMatchdays.Count - 1].dt = l.ltMatchdays[l.ltMatchdays.Count - 1].dt.AddDays(-7);
+        for (int i = 0; i < l.ltMatchdays[l.ltMatchdays.Count - 1].ltGameData.Count; i++) {
+          l.ltMatchdays[l.ltMatchdays.Count - 1].ltGameData[i].dt = l.ltMatchdays[l.ltMatchdays.Count - 1].ltGameData[i].dt.AddDays(-7);
+        }
+
+        foreach (CornerkickManager.Club c in CkAppShared.ckMng.ltClubs) c.stadium = CornerkickApp.Controllers.App.getDefaultStadium();
+        foreach (CornerkickManager.Cup c in CkAppShared.ckMng.ltCups) {
+          if (c.getClubsTotal() * c.getMatchdaysTotal() > 0) c.settings.iTvBonus = CornerkickApp.Controllers.Tool.roundInt(c.settings.iTvBonus / (c.getClubsTotal() * c.getMatchdaysTotal()), 1);
+        }
+        */        
+        // END OF DEBUG SECTION
+#endif
+
+        // Initialize tutorial and end-of-contract-info array
+        CornerkickApp.Controllers.Member.TutorialController.initialiteTutorial();
+        CornerkickApp.Controllers.Member.MemberController.bHideEocInfo = new bool[CkAppShared.ckMng.ltUser.Count];
+
+        // Set first user active
+        CkAppShared.iUserActive = 0;
+
+        // Update local user id of first user
+        //string sUserId = CornerkickApp.Controllers.Member.MemberController.getIPrincipalUserId(User, _httpContextAccessor);
+        if (/*User != null && !string.IsNullOrEmpty(sUserId) && */CkAppShared.ckMng.ltUser.Count > 0) {
+          //CkAppShared.ckMng.ltUser[0].id = sUserId;
+          CkAppShared.ckMng.ltUser[0].id = CkAppShared.ckMng.ltUser.Count.ToString();
+
+          Controllers.Tool.setCssStringClubColors(CkAppShared.ckMng.ltUser[0].club.cl1);
+        }
+
+        CornerkickApp.Controllers.Tool.setNations();
+        /*
+        List<byte> ltNations = new List<byte>();
+        foreach (CornerkickManager.Cup cup in CkAppShared.ckMng.ltCups) {
+          if (cup.iId == CkAppShared.iCupIdLeague && cup.iId2 >= 0) {
+            if (!ltNations.Contains((byte)cup.iId2)) ltNations.Add((byte)cup.iId2);
+          }
+        }
+        CkAppShared.iNations = ltNations.ToArray();
+        */
+
+        // Get game backup
+#if false
+        foreach (CornerkickManager.User usr in CkAppShared.ckMng.ltUser) {
+          if (usr?.club?.nextGame != null) {
+            string sFilenameGameInterrupted = Path.Combine(CornerkickApp.Controllers.App.getHomeDir(), ".game_" + CornerkickGame.Tool.getFilenameGame(usr.club.nextGame));
+            string sFilenameFull = Path.GetFullPath(sFilenameGameInterrupted);
+            if (Directory.Exists(sFilenameGameInterrupted)) {
+              CornerkickGame.Game gmBck = new CornerkickGame.Game();
+
+              // Get game data
+              string sFilenameGameData = Path.Combine(sFilenameGameInterrupted, ".gamedata_" + CornerkickGame.Tool.getFilenameGame(usr.club.nextGame) + ".ckgd");
+              if (File.Exists(sFilenameGameData)) {
+                gmBck.data = CkAppShared.ckMng.io.readGameData(sFilenameGameData);
+              }
+
+              // Get last state
+              var diGameInter = new DirectoryInfo(sFilenameGameInterrupted);
+              System.IO.FileInfo[] ltGameInter = diGameInter.GetFiles();
+              ltGameInter.ToList().RemoveAll(f => f.Length < 1024);
+              ltGameInter = ltGameInter.OrderBy(f => f.LastWriteTime).ToArray();
+
+              if (ltGameInter.Length > 0) {
+                gmBck.player = new CornerkickGame.Player[2][];
+                for (int iHA = 0; iHA < 2; iHA++) {
+                  CornerkickManager.Club? clb = CkAppShared.ckMng.ltClubs.Find(c => c.iId == usr.club.nextGame.team[iHA].iTeamId);
+                  if (clb == null) continue;
+
+                  gmBck.player[iHA] = new CornerkickGame.Player[usr.club.nextGame.nPlStart + usr.club.nextGame.nPlRes];
+                  for (int iP = 0; iP < usr.club.nextGame.nPlStart + usr.club.nextGame.nPlRes; iP++) {
+                    //CornerkickManager.Player[] players =
+                    if (iP >= clb.ltPlayer.Count) break;
+
+                    CornerkickManager.Player plMng = clb.ltPlayer[iP];
+                    if (plMng == null) continue;
+
+                    gmBck.player[iHA][iP] = clb.ltPlayer[iP].plGame;
+                  }
+                }
+                CornerkickGame.Tool.readGameState(ltGameInter[0].FullName, gmBck);
+
+                await CkDialog.ckDialog.Show(
+                  "Info",
+                  "Backup Spielstand gefunden: \"" + gmBck.data.team[0].sTeam + " vs. " + gmBck.data.team[1].sTeam + "\". Einladen?",
+                  //sButtonCancelText2: "",
+                  actionOnOk: () => loadGameBackup(gmBck)
+                );
+
+              }
+            }
+          }
+        }
+#endif
+
+        NavigationManager.NavigateTo("/member/desk", true);
+      } else {
+        await CkDialog.ckDialog.Show("ERROR", sErrorLoad, sButtonCancelText2: "");
+      }
+    } catch (Exception e) {
+      string sErrorMsg = "ERROR loading game. Message: " + e.Message + Environment.NewLine + e.StackTrace;
+      CkAppShared.ckMng.tl.writeLog(sErrorMsg);
+      //writeLog(Path.Combine(App.DocumentsDir, "ckapp.log"), sErrorMsg);
+    }
+  }
+
+  private async Task deleteGame()
+  {
+    if (string.IsNullOrEmpty(sFileCkSelected)) return;
+
+    await CkDialog.ckDialog.Show(
+      "Warnung",
+      "Spielstand <b>" + Path.GetFileNameWithoutExtension(sFileCkSelected) + "</b> wirklich löschen?",
+      sButtonOkText2: "löschen",
+      actionOnOk: () => deleteGameWork()
+    );
+  }
+
+  private async Task deleteGameWork()
+  {
+    if (string.IsNullOrEmpty(sFileCkSelected)) return;
+
+    await Task.Run(() => { File.Delete(sFileCkSelected); });
+
+    sFileCkSelected = null;
+    CkAppShared.sFileCk = null;
+
+    ltFilesCk = await Services.StartGameService.getFilesToLoad();
+    HomeModel.iFilesLoad = ltFilesCk.Count();
+
+    await InvokeAsync(StateHasChanged);
+  }
+
+  private Task loadGameBackup(CornerkickGame.Game gmBck)
+  {
+
+    return Task.CompletedTask;
+  }
+
+}

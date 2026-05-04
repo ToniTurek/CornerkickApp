@@ -1,0 +1,343 @@
+﻿@page "/member/contracts"
+
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using CornerkickApp.Shared.Models
+@using CornerkickApp.Components.Shared.Components
+
+@inject IJSRuntime JS
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject Controllers.Shared.MyAuthenticationStateProvider _auth
+
+<PageTitle>Training</PageTitle>
+
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    tfoot {
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+  <h3>Spielerverträge</h3>
+  
+  <div style="position: relative; width: 100%; display: flex; flex-wrap: wrap">
+    <div id="divCbProfiJouth" align="center" style="position: relative; width: fit-content; height: fit-content; margin-right: 10px; margin-bottom: 6px; white-space: nowrap; border: 1px solid grey; -webkit-border-radius: 10px; -moz-border-radius: 10px">
+      <label style="color: black; margin-left: 10px">
+        <input type="checkbox" @bind="bPro" @bind:after="updateTable">
+        Profis
+      </label>
+      <label style="color: black; margin-left: 10px; margin-right: 10px">
+        <input type="checkbox" @bind="bJouth" @bind:after="updateTable">
+        Jugend
+      </label>
+    </div>
+
+    <div style="width: fit-content; margin-right: 10px; margin-bottom: 12px">
+      <label style="display: flex; flex-direction: row; align-items: center">
+        Position:
+        <Blazorise.Select TValue="int" Value="@iPos" SelectedValueChanged="@((i) => updateTable(i))" Style="top: -8px; width:80px; margin-left: 10px">
+          @foreach (LayoutModel.SelectListItem sli in model.ltDdlFilterPos) {
+            <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+          }
+        </Blazorise.Select>
+      </label>
+    </div>
+
+    <div align="center" style="position: relative; display: flex; flex-direction: row; align-items: center; width: fit-content; height: fit-content; background-color: white; white-space: nowrap; border: 1px solid black; -webkit-border-radius: 10px; -moz-border-radius: 10px">
+      <Blazorise.RadioGroup TValue="bool" Name="form" CheckedValue="@bNextSeason" CheckedValueChanged="@((b) => updateTable(b))" Style="font-size: 120%">
+        <Blazorise.Radio Value="false" Inline="true">Aktuell</Blazorise.Radio>
+        <Blazorise.Radio Value="true" Inline="true">Nächste Saison</Blazorise.Radio>
+      </Blazorise.RadioGroup>
+    </div>
+  </div>
+
+  <div style="width: 100%; overflow: auto">
+    <div style="position: relative; width: fit-content">
+      @*
+        AggregateRowStyling="OnAggregateRowStyling"
+      *@
+      <DataGrid @ref="dgContracts"
+                TItem="ContractsModel.TableEntry"
+                Data="@ltTableContracts"
+                Style="white-space:nowrap"
+                PageSize="100"
+                Narrow
+                Striped
+                RowStyling="OnRowStyling"
+                RowSelectable="@((x) => false)"
+                Responsive
+                Sortable
+                SortMode="DataGridSortMode.Single">
+        <DataGridAggregates>
+          <DataGridAggregate Field="@nameof(ContractsModel.TableEntry.sName)" Aggregate="DataGridAggregateType.None">
+            <DisplayTemplate>
+              @("Summe / Durchschnitt:")
+            </DisplayTemplate>
+          </DataGridAggregate>
+          <DataGridAggregate Field="@nameof(ContractsModel.TableEntry.fSkill)" Aggregate="DataGridAggregateType.Average">
+            <DisplayTemplate>
+              @{
+                float f;
+                if (float.TryParse(context.Value.ToString(), out f)) {
+                  @(f > 0f ? f.ToString("0.0") : "?")
+                }
+              }
+            </DisplayTemplate>
+          </DataGridAggregate>
+          <DataGridAggregate Field="@nameof(ContractsModel.TableEntry.fSkillIdeal)" Aggregate="DataGridAggregateType.Average">
+            <DisplayTemplate>
+              @{
+                float f;
+                if (float.TryParse(context.Value.ToString(), out f)) {
+                  @(f > 0f ? f.ToString("0.0") : "?")
+                }
+              }
+            </DisplayTemplate>
+          </DataGridAggregate>
+          <DataGridAggregate Field="@nameof(ContractsModel.TableEntry.iAge)"            Aggregate="DataGridAggregateType.Average" DisplayFormat="{0:N1}" />
+          <DataGridAggregate Field="@nameof(ContractsModel.TableEntry.fTalent)"         Aggregate="DataGridAggregateType.Average" DisplayFormat="{0:N1}" />
+          <DataGridAggregate Field="@nameof(ContractsModel.TableEntry.iValue)"          Aggregate="DataGridAggregateType.Sum"     DisplayFormat="{0:N0}" />
+          <DataGridAggregate Field="@nameof(ContractsModel.TableEntry.iSalary)"         Aggregate="DataGridAggregateType.Sum"     DisplayFormat="{0:N0}" />
+          <DataGridAggregate Field="@nameof(ContractsModel.TableEntry.iBonusPlay)"      Aggregate="DataGridAggregateType.Sum"     DisplayFormat="{0:N0}" />
+          <DataGridAggregate Field="@nameof(ContractsModel.TableEntry.iBonusGoal)"      Aggregate="DataGridAggregateType.Sum"     DisplayFormat="{0:N0}" />
+          <DataGridAggregate Field="@nameof(ContractsModel.TableEntry.iLength)"         Aggregate="DataGridAggregateType.Average" DisplayFormat="{0:N1}"/>
+          <DataGridAggregate Field="@nameof(ContractsModel.TableEntry.iFixTransferFee)" Aggregate="DataGridAggregateType.Sum"     DisplayFormat="{0:N0}" />
+          <DataGridAggregate Field="@nameof(ContractsModel.TableEntry.bRetire)"         Aggregate="DataGridAggregateType.TrueCount" />
+          <DataGridAggregate Field="@nameof(ContractsModel.TableEntry.fHappy)"          Aggregate="DataGridAggregateType.Average" DisplayFormat="{0:N1}">
+            <DisplayTemplate>
+              @{
+                float f;
+                if (float.TryParse(context.Value.ToString(), out f)) {
+                  <span style="color: @getContractColor(f)">
+                    @(f.ToString("0.0%"))
+                  </span>
+                }
+              }
+            </DisplayTemplate>
+          </DataGridAggregate>
+          <DataGridAggregate Field="@nameof(ContractsModel.TableEntry.fNeg)"            Aggregate="DataGridAggregateType.Average" DisplayFormat="{0:N1}">
+            <DisplayTemplate>
+              @{
+                float f;
+                if (float.TryParse(context.Value.ToString(), out f)) {
+                  <span style="color: @getContractColor(f)">
+                    @(f.ToString("0.0%"))
+                  </span>
+                }
+              }
+            </DisplayTemplate>
+          </DataGridAggregate>
+        </DataGridAggregates>
+        <ChildContent>
+          <DataGridColumn Field="@nameof(ContractsModel.TableEntry.iId)" Sortable="false" Displayable="false" />
+          <DataGridColumn Field="@nameof(ContractsModel.TableEntry.iNb)" Caption="Nr" TextAlignment="Blazorise.TextAlignment.Center">
+            <DisplayTemplate>
+              @((MarkupString)(context.iNb < 1 ? "-" : context.iNb.ToString()))
+            </DisplayTemplate>
+          </DataGridColumn>
+          <DataGridColumn Field="@nameof(ContractsModel.TableEntry.sName)" Caption="Name" TextAlignment="Blazorise.TextAlignment.Center">
+            <DisplayTemplate>
+              <a href="/member/playerdetails/@context.iId" style="text-decoration: none">
+                @((MarkupString)context.sName)
+              </a>
+            </DisplayTemplate>
+          </DataGridColumn>
+          <DataGridColumn Field="@nameof(ContractsModel.TableEntry.sPosition)" Caption="HP" TextAlignment="Blazorise.TextAlignment.Center" />
+          <DataGridColumn Field="@nameof(ContractsModel.TableEntry.fSkill)" Caption="Stärke" TextAlignment="Blazorise.TextAlignment.Center">
+            <DisplayTemplate>
+              @((MarkupString)(context.fSkill > 0 ? context.fSkill.ToString("0.0") : "?"))
+            </DisplayTemplate>
+          </DataGridColumn>
+          <DataGridColumn Field="@nameof(ContractsModel.TableEntry.fSkillIdeal)" Caption="St. ber." TextAlignment="Blazorise.TextAlignment.Center">
+            <DisplayTemplate>
+              @((MarkupString)(context.fSkillIdeal > 0 ? context.fSkillIdeal.ToString("0.0") : "?"))
+            </DisplayTemplate>
+          </DataGridColumn>
+          <DataGridColumn Field="@nameof(ContractsModel.TableEntry.iAge)" Caption="Alter" TextAlignment="Blazorise.TextAlignment.End" />
+          <DataGridColumn Field="@nameof(ContractsModel.TableEntry.fTalent)" Caption="Tal." DisplayFormat="{0:N1}" TextAlignment="Blazorise.TextAlignment.End" />
+          <DataGridColumn Field="@nameof(ContractsModel.TableEntry.iValue)" Caption="MW [€]" DisplayFormat="{0:N0}" TextAlignment="Blazorise.TextAlignment.End" />
+          <DataGridColumn Field="@nameof(ContractsModel.TableEntry.iSalary)" Caption="Gehalt [€/a]" DisplayFormat="{0:N0}" TextAlignment="Blazorise.TextAlignment.End" />
+          <DataGridColumn Field="@nameof(ContractsModel.TableEntry.iBonusPlay)" Caption="Aufl. [€]" DisplayFormat="{0:N0}" TextAlignment="Blazorise.TextAlignment.End" />
+          <DataGridColumn Field="@nameof(ContractsModel.TableEntry.iBonusGoal)" Caption="Tor. [€]" DisplayFormat="{0:N0}" TextAlignment="Blazorise.TextAlignment.End" />
+          <DataGridColumn Field="@nameof(ContractsModel.TableEntry.iLength)" Caption="Lz [a]" DisplayFormat="{0:N0}" TextAlignment="Blazorise.TextAlignment.End" />
+          <DataGridColumn Field="@nameof(ContractsModel.TableEntry.iFixTransferFee)" Caption="Fixe Ablöse [€]" TextAlignment="Blazorise.TextAlignment.End">
+            <DisplayTemplate>
+              @((MarkupString)(context.iFixTransferFee > 0 ? context.iFixTransferFee.ToString("N0") : "-"))
+            </DisplayTemplate>
+          </DataGridColumn>
+          <DataGridColumn Field="@nameof(ContractsModel.TableEntry.bRetire)" Caption="KE">
+            <DisplayTemplate>
+              @(context.bRetire ? "X" : "-")
+            </DisplayTemplate>
+          </DataGridColumn>
+          <DataGridColumn Field="@nameof(ContractsModel.TableEntry.fHappy)" Caption="Zuf." DisplayFormat="{0:N1}" TextAlignment="Blazorise.TextAlignment.End">
+            <DisplayTemplate>
+              @if (context.bJouth) {
+                <span>-</span>
+              } else {
+                <span style="color: @getContractColor(context.fHappy)">
+                  @(context.fHappy.ToString("0.0%"))
+                </span>
+              }
+            </DisplayTemplate>
+          </DataGridColumn>
+          <DataGridColumn Field="@nameof(ContractsModel.TableEntry.fNeg)" Caption="VB" DisplayFormat="{0:N1}" TextAlignment="Blazorise.TextAlignment.End">
+            <DisplayTemplate>
+              @if (context.bJouth) {
+                <span>-</span>
+              } else {
+                <span style="color: @CornerkickApp.Controllers.Tool.getColor0_1(context.fNeg)">
+                  @(context.fNeg.ToString("0.0%"))
+                </span>
+              }
+            </DisplayTemplate>
+          </DataGridColumn>
+          <DataGridColumn Field="" Caption="Blitzverh." TextAlignment="Blazorise.TextAlignment.Center">
+            <DisplayTemplate>
+              @if (!context.bJouth && context.fNegUserSkill > 0f) {
+                <Blazorise.Button class="btn btn-outline-secondary" Clicked="@(() => NegotiatePlayerContractFast(context.iId, 1, context.fNegUserSkill))" Style="padding-top: 0; padding-bottom: 0">
+                  <Blazorise.Icon Name="Blazorise.IconName.IdCard" />
+                  @((MarkupString)(" +1 (" + context.fNegUserSkill.ToString("0.0%") + ")"))
+                </Blazorise.Button>
+              } else {
+                @("-")
+              }
+            </DisplayTemplate>
+          </DataGridColumn>
+          <DataGridColumn Field="@nameof(ContractsModel.TableEntry.sNat)" Caption="Nat." TextAlignment="Blazorise.TextAlignment.Center">
+            <DisplayTemplate>
+              @((MarkupString)Controllers.Tool.getNatIcon(context.sNat))
+            </DisplayTemplate>
+          </DataGridColumn>
+        </ChildContent>
+        <EmptyTemplate>
+          <div class="box">
+            Keine Jugendspieler ...
+          </div>
+        </EmptyTemplate>
+        <LoadingTemplate>
+          <div class="box">
+            <progress class="progress is-small is-primary" max="100" />
+          </div>
+        </LoadingTemplate>
+      </DataGrid>
+    </div>
+  </div>
+</body>
+</html>
+
+@code {
+  private CornerkickManager.User? _usr;
+  private ContractsModel? model;
+  private IJSObjectReference? module;
+
+  private DataGrid<ContractsModel.TableEntry>? dgContracts;
+
+  bool bPro { get; set; } = true;
+  bool bJouth;
+  int iPos;
+  bool bNextSeason;
+
+  List<ContractsModel.TableEntry> ltTableContracts = new List<ContractsModel.TableEntry>();
+
+  protected override async Task OnInitializedAsync()
+  {
+    //await base.OnInitializedAsync();
+
+#if _WebApp
+    //_usr = await Http.GetFromJsonAsync<CornerkickManager.User>("member/Member/ckUser");
+    _usr = Controllers.Member.MemberController.ckUser(await _auth.GetUserId());
+#else
+    _usr = CkAppShared.ckMng.ltUser[CkAppShared.iUserActive];
+#endif
+    model = CornerkickApp.Controllers.Member.ContractsController.Model(_usr);
+
+    if (model != null) {
+      await updateTable();
+#if _WebApp
+    } else {
+      NavigationManager.NavigateTo("/authentication/register");
+#endif
+    }
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender) {
+      await JS.InvokeAsync<IJSObjectReference>("import", "./_content/CornerkickApp.Components/js/Player.js");
+      module = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/CornerkickApp.Components/Pages/Member/Team.razor.js");
+
+      if (module != null && model != null) {
+        //await module.InvokeAsync<string>("init", JsonSerializer.Serialize(teamData), JsonSerializer.Serialize(team.tutorial));
+      }
+
+      if (dgContracts != null) await dgContracts.ApplySorting(new DataGridSortColumnInfo(nameof(ContractsModel.TableEntry.iNb), Blazorise.SortDirection.Ascending));
+    }
+  }
+
+  private void OnRowStyling(ContractsModel.TableEntry ti, DataGridRowStyling styling)
+  {
+    if (ti.bJouth) {
+      styling.Style += "; background-color: rgb(255,240,240)";
+    }
+  }
+
+  private Blazorise.DataGrid.DataGridRowStyling OnAggregateRowStyling(ContractsModel.TableEntry te)
+  {
+    DataGridRowStyling styling = new DataGridRowStyling();
+    styling.Style = "color: rgb(180,180,180)"; // --> text color grey
+
+    return styling;
+  }
+
+  private Task updateTable(bool bNs)
+  {
+    bNextSeason = bNs;
+    updateTable();
+
+    return Task.CompletedTask;
+  }
+
+  private Task updateTable(int jPos)
+  {
+    iPos = jPos;
+    updateTable();
+
+    return Task.CompletedTask;
+  }
+
+  private Task updateTable()
+  {
+    ltTableContracts = Controllers.Member.ContractsController.GetTable(_usr, bPro, bJouth, (byte)iPos, bNextSeason);
+
+    return Task.CompletedTask;
+  }
+
+  private static string getContractColor(float fHappy)
+  {
+    if (fHappy < 0.50) return "red";
+    if (fHappy < 0.75) return "orange";
+
+    return "green";
+  }
+
+  private Task NegotiatePlayerContractFast(int iPlayerId, int iYears, float fMoodTarget)
+  {
+    if (iPlayerId < 0) return Task.CompletedTask;
+
+    // Get player
+    CornerkickManager.Player? plContractFast = CkAppShared.ckMng.ltPlayer.Find(p => p.plGame.iId == iPlayerId);
+    if (plContractFast == null) return Task.CompletedTask;
+
+    bool bOk = Controllers.Member.ContractsController.extendPlayerContractFast(_usr, plContractFast, iYears, fMoodTarget);
+
+    if (bOk) updateTable();
+
+    return Task.CompletedTask;
+  }
+}

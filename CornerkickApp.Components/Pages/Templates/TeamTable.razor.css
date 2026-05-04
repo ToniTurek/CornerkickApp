@@ -1,0 +1,17 @@
+﻿div.selected_player_row {
+  position: relative;
+  bottom: 1px;
+  left: 0px;
+  width: fit-content;
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid black;
+  z-index: 3;
+  cursor: pointer;
+}
+
+@media (max-width: 640.98px) {
+  div.selected_player_row {
+    position: fixed;
+  }
+}

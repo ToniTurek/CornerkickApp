@@ -1,0 +1,458 @@
+﻿@page "/member/tactic"
+
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using CornerkickApp.Controllers.Member
+@using CornerkickApp.Shared.Models
+@inject IJSRuntime JS
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject Controllers.Shared.MyAuthenticationStateProvider _auth
+
+<PageTitle>Taktik</PageTitle>
+
+<!DOCTYPE html>
+<html>
+<head>
+  <link rel="stylesheet" href="./_content/CornerkickApp.Components/css/slider.css" />
+
+  <style>
+    .labels {
+      z-index: 0;
+    }
+
+    .labels.horizontal {
+      position: absolute;
+      left: 0px;
+      top: 4px;
+      width: 100%;
+      text-align: center;
+    }
+
+    .labels.vertical {
+      position: absolute;
+      top: 0px;
+      left: 0px;
+      height: 100%;
+      display: table;
+      overflow: visible;
+      pointer-events: none;
+    }
+
+    .rotate90 {
+      text-align: center;
+      display: inline-table;
+      white-space: nowrap;
+      width: 100%;
+      height: 20px;
+      transform: rotate(-90deg) translate(-100%, 0);
+      transform-origin: 0 0;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="divBody" style="width: 100%; max-width: 1200px; height: 100%; min-height: 800px">
+    <div style="position: relative; width: 100%; height: 80px">
+      <div style="position: absolute; float: left; width: 100%; height: 100%; top: 0%; left: 0%">
+        <div style="position: absolute; width: 30%; top: 50%; left: 0%">
+          @*@Html.DropDownListFor(m => m.sStandards[3], Model.ltDdlStandards[3], new { @class = "form-control", @onchange = "setStandards(3)", id = "iDdlStandard3" })*@
+          <Blazorise.Select id="iDdlStandard3" SelectedValue="@model.iStandards[3]" SelectedValueChanged="@(e => setStandards(3, e))" TValue="int">
+            @if (model?.sliSystem != null) {
+              @foreach (LayoutModel.SelectListItem sli in model.ltDdlStandards[3]) {
+                <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+              }
+            }
+          </Blazorise.Select>
+        </div>
+        <div style="position: absolute; width: 30%; top: 50%; right: 0px">
+          @*@Html.DropDownListFor(m => m.sStandards[2], Model.ltDdlStandards[2], new { @class = "form-control", @onchange = "setStandards(2)", id = "iDdlStandard2" })*@
+          <Blazorise.Select id="iDdlStandard2" SelectedValue="@model.iStandards[2]" SelectedValueChanged="@(e => setStandards(2, e))" TValue="int">
+            @if (model?.sliSystem != null) {
+              @foreach (LayoutModel.SelectListItem sli in model.ltDdlStandards[2]) {
+                <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+              }
+            }
+          </Blazorise.Select>
+        </div>
+        <div style="position: absolute; width: 30%; top: 50%; left: 35%">
+          @*@Html.DropDownListFor(m => m.sStandards[0], Model.ltDdlStandards[0], new { @class = "form-control", @onchange = "setStandards(0)", id = "iDdlStandard0" })*@
+          <Blazorise.Select id="iDdlStandard0" SelectedValue="@model.iStandards[0]" SelectedValueChanged="@(e => setStandards(0, e))" TValue="int">
+            @if (model?.sliSystem != null) {
+              @foreach (LayoutModel.SelectListItem sli in model.ltDdlStandards[0]) {
+                <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+              }
+            }
+          </Blazorise.Select>
+        </div>
+        <div style="position: absolute; width: 30%; top: 0%; left: 35%">
+          @*@Html.DropDownListFor(m => m.sStandards[1], Model.ltDdlStandards[1], new { @class = "form-control", @onchange = "setStandards(1)", id = "iDdlStandard1" })*@
+          <Blazorise.Select id="iDdlStandard1" SelectedValue="@model.iStandards[1]" SelectedValueChanged="@(e => setStandards(1, e))" TValue="int">
+            @if (model?.sliSystem != null) {
+              @foreach (LayoutModel.SelectListItem sli in model.ltDdlStandards[1]) {
+                <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+              }
+            }
+          </Blazorise.Select>
+        </div>
+      </div>
+    </div>
+
+    <div class="image" style="position: relative; width: 100%; margin-bottom: 2%">
+      @*
+      <div id="divSystemTactic" style="position: absolute; top: 2%; left: 3%; width: 94%; z-index: 99">
+        <Blazorise.Select id="ddlSystem" style="width: 84px; text-align: right" @bind-Value="@model.iSystem" TValue="int">
+          @if (model?.sliSystem != null) {
+            @foreach (LayoutModel.SelectListItem sli in model.sliSystem) {
+              <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+            }
+          }
+        </Blazorise.Select>
+        <button class="form-control" id="bnTacticNew" style="width: 40px; display: none" onclick="addSystem(this, document.getElementById('divTactic'), false)"><i class="fa fa-plus"></i></button>
+        <button class="form-control" id="bnTacticDel" style="width: 40px; display: none" onclick="deleteSystem(this, false)"><i class="fa fa-trash-o"></i></button>
+      </div>
+      *@
+
+      <img id="imgTacticBoard" style="position: relative; width: 100%" />
+
+      @if (model.iTactics != null) {
+        <div id="divTactic" style="position: absolute; width: 100%; height: 100%; top: 0px; left: 0px">
+          <div id="divTcOrientation" style="position: absolute; height: 34%; min-height: 300px; top: 11%; left: 33%">
+            <div class="labels vertical">
+              <div style="display: table-cell; text-align: left; vertical-align: middle">
+                <div class="rotate90">
+                  <b style="color: orange; font-family: 'MV Boli'">Ausrichtung</b>
+                </div>
+              </div>
+            </div>
+
+            <div style="height: 100%; display: flex; flex-direction: column">
+              <div style="color: orange">@model.iTactics[0].ToString()</div>
+              <Blazorise.Slider TValue="int" Value="model.iTactics[0]" Min="-100" Max="100" Step="5" ValueChanged="(i => setTactic(0, i))" Class="slider handleOrange" orient="vertical" />
+            </div>
+          </div>
+
+          <div id="divTcGapOffence" style="position: absolute; height: 10%; min-height: 300px; top: 20%; left: 18%">
+            <div class="labels vertical">
+              <div style="display: table-cell; text-align: left; vertical-align: middle">
+                <div class="rotate90">
+                  <b style="color: blue; font-family: 'MV Boli'">Abstand gegn. Abseits</b>
+                </div>
+              </div>
+            </div>
+
+            <div style="height: 100%; display: flex; flex-direction: column">
+              <div style="color: blue">@model.iTactics[9].ToString()</div>
+              <Blazorise.Slider TValue="int" Value="model.iTactics[9]" Min="-1" Max="3" Step="1" ValueChanged="(i => setTactic(9, i))" Class="slider handleBlue" Style="rotate: 0deg" orient="vertical" />
+            </div>
+          </div>
+
+          <div id="divTcShootDist" style="position: absolute; height: 25%; min-height: 300px; top: 2%; left: 58%; transform:rotate(-23deg)">
+            <div class="labels vertical">
+              <div style="display: table-cell; text-align: left; vertical-align: middle">
+                <div class="rotate90">
+                  <b style="color: red; font-family: 'MV Boli'">Schusshäufigkeit</b>
+                </div>
+              </div>
+            </div>
+
+            <div style="height: 100%; display: flex; flex-direction: column">
+              <div style="color: red">@model.iTactics[2].ToString()</div>
+              <Blazorise.Slider TValue="int" Value="model.iTactics[2]" Min="-100" Max="100" Step="5" ValueChanged="(i => setTactic(2, i))" Class="slider handleRed" Style="rotate: 0deg" orient="vertical" />
+            </div>
+          </div>
+
+          <div id="divTcPassLeft" style="position: absolute; height: 34%; min-height: 300px; top: 13%; left: 5%">
+            <div class="labels vertical">
+              <div style="display: table-cell; text-align: left; vertical-align: middle">
+                <div class="rotate90">
+                  <b style="color: rgb(@CkAppShared.sClCkRgb); font-family: 'MV Boli'">über links</b>
+                </div>
+              </div>
+            </div>
+
+            <div style="height: 100%; display: flex; flex-direction: column">
+              <div style="color: rgb(@CkAppShared.sClCkRgb)">@model.iTactics[7].ToString()</div>
+              <Blazorise.Slider TValue="int" Value="model.iTactics[7]" Min="0" Max="300" Step="5" ValueChanged="(i => setTactic(7, i))" Class="slider handleGreen" orient="vertical" />
+            </div>
+          </div>
+
+          <div id="divTcPassRight" style="position: absolute; height: 34%; min-height: 300px; top: 13%; right: 5%">
+            <div class="labels vertical">
+              <div style="display: table-cell; text-align: left; vertical-align: middle">
+                <div class="rotate90">
+                  <b style="color: rgb(@CkAppShared.sClCkRgb); font-family: 'MV Boli'">über rechts</b>
+                </div>
+              </div>
+            </div>
+
+            <div style="height: 100%; display: flex; flex-direction: column">
+              <div style="color: rgb(@CkAppShared.sClCkRgb)">@model.iTactics[8].ToString()</div>
+              <Blazorise.Slider TValue="int" Value="model.iTactics[8]" Min="0" Max="300" Step="5" ValueChanged="(i => setTactic(8, i))" Class="slider handleGreen" orient="vertical" />
+            </div>
+          </div>
+
+          <div id="divTcPassMid" style="position: absolute; height: 34%; min-height: 300px; top: 13%; left: 50%" disabled="disabled">
+            <div class="labels vertical">
+              <div style="display: table-cell; text-align: left; vertical-align: middle">
+                <div class="rotate90">
+                  <b style="color: rgb(@CkAppShared.sClCkRgb); font-family: 'MV Boli'">durch die Mitte</b>
+                </div>
+              </div>
+            </div>
+
+            <div style="height: 100%; display: flex; flex-direction: column">
+              <div style="color: rgb(@CkAppShared.sClCkRgb)">@model.iTactics[10].ToString()</div>
+              <Blazorise.Slider TValue="int" Value="model.iTactics[10]" Min="0" Max="300" Step="5" Class="slider handleGreen" orient="vertical" Disabled />
+            </div>
+          </div>
+
+          <div id="divTcPower" style="position: absolute; width: 40%; top: 53%; left: 5%">
+            <div class="labels horizontal">
+              <b style="color: magenta; font-family: 'MV Boli'">Einsatz</b>
+            </div>
+
+            <div style="height: 100%; display: flex; flex-direction: column; z-index: 1">
+              <div style="color: magenta">@model.iTactics[1].ToString()</div>
+              <Blazorise.Slider TValue="int" Value="model.iTactics[1]" Min="-100" Max="100" Step="5" ValueChanged="(i => setTactic(1, i))" Class="slider handleMagenta" />
+              @{
+#if _WebApp
+                if (!model.bGame && model.iTactics[1] > 0) {
+                  <img id="powerWarning" title="Achtung: Du solltest nicht mit einem Einsatz größer als 0 in ein Spiel gehen!" style="position: absolute; top: -4px; right: 6px; width: 30px; z-index: 2" src="@CkAppShared.sContentDir/Icons/attention.png">
+                }
+#endif
+              }
+            </div>
+          </div>
+
+          <div id="divTcDuel" style="position: absolute; width: 40%; top: 60%; left: 5%">
+            <div class="labels horizontal">
+              <b style="color: black; font-family: 'MV Boli'">Aggressivität</b>
+            </div>
+
+            <div style="height: 100%; display: flex; flex-direction: column; z-index: 1">
+              <div style="color: magenta">@model.iTactics[3].ToString()</div>
+              <Blazorise.Slider TValue="int" Value="model.iTactics[3]" Min="-100" Max="100" Step="5" ValueChanged="(i => setTactic(3, i))" Class="slider" />
+            </div>
+          </div>
+
+          <div id="divTcOffsite" style="position: absolute; width: 40%; min-width: 300px; top: 67%; left: 5%; text-align: center">
+            <label style="width: 100%; background-color: white; font-size: 32px; color: blue; font-family: 'MV Boli'">
+              @*@Html.CheckBoxFor(m => m.tactic.bOffsite, new { id = "cbTcOffsite" })*@
+              <input type="checkbox" value="@model.tactic.bOffsite" @onchange="setOffsite" />
+              Abseitsfalle
+            </label>
+          </div>
+
+          <div id="divTcPassLength" style="position: absolute; width: 40%; top: 53%; left: 55%">
+            <div class="labels horizontal">
+              <b style="color: rgb(@CkAppShared.sClCkRgb); font-family: 'MV Boli'">Passlänge</b>
+            </div>
+
+            <div style="height: 100%; display: flex; flex-direction: column; z-index: 1">
+              <div style="color: magenta">@model.iTactics[5].ToString()</div>
+              <Blazorise.Slider TValue="int" Value="model.iTactics[5]" Min="-100" Max="100" Step="5" ValueChanged="(i => setTactic(5, i))" Class="slider handleGreen" />
+            </div>
+          </div>
+
+          <div id="divTcPassRisk" style="position: absolute; width: 40%; top: 60%; left: 55%">
+            <div class="labels horizontal">
+              <b style="color: rgb(@CkAppShared.sClCkRgb); font-family: 'MV Boli'">Passrisiko</b>
+            </div>
+
+            <div style="height: 100%; display: flex; flex-direction: column; z-index: 1">
+              <div style="color: magenta">@model.iTactics[4].ToString()</div>
+              <Blazorise.Slider TValue="int" Value="model.iTactics[4]" Min="-100" Max="100" Step="5" ValueChanged="(i => setTactic(4, i))" Class="slider handleGreen" />
+            </div>
+          </div>
+
+          <div id="divTcPassFreq" style="position: absolute; width: 40%; top: 67%; left: 55%">
+            <div class="labels horizontal">
+              <b style="color: rgb(@CkAppShared.sClCkRgb); font-family: 'MV Boli'">Passhäufigkeit</b>
+            </div>
+
+            <div style="height: 100%; display: flex; flex-direction: column; z-index: 1">
+              <div style="color: magenta">@model.iTactics[6].ToString()</div>
+              <Blazorise.Slider TValue="int" Value="model.iTactics[6]" Min="-100" Max="100" Step="5" ValueChanged="(i => setTactic(6, i))" Class="slider handleGreen" />
+            </div>
+          </div>
+
+          <div id="divTcSubs" style="position: absolute; width: 60%; min-width: 300px; top: 75%; left: 20%; text-align: center">
+            @if (model.ddlAutoSubsOut != null) {
+              for (int i = 0; i < model.ddlAutoSubsOut.Length; i++) {
+                int ii = i;
+
+                <div style="position: relative; width: 100%; height: 40px">
+                  <div style="position: absolute; width: 38%; left:  0%">
+                    <Blazorise.Select SelectedValue="@(model.iAutoSubsOut[ii])" SelectedValueChanged="@(j => setAutoSubs(0, ii, j, model.iAutoSubsIn[ii], model.iAutoSubsMin[ii]))" TValue="int" Disabled=@(ii > 0 && (model.iAutoSubsOut[ii - 1] < 0 || model.iAutoSubsIn[ii - 1] < 0))>
+                      @foreach (LayoutModel.SelectListItem sli in model.ddlAutoSubsOut[ii]) {
+                        <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+                      }
+                    </Blazorise.Select>
+                  </div>
+                  <div style="position: absolute; width: 38%; left: 40%">
+                    <Blazorise.Select SelectedValue="@(model.iAutoSubsIn[ii])" SelectedValueChanged="@(j => setAutoSubs(1, ii, model.iAutoSubsOut[ii], j, model.iAutoSubsMin[ii]))" TValue="int" Disabled=@(ii > 0 && (model.iAutoSubsOut[ii - 1] < 0 || model.iAutoSubsIn[ii - 1] < 0))>
+                      @foreach (LayoutModel.SelectListItem sli in model.ddlAutoSubsIn[ii]) {
+                        <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+                      }
+                    </Blazorise.Select>
+                  </div>
+                  <div style="position: absolute; width: 60px; left: 80%">
+                    <input class="form-control" type="number" min="0" max="120" style="width: 64px; text-align: right" value="@model.iAutoSubsMin[ii]" @onchange="(j) => setAutoSubs(2, ii, model.iAutoSubsOut[ii], model.iAutoSubsIn[ii], int.Parse(j.Value.ToString()))" />
+                  </div>
+                </div>
+              }
+            }
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+
+</body>
+</html>
+
+@code {
+  private CornerkickManager.User? _usr;
+  private TacticModel? model;
+  private IJSObjectReference? module;
+
+  MainLayout.BrowserDimension? bd { get; set; }
+
+  protected override async Task OnInitializedAsync()
+  {
+    await base.OnInitializedAsync();
+
+#if _WebApp
+    //_usr = await Http.GetFromJsonAsync<CornerkickManager.User>("member/Member/ckUser");
+    _usr = Controllers.Member.MemberController.ckUser(await _auth.GetUserId());
+#else
+    _usr = CkAppShared.ckMng.ltUser[CkAppShared.iUserActive];
+#endif
+
+    model = CornerkickApp.Controllers.Member.TacticController.Model(_usr);
+    if (model != null) {
+      //await GetTableTeam();
+#if _WebApp
+    } else {
+      NavigationManager.NavigateTo("/authentication/register");
+#endif
+    }
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender) {
+      //await JS.InvokeAsync<IJSObjectReference>("import", "./_content/CornerkickApp.Components/js/Player.js");
+      module = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/CornerkickApp.Components/Pages/Member/Tactic.razor.js");
+
+      if (module != null && model != null) {
+        MainLayout.BrowserService browserService = new MainLayout.BrowserService(JS);
+        bd = await browserService.GetDimensions();
+
+        await module.InvokeAsync<string>("init", model.bGame, bd.Width, JsonSerializer.Serialize(model.tutorial));
+
+        await ShowTutorial();
+      }
+    }
+  }
+
+  protected Task setTactic(int iType, string sValue)
+  {
+    int iValue = -1;
+    if (int.TryParse(sValue, out iValue)) setTactic(iType, iValue);
+
+    return Task.CompletedTask;
+  }
+  protected Task setTactic(int iType, int iValue, bool bReverse = false)
+  {
+    if (_usr == null) return Task.CompletedTask;
+
+    if (model?.tactic != null) model.iTactics[iType] = iValue;
+
+    float fReturn = CornerkickApp.Controllers.Member.TacticController.update(_usr, iType, bReverse ? -iValue : iValue, model.iSystem);
+
+    if (iType == 7 || iType == 8) {
+      model.iTactics[15 - iType] = (int)((fReturn + 1) * 100);
+
+      model.iTactics[10] = 300 - (model.iTactics[7] + model.iTactics[8]);
+    }
+
+    return Task.CompletedTask;
+  }
+
+  protected Task setOffsite(ChangeEventArgs e)
+  {
+    if (_usr == null) return Task.CompletedTask;
+    if (e.Value == null) return Task.CompletedTask;
+
+    bool bOffsite = false;
+    if (bool.TryParse(e.Value.ToString(), out bOffsite)) CornerkickApp.Controllers.Member.TacticController.setOffsite(_usr, bOffsite, model.iSystem);
+
+    if (model?.tactic != null) model.tactic.bOffsite = bOffsite;
+
+    return Task.CompletedTask;
+  }
+
+  protected Task setStandards(int iType, int iValue)
+  {
+    if (_usr == null) return Task.CompletedTask;
+
+    CornerkickApp.Controllers.Member.TacticController.setStandards(_usr, iType, iValue);
+
+    if (model?.iStandards != null) model.iStandards[iType] = iValue;
+
+    return Task.CompletedTask;
+  }
+
+  protected Task setAutoSubs(int iInOutMin, int iAS, int iOut, int iIn, int iMin)
+  {
+    if (_usr == null) return Task.CompletedTask;
+
+    if      (iInOutMin == 0) model.iAutoSubsOut[iAS] = iOut;
+    else if (iInOutMin == 1) model.iAutoSubsIn [iAS] = iIn;
+    else if (iInOutMin == 2) model.iAutoSubsMin[iAS] = iMin;
+
+    CornerkickApp.Controllers.Member.TacticController.setAutoSubs(_usr, iAS, iOut, iIn, iMin);
+
+    return Task.CompletedTask;
+  }
+
+  private static void ShowTutorial(CornerkickManager.User _usr, TacticModel md, NavigationManager navmng)
+  {
+    if (md?.tutorial == null) return;
+    if (MainLayout.tutorial == null) return;
+
+    CkAppShared.Tutorial tt = md.tutorial;
+
+    if (_usr != null && tt != null && tt.bShow) {
+      //if (tt.iLevel == (TutorialController.iTtMainLevelCalendar * 10) + 2) tt.iLevel = TutorialController.iTtMainLevelTactic * 10;
+      if (TutorialController.IsLastSubLevel(tt.iLevel, TutorialController.iTtMainLevelCalendar)) tt.iLevel = TutorialController.iTtMainLevelTactic * 10;
+
+      if ((tt.iLevel / 10) == TutorialController.iTtMainLevelTactic) {
+        TutorialController.TutorialReturn ttr = TutorialController.getTutorial(
+          _usr,
+          tt.iLevel,
+          _usr.bScouting
+        );
+
+        MainLayout.tutorial.Show(
+          ttr,
+          usr: _usr,
+          iLevel: tt.iLevel,
+          actionOnOk: () => ShowTutorial(_usr, md, navmng),
+          actionOnCancel: () => ShowTutorial(_usr, md, navmng),
+          actionOn3: () => navmng.NavigateTo("/member/desk", forceLoad: true)
+        );
+      }
+    }
+  }
+
+  protected async Task ShowTutorial(int iLevelChange = 0)
+  {
+    if (_usr != null && model?.tutorial != null) {
+      model.tutorial.iLevel += iLevelChange;
+      await Task.Run(() => ShowTutorial(_usr, model, NavigationManager));
+    }
+  }
+}

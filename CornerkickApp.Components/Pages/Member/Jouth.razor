@@ -1,0 +1,201 @@
+﻿@page "/member/jouth"
+
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using CornerkickApp.Components.Shared.Components
+@using CornerkickApp.Shared.Models
+@inject IJSRuntime JS
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject Controllers.Shared.MyAuthenticationStateProvider _auth
+
+<PageTitle>Jugendspieler</PageTitle>
+
+<!DOCTYPE html>
+<html>
+<head>
+</head>
+
+<body>
+  <h3>Jugendspieler</h3>
+  <div style="width: 100%; overflow: auto">
+    <div style="position: relative; width: fit-content">
+      <DataGrid @ref="dgJouth" 
+                TItem="TeamModel.TableTeam"
+                Data="@ltTableJouth"
+                Style="white-space:nowrap"
+                PageSize="100"
+                Narrow
+                Responsive
+                Sortable
+                SortMode="DataGridSortMode.Single">
+        <ChildContent>
+          <DataGridColumn Field="@nameof(TeamModel.TableTeam.iId)" Sortable="false" Displayable="false" />
+          <DataGridColumn Field="@nameof(TeamModel.TableTeam.fAge)" Caption="Kl." TextAlignment="Blazorise.TextAlignment.Center"
+                                            CellStyle="@((item) => {
+                                              if (item.fAge >= 17) {
+                                                return "background-color: LightGrey !important";
+                                              } else if (item.fAge >= 15) {
+                                                return "background-color: PowderBlue !important";
+                                              } else if (item.fAge >= 13) {
+                                                return "background-color: Yellow !important";
+                                              } else if (item.fAge >= 11) {
+                                                return "background-color: PaleGreen !important";
+                                              }
+                                              return "background-color: pink !important";
+                                            })">
+            <DisplayTemplate>
+              @(getJouthClass(context.fAge))
+            </DisplayTemplate>
+          </DataGridColumn>
+          <DataGridColumn Field="@nameof(TeamModel.TableTeam.sName)" Caption="Name" TextAlignment="Blazorise.TextAlignment.Center">
+            <DisplayTemplate>
+              <a href="/member/playerdetails/@context.iId" style="text-decoration: none">
+                @((MarkupString)context.sName)
+              </a>
+            </DisplayTemplate>
+          </DataGridColumn>
+          <DataGridColumn Field="@nameof(TeamModel.TableTeam.fAge)" Caption="Alter" TextAlignment="Blazorise.TextAlignment.Center">
+            <CaptionTemplate>
+              <Blazorise.Tooltip Text="Hello tooltip">
+                @context.Caption
+              </Blazorise.Tooltip>
+            </CaptionTemplate>
+            <DisplayTemplate>
+              @(((int)context.fAge).ToString())
+            </DisplayTemplate>
+          </DataGridColumn>
+          <DataGridColumn Field="@nameof(TeamModel.TableTeam.sHp)" Caption="Position" TextAlignment="Blazorise.TextAlignment.Center" />
+          <DataGridColumn Field="@nameof(TeamModel.TableTeam.fSkill)" Caption="Stärke" TextAlignment="Blazorise.TextAlignment.Center" DisplayFormat="{0:N1}" />
+          <DataGridColumn Field="@nameof(TeamModel.TableTeam.fTalent)" Caption="Tal." DisplayFormat="{0:N1}" TextAlignment="Blazorise.TextAlignment.End" />
+          <DataGridColumn Field="" Caption="Blitzverh." TextAlignment="Blazorise.TextAlignment.Center">
+            <DisplayTemplate>
+              @if ((int)context.fAge > 15) {
+                <Blazorise.Button class="btn btn-outline-secondary" Clicked="@(() => NegotiateJouthPlayerContractFast(context.iId, context.fAge))" Style="padding-top: 0; padding-bottom: 0">
+                  <Blazorise.Icon Name="Blazorise.IconName.IdCard" />
+                  @((MarkupString)("zu den Profis"))
+                </Blazorise.Button>
+              } else {
+                @("-")
+              }
+            </DisplayTemplate>
+          </DataGridColumn>
+          <DataGridColumn Field="@nameof(TeamModel.TableTeam.sNat)" Caption="Nat." TextAlignment="Blazorise.TextAlignment.Center">
+            <DisplayTemplate>
+              @((MarkupString)Controllers.Tool.getNatIcon(context.sNat))
+            </DisplayTemplate>
+          </DataGridColumn>
+        </ChildContent>
+        <EmptyTemplate>
+          <div class="box">
+            Keine Jugendspieler ...
+          </div>
+        </EmptyTemplate>
+        <LoadingTemplate>
+          <div class="box">
+            <progress class="progress is-small is-primary" max="100" />
+          </div>
+        </LoadingTemplate>
+      </DataGrid>
+    </div>
+  </div>
+</body>
+</html>
+
+@code {
+  private CornerkickManager.User? _usr;
+  private JouthModel? model;
+  private IJSObjectReference? module;
+
+  private DataGrid<TeamModel.TableTeam>? dgJouth;
+
+  protected List<TeamModel.TableTeam> ltTableJouth = new List<TeamModel.TableTeam>();
+
+  protected override async Task OnInitializedAsync()
+  {
+    await base.OnInitializedAsync();
+
+#if _WebApp
+    //_usr = await Http.GetFromJsonAsync<CornerkickManager.User>("member/Member/ckUser");
+    _usr = Controllers.Member.MemberController.ckUser(await _auth.GetUserId());
+#else
+    _usr = CkAppShared.ckMng.ltUser[CkAppShared.iUserActive];
+#endif
+
+    model = CornerkickApp.Controllers.Member.JouthController.Model(_usr);
+
+    if (model != null && _usr != null) {
+      ltTableJouth = await CornerkickApp.Controllers.Member.JouthController.GetTableJouth(_usr);
+#if _WebApp
+    } else {
+      NavigationManager.NavigateTo("/authentication/register");
+#endif
+    }
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender) {
+      if (dgJouth != null) await dgJouth.ApplySorting(new DataGridSortColumnInfo(nameof(TeamModel.TableTeam.fAge), Blazorise.SortDirection.Descending));
+    }
+  }
+
+  private void OnRowStyling(TeamModel.TableTeam pl, DataGridRowStyling styling)
+  {
+    if (pl.iIndex < 12) {
+      if (pl.iIndex % 2 == 0) {
+        styling.Style = "background-color: rgb(235,255,235)";
+      } else {
+        styling.Style = "background-color: rgb(245,255,245)";
+      }
+    } else if (pl.iIndex < 19) {
+      if (pl.iIndex % 2 == 0) {
+        styling.Style = "background-color: rgb(230,240,255)";
+      } else {
+        styling.Style = "background-color: rgb(240,250,255)";
+      }
+    } else {
+      if (pl.iIndex % 2 == 0) {
+        styling.Style = "background-color: rgb(240,240,240)";
+      } else {
+        styling.Style = "background-color: white";
+      }
+    }
+  }
+
+  private string getJouthClass(float fAge)
+  {
+    if (fAge >= 17) {
+      return "A";
+    } else if (fAge >= 15) {
+      return "B";
+    } else if (fAge >= 13) {
+      return "C";
+    } else if (fAge >= 11) {
+      return "D";
+    } else {
+      return "E";
+    }
+  }
+
+  private async Task NegotiateJouthPlayerContractFast(int iPlayerId, float fAge)
+  {
+    if (iPlayerId < 0) return;
+    if (_usr == null) return;
+
+    // Get player
+    CornerkickManager.Player? plContractFast = CkAppShared.ckMng.ltPlayer.Find(p => p.plGame.iId == iPlayerId);
+    if (plContractFast == null) return;
+
+    //bool bOk = Controllers.Member.ContractsController.extendPlayerContractFast(_usr, plContractFast, 19 - (int)fAge);
+    bool bOk = Controllers.Member.ContractsController.extendPlayerContractFast(_usr, plContractFast, 0);
+
+    if (bOk) {
+      string sRet;
+      bOk = Controllers.Member.PlayerController.moveJouthPlayerToProTeam(plContractFast, _usr.club, out sRet);
+      if (!string.IsNullOrEmpty(sRet)) CkDialog.ckDialog.Show("Vertragsverhandlung", sRet, sButtonCancelText2: "");
+      if (bOk) ltTableJouth = await CornerkickApp.Controllers.Member.JouthController.GetTableJouth(_usr);
+    }
+  }
+
+}

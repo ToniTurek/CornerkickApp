@@ -1,0 +1,330 @@
+﻿@page "/member/user"
+
+@using CornerkickApp.Controllers.Member
+@using CornerkickApp.Components.Shared.Components
+@using CornerkickApp.Shared.Models
+
+@inject IJSRuntime JS
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject Controllers.Shared.MyAuthenticationStateProvider _auth
+
+<PageTitle>Persönliches</PageTitle>
+
+<!DOCTYPE html>
+<html>
+<head>
+  <link rel="stylesheet" href="/_content/CornerkickApp.Components/css/slider.css" />
+</head>
+
+<body>
+  @{
+    if (model != null && _usr != null) {
+      string sName = _usr.sFirstname + " " + @_usr.sSurname;
+      <h3 style="margin-bottom: 30px">@sName</h3>
+
+      <div class="scroll-anchor" id="divUserRespContainer" style="position: relative; width: auto; margin-bottom: 30px">
+        <h4>Stellung im Verein</h4>
+          <table class="table table-bordered" cellpadding="4" style="width: auto; font-size: 120%; vertical-align: middle">
+          @for (int iLvl = 0; iLvl < CornerkickManager.Names.sUserRespLvlNames.Length; iLvl++) {
+            <tr style="opacity: @(iLvl == iRespLvl ? "1" : "0.25")">
+              <td align="left">@CornerkickManager.Names.sUserRespLvlNames[iLvl]</td>
+              <td>@rfStarsRespLvl[iLvl]</td>
+            </tr>
+          }
+        </table>
+      </div>
+
+      int iLv = _usr.iSkillTraining + _usr.iSkillMotivation + _usr.iSkillNegotiation;
+      if (_usr.bScouting && _usr.scout != null) iLv += _usr.scout.iSkill + _usr.scout.nDataPerScouting;
+      string sSkill = "Level: " + @iLv.ToString();
+      <div class="scroll-anchor" id="divUserSkillsContainer" style="position: relative; width: 100%; margin-bottom: 30px">
+        <h4>Fähigkeiten</h4>
+        <p style="margin-top: 6px; font-size: 120%">@sSkill</p>
+        <div style="overflow-x: auto">
+          <table class="table table-bordered" id="tblUserSkills" cellpadding="4" style="width: auto; font-size: 120%; vertical-align: middle">
+            <tr data-type="0">
+              <td align="left">Trainingsgestaltung:</td>
+              <td>@rfStars[0]</td>
+              <td>
+                <button type="button" class="btnUseSkillPointFree btn btn-outline-secondary" id="btnTrainingSkill" title="1 Fähigkeitspunkt einsetzen" disabled="@(_usr.fSkillPointsFree < 1f)" @onclick="() => UseSkillPoints(0)"><img src="@CkAppShared.sContentDir/Icons/plus.png" height="26" width="26" /></button>
+              </td>
+            </tr>
+            <tr data-type="1">
+              <td align="left">Motivationsfähigkeit:</td>
+              <td>@rfStars[1]</td>
+              <td>
+                <button type="button" class="btnUseSkillPointFree btn btn-outline-secondary" title="1 Fähigkeitspunkt einsetzen" disabled="@(_usr.fSkillPointsFree < 1f)" @onclick="() => UseSkillPoints(1)"><img src="@CkAppShared.sContentDir/Icons/plus.png" height="26" width="26" /></button>
+              </td>
+            </tr>
+            @if (_usr.bScouting && _usr.scout != null) {
+              <tr data-type="3">
+                <td align="left">Spielereinschätzung:</td>
+                <td>@rfStars[3]</td>
+                <td>
+                  <button type="button" class="btnUseSkillPointFree btn btn-outline-secondary" id="btnScoutingSkill" title="1 Fähigkeitspunkt einsetzen" disabled="@(_usr.fSkillPointsFree < 1f)" @onclick="() => UseSkillPoints(3)"><img src="@CkAppShared.sContentDir/Icons/plus.png" height="26" width="26" /></button>
+                </td>
+              </tr>
+              <tr data-type="4">
+                <td align="left">Anzahl Spielerbeob.:</td>
+                <td>@rfStars[4]</td>
+                <td>
+                  <button type="button" class="btnUseSkillPointFree btn btn-outline-secondary" title="1 Fähigkeitspunkt einsetzen" disabled="@(_usr.fSkillPointsFree < 1f)" @onclick="() => UseSkillPoints(4)"><img src="@CkAppShared.sContentDir/Icons/plus.png" height="26" width="26" /></button>
+                </td>
+              </tr>
+            }
+            @if (iRespLvl >= CkAppShared.iUserRespPlayerContractsFast) {
+              <tr data-type="2">
+                <td align="left">Verhandlungsgeschick:</td>
+                <td>@rfStars[2]</td>
+                <td>
+                  <button type="button" class="btnUseSkillPointFree btn btn-outline-secondary" id="btnNegoSkill" title="1 Fähigkeitspunkt einsetzen" disabled="@(_usr.fSkillPointsFree < 1f)" @onclick="() => UseSkillPoints(2)"><img src="@CkAppShared.sContentDir/Icons/plus.png" height="26" width="26" /></button>
+                </td>
+              </tr>
+            }
+          </table>
+        </div>
+
+        <p style="margin-top: 6px; font-size: 110%">Verfügbare Fähigkeitspunkte: <span id="lbSkillPointsFree">@_usr.fSkillPointsFree.ToString("0.000")</span></p>
+      </div>
+
+      <div id="divUserSuccessContainer" style="position: relative; width: auto; margin-bottom: 30px">
+        <h4>Erfolge</h4>
+        @{
+          if (_usr.ltSuccess?.Count == 0) {
+            <p style="margin-top: 6px; font-size: 140%">keine</p>
+          } else {
+            foreach (CornerkickManager.Main.Success success in _usr.ltSuccess.OrderBy(s => s.cup.iId).ThenBy(s => s.cup.iId3)) {
+              if (success.cup == null) { continue; }
+              if (success.cup.iId == CkAppShared.iCupIdTestgame) { continue; }
+
+              string sWDD = "S/U/N: " + success.iWin.ToString() + "/" + success.iDraw.ToString() + "/" + success.iDefeat.ToString();
+
+              <b>@success.cup.sName</b>
+              for (int i = 0; i < success.getCupWin(); i++) {
+                <i class="fa fa-trophy" title="@success.getCupWin().ToString()"></i>
+              }
+              <p>@sWDD</p>
+            }
+          }
+        }
+      </div>
+
+//#if _WebApp
+      @if (CkAppShared.bWebApp) {
+        <div id="divCoopContainer" style="position: relative; width: auto; margin-bottom: 30px; display: none">
+          <h4>Kooperationen</h4>
+
+          <div style="margin-bottom: 20px">
+            <p style="margin:0">Schicke eine Einladung an einen Freund und lade ihn zu Cornerkick ein:</p>
+            @{
+              string sMailto = "mailto:email@dein_freund.de?subject=Einladung zu Cornerkick&body=Hallo%0D%0A%0D%0AIch spiele den kostenlosen online Fussball-Manager Cornerkick. Spiel doch auch mit!%0D%0A%0D%0AÜber den folgenden link kannst du dich registrieren:%0D%0A%0D%0A";
+              sMailto += model.sInviteLink;
+              sMailto += "%0D%0A%0D%0AWenn du dich über diesen Link registrierst (und mich als dein Kooperationsverein angibst), haben wir beide etwas davon.%0D%0A%0D%0AAlso bis bald in Cornerkick!%0D%0A%0D%0A%0D%0A";
+            }
+            <a href="@sMailto">Email schreiben</a>
+          </div>
+
+          <div style="width: auto; margin-top: 10px; text-align: left">
+            <table id="tblCooperations" cellspacing="0" style="display: inline-block; width: auto" class="display responsive nowrap">
+              <thead>
+                <tr>
+                  <th>ClubId</th>
+                  <th>Manager</th>
+                  <th>Verein</th>
+                  <th>Erf. Faktor</th>
+                  <th>Land</th>
+                  <th>Liga</th>
+                  <th>Status</th>
+                  <th>Erw. Einnahmen</th>
+                </tr>
+              </thead>
+              <tbody>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      }
+//#endif
+    }
+  }
+
+  <script src="./_content/CornerkickApp.Components/js/Player.js"></script>
+</body>
+</html>
+
+@code {
+  private CornerkickManager.User? _usr;
+  private UserModel? model;
+  private IJSObjectReference? module;
+
+  private RenderFragment[] rfStars = new RenderFragment[5];
+  private RenderFragment[] rfStarsRespLvl = new RenderFragment[CornerkickManager.Names.sUserRespLvlNames.Length];
+  string sRespLvl { get; set; } = "";
+  int iRespLvl { get; set; }
+
+  private bool _navigateToRegister = false;
+
+  protected override async Task OnInitializedAsync()
+  {
+    await base.OnInitializedAsync();
+
+#if _WebApp
+    //model = await Http.GetFromJsonAsync<UserModel>("member/User/Get");
+    _usr = Controllers.Member.MemberController.ckUser(_auth.GetUserId().Result);
+    if (_usr == null) {
+      _navigateToRegister = true;
+      return;
+    }
+#else
+    _usr = CkAppShared.ckMng.ltUser[CkAppShared.iUserActive];
+#endif
+    model = CornerkickApp.Controllers.Member.UserController.Get(_usr);
+
+    if (model != null) {
+      DrawSkillPoints();
+
+      iRespLvl = _usr.iResp;
+      if (iRespLvl < CornerkickManager.Names.sUserRespLvlNames.Length) sRespLvl = CornerkickManager.Names.sUserRespLvlNames[iRespLvl];
+      else                                                             sRespLvl = CornerkickManager.Names.sUserRespLvlNames[CornerkickManager.Names.sUserRespLvlNames.Length - 1];
+      sRespLvl += " (Level: " + (iRespLvl + 1).ToString("0)");
+
+      for (int i = 0; i < CornerkickManager.Names.sUserRespLvlNames.Length; i++) rfStarsRespLvl[i] = Controllers.Tool.createStars(i, iStarsMax: CornerkickManager.Names.sUserRespLvlNames.Length - 1, iStarSizePx: 24, bRound: false);
+  #if _WebApp
+    } else {
+      _navigateToRegister = true;
+#endif
+    }
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender) {
+      if (_navigateToRegister) {
+        // Navigation während Render-Phase nach Fertigstellung ausführen
+        //NavigationManager.NavigateTo(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = "/member/desk" }), forceLoad: true);
+        NavigationManager.NavigateTo("/Account/Register", forceLoad: true);
+        return;
+      }
+
+      await ShowTutorial();
+    }
+  }
+
+  protected void DrawSkillPoints()
+  {
+    if (_usr == null) return;
+
+    rfStars[0] = Controllers.Tool.createStars(_usr.iSkillTraining,    iStarsMax: _usr.iSkillTraining    + 1, iStarSizePx: 24, bRound: false);
+    rfStars[1] = Controllers.Tool.createStars(_usr.iSkillMotivation,  iStarsMax: _usr.iSkillMotivation  + 1, iStarSizePx: 24, bRound: false);
+    rfStars[2] = Controllers.Tool.createStars(_usr.iSkillNegotiation, iStarsMax: _usr.iSkillNegotiation + 1, iStarSizePx: 24, bRound: false);
+    @if (_usr.bScouting && _usr.scout != null) {
+      rfStars[3] = Controllers.Tool.createStars(_usr.scout.iSkill,           iStarsMax: _usr.scout.iSkill           + 1, iStarSizePx: 24, bRound: false);
+      rfStars[4] = Controllers.Tool.createStars(_usr.scout.nDataPerScouting, iStarsMax: _usr.scout.nDataPerScouting + 1, iStarSizePx: 24, bRound: false);
+    }
+
+    //return await Task.CompletedTask;
+  }
+
+  protected void UseSkillPoints(int iCat)
+  {
+    if (_usr != null) {
+      if (iCat == 0) {
+        _usr.iSkillTraining++;
+        _usr.fSkillPointsFree--;
+      } else if (iCat == 1) {
+        _usr.iSkillMotivation++;
+        _usr.fSkillPointsFree--;
+      } else if (iCat == 2) {
+        _usr.iSkillNegotiation++;
+        _usr.fSkillPointsFree--;
+      } else if (iCat == 3) {
+        _usr.scout.iSkill++;
+        _usr.fSkillPointsFree--;
+      } else if (iCat == 4) {
+        _usr.scout.nDataPerScouting++;
+        _usr.fSkillPointsFree--;
+      }
+    }
+
+    DrawSkillPoints();
+    StateHasChanged();
+
+    ShowTutorial(iType: iCat, iSkillNew: _usr.scout != null ? _usr.scout.iSkill : 0, fSkillPointsFree: _usr.fSkillPointsFree);
+  }
+
+  private static void ShowTutorial(CornerkickManager.User _usr, UserModel md, NavigationManager navmng, int iLevelChange = 0, int iType = -1, int iSkillNew = 0, float fSkillPointsFree = 9f)
+  {
+    if (md?.tutorial == null) return;
+    if (MainLayout.tutorial == null) return;
+
+    CkAppShared.Tutorial tt = md.tutorial;
+
+    if (_usr != null && tt != null && tt.bShow) {
+      //if (tt.iLevel == (TutorialController.iTtMainLevelPlayer * 10) + 8) { tt.iLevel = TutorialController.iTtMainLevelUser * 10; }
+      if (TutorialController.IsLastSubLevel(tt.iLevel, TutorialController.iTtMainLevelPlayer)) tt.iLevel = TutorialController.iTtMainLevelUser * 10;
+
+      if (tt.iLevel == (TutorialController.iTtMainLevelUser * 10) + 2 && iType == 3 && iSkillNew == 3) {
+        tt.iLevel++;
+
+        TutorialController.TutorialReturn ttr = TutorialController.getTutorial(
+          _usr,
+          tt.iLevel,
+          /*
+            [
+              new Tt_highlight((iTtMainLevelUser * 10) + 2, document.getElementById("btnTrainingSkill"), true),
+              new Tt_highlight((iTtMainLevelUser * 10) + 2, document.getElementById("btnNegoSkill"), true)
+          ]*/
+          _usr.bScouting
+        );
+
+        MainLayout.tutorial.Show(ttr, usr: _usr, iLevel: tt.iLevel, actionOnOk: () => ShowTutorial(_usr, md, navmng), actionOnCancel: () => ShowTutorial(_usr, md, navmng), actionOn3: () => navmng.NavigateTo("/member/desk", forceLoad: true));
+        //CkDialog.ckDialog.Show(ttr, usr: _usr, iLevel: tt.iLevel, actionOnOk: () => ShowTutorial(_usr, md, navmng), actionOnCancel: () => ShowTutorial(_usr, md, navmng), actionOn3: () => navmng.NavigateTo("/member/desk", forceLoad: true));
+      } else if (tt.iLevel == (TutorialController.iTtMainLevelUser * 10) + 3 && fSkillPointsFree < 1f) {
+        tt.iLevel++;
+
+        TutorialController.TutorialReturn ttr = TutorialController.getTutorial(
+          _usr,
+          tt.iLevel,
+          /*
+            [
+              new Tt_highlight((iTtMainLevelUser * 10) + 3, document.getElementById("divCoopContainer")),
+              new Tt_highlight((iTtMainLevelUser * 10) + 4, document.getElementById("navbarDropdownTeam")),
+              new Tt_highlight((iTtMainLevelUser * 10) + 4, document.getElementById("aMenuTeamTraining"))
+          ]*/
+          _usr.bScouting
+        );
+
+        MainLayout.tutorial.Show(ttr, usr: _usr, iLevel: tt.iLevel, actionOnOk: () => ShowTutorial(_usr, md, navmng), actionOnCancel: () => ShowTutorial(_usr, md, navmng), actionOn3: () => navmng.NavigateTo("/member/desk", forceLoad: true));
+        //CkDialog.ckDialog.Show(ttr, usr: _usr, iLevel: tt.iLevel, actionOnOk: () => ShowTutorial(_usr, md, navmng), actionOnCancel: () => ShowTutorial(_usr, md, navmng), actionOn3: () => navmng.NavigateTo("/member/desk", forceLoad: true));
+      } else if ((tt.iLevel / 10) == TutorialController.iTtMainLevelUser) {
+        TutorialController.TutorialReturn ttr = TutorialController.getTutorial(
+          _usr,
+          tt.iLevel,
+          /*
+            [
+              new Tt_highlight((iTtMainLevelUser * 10) + 0, document.getElementById("divUserSkillsContainer")),
+              new Tt_highlight((iTtMainLevelUser * 10) + 1, document.getElementById("btnScoutingSkill"), true),
+              new Tt_highlight((iTtMainLevelUser * 10) + 2, document.getElementById("btnTrainingSkill"), true),
+              new Tt_highlight((iTtMainLevelUser * 10) + 2, document.getElementById("btnNegoSkill"), true),
+              new Tt_highlight((iTtMainLevelUser * 10) + 3, document.getElementById("divCoopContainer")),
+              new Tt_highlight((iTtMainLevelUser * 10) + 4, document.getElementById("navbarDropdownTeam")),
+              new Tt_highlight((iTtMainLevelUser * 10) + 4, document.getElementById("aMenuTeamTraining"))
+          ]*/
+          _usr.bScouting
+        );
+
+        MainLayout.tutorial.Show(ttr, usr: _usr, iLevel: tt.iLevel, actionOnOk: () => ShowTutorial(_usr, md, navmng), actionOnCancel: () => ShowTutorial(_usr, md, navmng), actionOn3: () => navmng.NavigateTo("/member/desk", forceLoad: true));
+        //CkDialog.ckDialog.Show(ttr, usr: _usr, iLevel: tt.iLevel, actionOnOk: () => ShowTutorial(_usr, md, navmng), actionOnCancel: () => ShowTutorial(_usr, md, navmng), actionOn3: () => navmng.NavigateTo("/member/desk", forceLoad: true));
+      }
+    }
+  }
+
+  protected async Task ShowTutorial(int iType = -1, int iSkillNew = 0, float fSkillPointsFree = 9f)
+  {
+    if (_usr != null && model?.tutorial != null) {
+      await Task.Run(() => ShowTutorial(_usr, model, NavigationManager, iType: iType, iSkillNew: iSkillNew, fSkillPointsFree: fSkillPointsFree));
+    }
+  }
+
+}

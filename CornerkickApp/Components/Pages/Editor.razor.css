@@ -1,0 +1,22 @@
+﻿h5 {
+  /*text-decoration-line: underline;*/
+  font-weight: bold;
+  margin-top: 20px;
+}
+
+h6 {
+  font-weight: bold;
+  margin-top: 8px;
+}
+
+th, td {
+  border: 1px solid black;
+  border-radius: 6px;
+  padding: 6px;
+  text-align: center;
+}
+
+input.currency {
+  width: 90px;
+  text-align: right;
+}

@@ -1,0 +1,32 @@
+﻿@page "/logout"
+@inject NavigationManager navigationManager
+@inject MauiAuthenticationStateProvider AuthStateProvider
+
+<head>
+  <style>
+    .link {
+      color: #069;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<div @onclick=LogoutUser>
+  <span class="bi bi-arrow-bar-left-nav-menu" aria-hidden="true"></span> <span class="link">ausloggen</span>
+</div>
+
+@code{
+  protected override void OnInitialized()
+  {
+      //AuthStateProvider.Logout();
+      //navigationManager.NavigateTo("/login");
+  }
+
+  private async Task LogoutUser()
+  {
+    AuthStateProvider.Logout();
+
+    //Navigation.NavigateTo(""); //Root URL
+  }
+}

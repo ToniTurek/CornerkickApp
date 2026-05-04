@@ -1,0 +1,724 @@
+﻿@page "/member/finance"
+
+@using CornerkickApp.Shared.Models
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject Controllers.Shared.MyAuthenticationStateProvider _auth
+
+<PageTitle>Personal</PageTitle>
+
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    /* Radzen inputs */
+    .rz-inputtext {
+      font-size: 1rem;
+      color: black;
+    }
+
+    th {
+      text-align: center;
+    }
+    input.tbSpec {
+      width: calc(65px * var(--ckRelSize));
+      text-align: right;
+    }
+  </style>
+</head>
+
+<body>
+  @if (model != null && _usr != null) {
+    <Blazorise.Tabs SelectedTab="@selectedTab" SelectedTabChanged="@OnSelectedTabChanged">
+      <Items>
+        <Blazorise.Tab Style="@CkAppShared.sCssStyleClubColors" Name="tabBalanceHist" hidden="@(_usr.iResp < CkAppShared.iUserRespFinanceAccountDetails)">Kontoentwicklung</Blazorise.Tab>
+        <Blazorise.Tab Style="@CkAppShared.sCssStyleClubColors" Name="tabBudgetHistory" hidden="@(_usr.iResp < CkAppShared.iUserRespFinanceAccountDetails)">Bilanzhistorie</Blazorise.Tab>
+        <Blazorise.Tab Style="@CkAppShared.sCssStyleClubColors" Name="tabSpecPrice" hidden="@(_usr.iResp < CkAppShared.iUserRespFinanceAccountDetails)">Zuschauer</Blazorise.Tab>
+      </Items>
+      <Content>
+        <Blazorise.TabPanel Name="tabBalanceHist">
+          <div style="margin-top: 1rem; max-width: 100%; overflow-x: auto">
+            <RadzenChart Style="width: 50%; min-width: 300px; height: 320px">
+              <RadzenAreaSeries Data="@ltBalanceHist" CategoryProperty="x" ValueProperty="y" Stroke="blue" StrokeWidth="2">
+                <TooltipTemplate Context="data">
+                  @if (data.x.HasValue && data.y.HasValue) {
+                    <div>@(data.x.Value.ToString("dd.MM.yy") + ": ")<b>@data.y.Value.ToString("C0")</b></div>
+                  }
+                </TooltipTemplate>
+                <ChildContent>
+                  <RadzenMarkers MarkerType="MarkerType.Circle" Size="4" Fill="blue" StrokeWidth="0" />
+                </ChildContent>
+              </RadzenAreaSeries>
+              <RadzenCategoryAxis Visible="true" Formatter="@FormatAsDate">
+                <RadzenGridLines Visible="true" Stroke="#ccc" LineType="Radzen.Blazor.LineType.Dashed" />
+              </RadzenCategoryAxis>
+              <RadzenValueAxis FormatString="{0:#,,}">
+                <RadzenAxisTitle Text="Kontostand [mio. €]" />
+                <RadzenGridLines Visible="true" StrokeWidth="2" />
+              </RadzenValueAxis>
+              <RadzenLegend Visible="false" />
+            </RadzenChart>
+          </div>
+        </Blazorise.TabPanel>
+        <Blazorise.TabPanel Name="tabBudgetHistory">
+          @if (ltBudgetHist != null && ltBudgetHist[0] != null && ltBudgetHist[1] != null && ltBudgetHist[0].Count > 0 && ltBudgetHist[1].Count > 0) {
+            <div style="margin-top: 1rem; max-width: 100%; overflow-x: auto">
+              <RadzenChart Style="width: 50%; min-width: 300px; height: 320px">
+                <RadzenColumnSeries Data="@ltBudgetHist[0]" CategoryProperty="x" ValueProperty="y" Stroke="blue" StrokeWidth="2" Title="Umsatz">
+                  <TooltipTemplate Context="data">
+                    @if (data.x.HasValue && data.y.HasValue) {
+                      <div><u>@(Controllers.Tool.getSeasonString(data.x.Value))</u></div>
+                      <div>Umsatz: <b>@data.y.Value.ToString("C0")</b></div>
+                    }
+                  </TooltipTemplate>
+                </RadzenColumnSeries>
+                <RadzenColumnSeries Data="@ltBudgetHist[1]" CategoryProperty="x" ValueProperty="y" Stroke="green" StrokeWidth="2" Title="Gewinn">
+                  <TooltipTemplate Context="data">
+                    @if (data.x.HasValue && data.y.HasValue) {
+                      <div><u>@(Controllers.Tool.getSeasonString(data.x.Value))</u></div>
+                      @if (data.y.Value < 0) {
+                        <div>Verlust: <b style="color: red">@data.y.Value.ToString("C0")</b></div>
+                      } else {
+                        <div>Gewinn: <b style="color: green">@data.y.Value.ToString("C0")</b></div>
+                      }
+                    }
+                  </TooltipTemplate>
+                </RadzenColumnSeries>
+                <RadzenColumnOptions Radius="5" />
+                <RadzenCategoryAxis Visible="true" Min="0.5" Max="CkAppShared.ckMng.iSeason - 0.5" Step="0.5" Formatter="@FormatAsSeasonStr">
+                  <RadzenGridLines Visible="true" Stroke="#ccc" LineType="Radzen.Blazor.LineType.Dashed" />
+                </RadzenCategoryAxis>
+                <RadzenValueAxis FormatString="{0:#,,}">
+                  <RadzenAxisTitle Text="Umsatz/Gewinn [mio. €]" />
+                  <RadzenGridLines Visible="true" StrokeWidth="2" />
+                </RadzenValueAxis>
+                <RadzenLegend Visible="true" Position="LegendPosition.Bottom" />
+              </RadzenChart>
+            </div>
+          }
+        </Blazorise.TabPanel>
+        <Blazorise.TabPanel Name="tabSpecPrice">
+          <div style="display: flex; flex-wrap: wrap; max-width: 100%; margin-top: 1rem">
+            <div id="divSpecPriceContainer" style="position: relative; margin-right: 1.5rem; margin-bottom: 1.5rem">
+              <h4>Eintrittspreise</h4>
+              <table>
+                @if (_usr.iResp >= CkAppShared.iUserRespSpecPrice) {
+                  <thead>
+                    <tr>
+                      <th></th>
+                      <th>Einzel</th>
+                      <th>Saison</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                }
+                <tbody>
+                  <tr>
+                    <td>Stehplätze:</td>
+                    <td>
+                      <input type="number" min="0" class="tbSpec tbPrice form-control" autocomplete="off" style="width: 80px; text-align: right" @bind="model.iPrice1" @bind:after="() => SetSpecPrice(0, model.iPrice1)" disabled="@(_usr.iResp < CkAppShared.iUserRespSpecPrice)" />
+                    </td>
+                    @if (_usr.iResp >= CkAppShared.iUserRespSpecPrice) {
+                      <td>
+                        <input type="number" min="0" class="tbSpec tbPriceSeason form-control" autocomplete="off" style="width: 80px; text-align: right" @bind="model.iPriceSeason1" @bind:after="() => SetSpecPrice(0, model.iPrice1, bSeasonalPrice: true)" />
+                      </td>
+                    }
+                    <td>€</td>
+                  </tr>
+                  <tr>
+                    <td>Sitzplätze:</td>
+                    <td>
+                      <input type="number" min="0" class="tbSpec tbPrice form-control" autocomplete="off" style="width: 80px; text-align: right" @bind="model.iPrice2" @bind:after="() => SetSpecPrice(1, model.iPrice2)" disabled="@(_usr.iResp < CkAppShared.iUserRespSpecPrice)" />
+                    </td>
+                    @if (_usr.iResp >= CkAppShared.iUserRespSpecPrice) {
+                      <td>
+                        <input type="number" min="0" class="tbSpec tbPriceSeason form-control" autocomplete="off" style="width: 80px; text-align: right" @bind="model.iPriceSeason2" @bind:after="() => SetSpecPrice(1, model.iPrice2, bSeasonalPrice: true)" />
+                      </td>
+                    }
+                    <td>€</td>
+                  </tr>
+                  <tr>
+                    <td>V.I.P.:</td>
+                    <td>
+                      <input type="number" min="0" class="tbSpec tbPrice form-control" autocomplete="off" style="width: 80px; text-align: right" @bind="model.iPrice3" @bind:after="() => SetSpecPrice(2, model.iPrice3)" disabled="@(_usr.iResp < CkAppShared.iUserRespSpecPrice)" />
+                    </td>
+                    @if (_usr.iResp >= CkAppShared.iUserRespSpecPrice) {
+                      <td>
+                        <input type="number" min="0" class="tbSpec tbPriceSeason form-control" autocomplete="off" style="width: 80px; text-align: right" @bind="model.iPriceSeason3" @bind:after="() => SetSpecPrice(2, model.iPrice3, bSeasonalPrice: true)" />
+                      </td>
+                    }
+                    <td>€</td>
+                  </tr>
+                  @if (_usr.iResp >= CkAppShared.iUserRespSpecPrice) {
+                    <tr>
+                      <td colspan=2 style="white-space: nowrap">Max. Anteil Saisontick.:</td>
+                      <td>
+                        <input type="tel" min="0" max="100" class="tbSpec form-control" autocomplete="off" style="width: 80px; text-align: right" @bind="model.fSeasonalTicketsMaxFrac" @bind:after="SetSeasonalTicketsMaxFrac" />
+                      </td>
+                      <td>%</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+
+              @if (_usr.iResp >= CkAppShared.iUserRespSpecPrice) {
+                <div style="position: relative; width: fit-content; margin-top: 1rem; margin-bottom: 1.5rem">
+                  
+                  <p style="margin: 0">Einnahmen Liga bei 100% Auslastung:</p>
+                  <p>@sPotentialTotalSpecIncome</p>
+                  <p style="margin: 0">@sSoldSeasonalTickets</p>
+                </div>
+              }
+            </div>
+
+            @if (ltSpecHist != null && ltSpecHist[0] != null && ltSpecHist[1] != null && ltSpecHist[0].Count > 0 && ltSpecHist[1].Count > 0) {
+              <div id="divChartSpecContainer" style="position: relative; width: 50%; min-width: 320px">
+                <h4>Zuschauerhistorie</h4>
+                <div id="divChartSpec" style="position: relative; height: 280px; width: 100%">
+                  <RadzenChart>
+                    <RadzenLineSeries Data="@ltSpecHist[1]" CategoryProperty="x" ValueProperty="y" Stroke="red" StrokeWidth="1" Title="Stadionkapazität">
+                      <TooltipTemplate Context="data">
+                        @if (data.x.HasValue && data.y.HasValue) {
+                          <div style="width: 100%; text-align: center">@((MarkupString)(data.z))</div>
+                          <div style="display: flex; justify-content: center">
+                            <table>
+                              <tr>
+                                <td style="text-align: right; color: red">@(data.y.Value.ToString("N0") + " (" + data.spec[0].ToString("N0") + " / " + data.spec[1].ToString("N0") + " / " + data.spec[2].ToString("N0") + ")")</td>
+                              </tr>
+                            </table>
+                          </div>
+                        }
+                      </TooltipTemplate>
+                      <ChildContent>
+                        <RadzenMarkers MarkerType="MarkerType.Circle" Size="4" Fill="red" StrokeWidth="0" />
+                      </ChildContent>
+                    </RadzenLineSeries>
+                    <RadzenAreaSeries Data="@ltSpecHist[0]" CategoryProperty="x" ValueProperty="y" StrokeWidth="1" Title="Zuschauer">
+                      <TooltipTemplate Context="data">
+                        @if (data.x.HasValue && data.y.HasValue) {
+                          <div style="width: 100%; text-align: center">@((MarkupString)(data.z))</div>
+                          <div style="display: flex; justify-content: center">
+                            <table>
+                              <tr>
+                                <td style="text-align: right">@(data.y.Value.ToString("N0") + " (" + data.spec[0].ToString("N0") + " / " + data.spec[1].ToString("N0") + " / " + data.spec[2].ToString("N0") + ")")</td>
+                              </tr>
+                            </table>
+                          </div>
+                        }
+                      </TooltipTemplate>
+                      <ChildContent>
+                        <RadzenMarkers MarkerType="MarkerType.Circle" Size="6" Stroke="white" StrokeWidth="1" />
+                      </ChildContent>
+                    </RadzenAreaSeries>
+                    <RadzenCategoryAxis Visible="false">
+                      <RadzenGridLines Visible="true" Stroke="#ccc" LineType="Radzen.Blazor.LineType.Dashed" />
+                    </RadzenCategoryAxis>
+                    <RadzenValueAxis FormatString="{0:N0}">
+                      <RadzenGridLines Visible="true" StrokeWidth="2" />
+                    </RadzenValueAxis>
+                    <RadzenLegend Visible="true" Position="LegendPosition.Top" />
+                  </RadzenChart>
+                </div>
+              </div>
+            }
+          </div>
+        </Blazorise.TabPanel>
+      </Content>
+    </Blazorise.Tabs>
+
+    <div>
+      <h3>Finanzplanung</h3>
+      <div id="dlgChartBudget"></div>
+
+      <div style="position: relative; width: fit-content; max-width: 100%; overflow-x: auto; margin-bottom: 40px">
+        <div style="position: relative; width: 100%; display: flex; justify-content: flex-end; align-items: center">
+          <label style="margin-right: 10px; color: @(bNetto ? "blue" : "black")">
+            Netto:
+            <input type="checkbox" @onchange="(o) => SetNetto(o.Value)">
+          </label>
+          @if (model.sliYears.Count > 1) {
+            <label style="display: ruby">
+              <span>Jahr:</span>
+              <Blazorise.Select SelectedValue="@iYear" SelectedValueChanged="(i) => SetYear(i)" TValue="int" Style="width: fit-content">
+                @foreach (LayoutModel.SelectListItem sli in model.sliYears) {
+                  <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+                }
+              </Blazorise.Select>
+            </label>
+          }
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap">
+          <div style="position: relative; min-width: 320px; margin-right: 1em; margin-bottom: 1em">
+            <table class="table table-bordered display responsive nowrap" id="tableBudgetIn" cellpadding="4">
+              <thead>
+                <tr>
+                  <th style="text-align:center; font-size: 125%; color: green" colspan="4">
+                    Einnahmen
+                    <button type="button" class="btn btn-outline-secondary" @onclick=@(() => drawBudgetChart(true)) style="position: absolute; top: 4px; right: 4px">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pie-chart-fill" viewBox="0 0 16 16">
+                        <path d="M15.985 8.5H8.207l-5.5 5.5a8 8 0 0 0 13.277-5.5zM2 13.292A8 8 0 0 1 7.5.015v7.778l-5.5 5.5zM8.5.015V7.5h7.485A8.001 8.001 0 0 0 8.5.015z"></path>
+                      </svg>
+                    </button>
+                  </th>
+                </tr>
+                <tr>
+                  <th style="text-align:center; white-space: nowrap" width="26%">Art</th>
+                  <th style="text-align:center; white-space: nowrap" width="26%">Geplant [€]</th>
+                  <th style="text-align:center; white-space: nowrap" width="26%">Tatsächlich [€]</th>
+                  <th style="text-align:center; white-space: nowrap" width="22%">Diff</th>
+                </tr>
+              </thead>
+              <tbody>
+                @if (iBudget[0] != null && iBudget[1] != null) {
+                  for (int i = 0; i < sBudgetTypeIn.Length; i++) {
+                    double fDiffRel = iBudget[0][i] > 0 ? (iBudget[1][i] - iBudget[0][i]) / (double)iBudget[0][i] : 0.0;
+                    <tr style="color: @(bNetto && iBudgetIxNetto.Contains(i) ? ((iBudget[0][i] > 0 || iBudget[1][i] > 0) ? "blue" : "lightgrey") : "black")">
+                      <td align="right">@sBudgetTypeIn[i]</td>
+                      <td id="tdPaySalaryPlan" class="planItem" style="width: 160px@(model.bEditable ? "; padding: 0" : "")" align="right">
+                        @if (model.bEditable) {
+                          int j = i;
+                          <RadzenNumeric TValue="long" Format="C0" Value="@iBudget[0][i]" ValueChanged="(l) => SetBudget(true, j, l)" Min="0" Step="@(Controllers.Tool.roundIntBy((int)iBudget[0][i], 1).ToString())" TextAlign="TextAlign.Right"/>
+                        } else {
+                          @iBudget[0][i].ToString("N0")
+                        }
+                      </td>
+                      <td id="tdPaySalaryReal" align="right">@iBudget[1][i].ToString("N0")</td>
+                      <td align="right" style="color: @(iBudget[1][i] - iBudget[0][i] == 0 ? "black" : (fDiffRel < 0.0 ? "red" : "green")); white-space: nowrap">@(iBudget[0][i] > 0 && Math.Abs(fDiffRel) < 10.0 ? ((fDiffRel > 0.0 ? "+" : "") + fDiffRel.ToString("P1")) : iBudget[1][i] > 0 ? "+inf." : "-")</td>
+                    </tr>
+                  }
+                }
+              </tbody>
+              <tfoot>
+                @{
+                  double fDiffRelTotIn = iBudget[0][iBudgetIxSumIn] > 0 ? (iBudget[1][iBudgetIxSumIn] - iBudget[0][iBudgetIxSumIn]) / (double)iBudget[0][iBudgetIxSumIn] : 0.0;
+                }
+                <tr>
+                  <th style="text-align: right">Gesamt</th>
+                  <th id="tdTotalInPlan" class="planItem" style="width:20%; text-align: right">@iBudget[0][iBudgetIxSumIn].ToString("N0")</th>
+                  <th id="tdTotalInReal" style="text-align: right">@iBudget[1][iBudgetIxSumIn].ToString("N0")</th>
+                  <th style="text-align: right; color: @(fDiffRelTotIn < 0.0 ? "red" : "green"); white-space: nowrap">@(iBudget[0][iBudgetIxSumIn] > 0 && Math.Abs(fDiffRelTotIn) < 10.0 ? ((fDiffRelTotIn > 0.0 ? "+" : "") + fDiffRelTotIn.ToString("P1")) : iBudget[1][iBudgetIxSumIn] > 0 ? "+inf." : "-")</th>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <div style="position: relative; min-width: 320px">
+            <table class="table table-bordered display responsive nowrap" id="tableBudgetPay" cellpadding="4">
+              <thead>
+                <tr>
+                  <th style="text-align:center; font-size: 125%; color: red" colspan="4">
+                    Ausgaben
+                    <button type="button" class="btn btn-outline-secondary" @onclick=@(() => drawBudgetChart(false)) style="position: absolute; top: 4px; right: 4px">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pie-chart-fill" viewBox="0 0 16 16">
+                        <path d="M15.985 8.5H8.207l-5.5 5.5a8 8 0 0 0 13.277-5.5zM2 13.292A8 8 0 0 1 7.5.015v7.778l-5.5 5.5zM8.5.015V7.5h7.485A8.001 8.001 0 0 0 8.5.015z"></path>
+                      </svg>
+                    </button>
+                  </th>
+                </tr>
+                <tr>
+                  <th style="text-align:center; white-space: nowrap" width="26%">Art</th>
+                  <th style="text-align:center; white-space: nowrap" width="26%">Geplant [€]</th>
+                  <th style="text-align:center; white-space: nowrap" width="26%">Tatsächlich [€]</th>
+                  <th style="text-align:center; white-space: nowrap" width="22%">Diff</th>
+                </tr>
+              </thead>
+              <tbody>
+                @if (iBudget[0] != null && iBudget[1] != null) {
+                  for (int i = 0; i < sBudgetTypeOut.Length; i++) {
+                    double fDiffRel = iBudget[0][sBudgetTypeIn.Length + i] > 0 ? (iBudget[1][sBudgetTypeIn.Length + i] - iBudget[0][sBudgetTypeIn.Length + i]) / (double)iBudget[0][sBudgetTypeIn.Length + i] : 999.9;
+                    <tr style="color: @(bNetto && iBudgetIxNetto.Contains(i) ? ((iBudget[0][sBudgetTypeIn.Length + i] > 0 || iBudget[1][sBudgetTypeIn.Length + i] > 0) ? "blue" : "lightgrey") : "black")">
+                      <td align="right">@sBudgetTypeOut[i]</td>
+                      <td id="tdPaySalaryPlan" class="planItem" style="width:160px@(model.bEditable ? "; padding: 0" : "")" align="right">
+                        @if (model.bEditable) {
+                          int j = i;
+                          <RadzenNumeric TValue="long" Format="C0" Value="@iBudget[0][sBudgetTypeIn.Length + i]" ValueChanged="(l) => SetBudget(false, j, l)" Min="0" Step="@(Controllers.Tool.roundIntBy((int)iBudget[0][sBudgetTypeIn.Length + i], 1).ToString())" TextAlign="TextAlign.Right"/>
+                        } else {
+                          @iBudget[0][sBudgetTypeIn.Length + i].ToString("N0")
+                        }
+                      </td>
+                      <td id="tdPaySalaryReal" style="width:20%" align="right">@iBudget[1][sBudgetTypeIn.Length + i].ToString("N0")</td>
+                      <td align="right" style="color: @(iBudget[1][sBudgetTypeIn.Length + i] - iBudget[0][sBudgetTypeIn.Length + i] == 0 ? "black" : (fDiffRel > 0.0 ? "red" : "green")); white-space: nowrap">@(iBudget[0][sBudgetTypeIn.Length + i] > 0 && Math.Abs(fDiffRel) < 10.0 ? ((fDiffRel > 0.0 ? "+" : "") + fDiffRel.ToString("P1")) : iBudget[1][sBudgetTypeIn.Length + i] > 0 ? "+inf." : "-")</td>
+                    </tr>
+                  }
+                }
+              </tbody>
+              <tfoot>
+                @{
+                  double fDiffRelTotPay = iBudget[0][iBudgetIxSumPay] > 0 ? (iBudget[1][iBudgetIxSumPay] - iBudget[0][iBudgetIxSumPay]) / (double)iBudget[0][iBudgetIxSumPay] : 999.9;
+                }
+                <tr>
+                  <th style="text-align: right">Gesamt</th>
+                  <th id="tdTotalPayPlan" class="planItem" style="width:20%; text-align: right">@iBudget[0][iBudgetIxSumPay].ToString("N0")</th>
+                  <th id="tdTotalPayReal" style="width:20%; text-align: right">@iBudget[1][iBudgetIxSumPay].ToString("N0")</th>
+                  <th style="text-align: right; color: @(fDiffRelTotPay > 0.0 ? "red" : "green"); white-space: nowrap">@(iBudget[0][iBudgetIxSumPay] > 0 && Math.Abs(fDiffRelTotPay) < 10.0 ? ((fDiffRelTotPay > 0.0 ? "+" : "") + fDiffRelTotPay.ToString("P1")) : iBudget[1][iBudgetIxSumPay] > 0 ? "+inf." : "-")</th>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+
+        <div style="position: relative; width: 100%">
+          <table class="table table-bordered" cellpadding="4">
+            <thead>
+              <tr>
+                <th style="text-align:center">Geplantes Ergebnis [€]</th>
+                <th style="text-align:center">Tatsächliches Ergebnis [€]</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td id="tdSumPlan" align="right" style="font-weight: bold; color: @(iBudget[0][iBudgetIxSumPay + 1] < 0 ? "red" : "green")">@iBudget[0][iBudgetIxSumPay + 1].ToString("N0")</td>
+                <td id="tdSumCurr" align="right" style="font-weight: bold; color: @(iBudget[1][iBudgetIxSumPay + 1] < 0 ? "red" : "green")">@iBudget[1][iBudgetIxSumPay + 1].ToString("N0")</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    @if (_usr != null && _usr.iResp >= CkAppShared.iUserRespFinanceAccountDetails) {
+      <div style="position: relative; width: 100%; margin-top: 2em; display: flex; flex-wrap: wrap-reverse; align-items: flex-end">
+        @{
+          if (model.ltAccount != null && model.ltAccount.Count > 0) {
+            <div style="position: relative; max-width: 100%; height: auto; overflow: auto; margin-right: 5%">
+              <h3>Kontoauszug</h3>
+              <table class="table table-bordered" cellpadding="4" style="width: auto">
+                <thead>
+                  <tr>
+                    <th align="center">Datum</th>
+                    <th align="center">Betreff</th>
+                    <th align="center">Umsatz €</th>
+                    <th align="center">Kontostand €</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (int i = model.ltAccount.Count - 1; i >= 0; i--) {
+                    CornerkickManager.Finance.Account kto = model.ltAccount[i];
+                    <tr>
+                      <td align="center">@kto.dt.ToString("d", CornerkickApp.Controllers.Member.MemberController.getCi(_usr))</td>
+                      <td align="center">@kto.sSubject</td>
+                      <td align="right" style="color: @(kto.iValue < 0 ? "red" : "green")">@(kto.iValue == 0 ? "0" : kto.iValue.ToString("#,#", CornerkickApp.Controllers.Member.MemberController.getCi(_usr)))</td>
+                      <td align="right">@(kto.iBalance == 0 ? "0" : kto.iBalance.ToString("#,#", CornerkickApp.Controllers.Member.MemberController.getCi(_usr)))</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        }
+
+        <div id="divSecretMoneyContainer" style="position: relative; width: 300px; margin-bottom: 1rem; height: fit-content; background-color: black; -webkit-border-radius: 10px; -moz-border-radius: 10px">
+          <div style="position: relative; width: 280px; left: 10px; margin-top: 4px; text-align: center">
+            <div style="position: relative; width: 100%">
+              <b style="color: white">Schwarze Kasse</b>
+            </div>
+            <p style="color: white">
+              Inhalt: @model.sBalanceSecret
+            </p>
+            <div style="color: white; margin-bottom: 0.5rem">
+              Einbehaltene Zuschauereinnahmen:
+              <div style="display: flex; flex-direction: row; justify-content: center; align-items: center">
+                <input type="number" class="form-control" autocomplete="off" style="position: relative; text-align: right; width: 70px; font-size: 1em" value="@model.fBalanceSecretFracAdmissionPrice" max="20" @onchange="(i) => SetBalanceSecret(i.Value)" /> %
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+  }
+
+  <Blazorise.Modal @ref="modalBudgetChart">
+    <Blazorise.ModalContent Centered>
+      @{
+        string sStyle = "color: white; font-weight: bold; background-color: " + (bChartIncome ? "green" : "red");
+      }
+      <Blazorise.ModalHeader Style="@sStyle">
+        <Blazorise.ModalTitle>@(bChartIncome ? "Einnahmen" : "Ausgaben")</Blazorise.ModalTitle>
+        <Blazorise.CloseButton />
+      </Blazorise.ModalHeader>
+      <Blazorise.ModalBody>
+        @if (dataChart != null) {
+          <RadzenChart>
+            <RadzenDonutSeries Data="@dataChart" CategoryProperty="Name" ValueProperty="Value" TotalAngle="360" StartAngle="90">
+              <ChildContent>
+                <RadzenSeriesDataLabels Visible="false" />
+              </ChildContent>
+              <TooltipTemplate Context="data">
+                <span>@data.Name</span>: <strong>@data.Value.ToString("N0") €</strong>
+              </TooltipTemplate>
+              <TitleTemplate>
+                <div class="rz-donut-content">
+                  <div>Gesamt:</div>
+                  <div><strong>@iBudget[1][bChartIncome ? iBudgetIxSumIn : iBudgetIxSumPay].ToString("N0") €</strong></div>
+                </div>
+              </TitleTemplate>
+            </RadzenDonutSeries>
+          </RadzenChart>
+        }
+      </Blazorise.ModalBody>
+    </Blazorise.ModalContent>
+  </Blazorise.Modal>
+</body>
+</html>
+
+@code {
+  private CornerkickManager.User? _usr;
+  private FinanceModel? model;
+
+  string selectedTab = "";
+
+  bool bNetto { get; set; }
+  int iYear = -1;
+
+#if _WebApp
+  const int iBudgetIxSumIn  = 17;
+  const int iBudgetIxSumPay = 18;
+#else
+  const int iBudgetIxSumIn  = 16;
+  const int iBudgetIxSumPay = 17;
+#endif
+  readonly int[] iBudgetIxNetto = [4, 5];
+
+  long[][] iBudget = new long[2][];
+  string[] sBudgetTypeIn = new string[] {
+    "Zuschauer",
+    "Prämien",
+    "Sponsoren",
+    "TV Gelder",
+    "Merchandising",
+    "Transfer",
+#if _WebApp
+    "Kooperationen",
+#endif
+    "Sonstiges"
+  };
+  string[] sBudgetTypeOut = new string[] {
+    "Spielerkosten",
+    "Personalkosten",
+    "Stadion & Umg.",
+    "Gebäudeunterhalt",
+    "Merchandising",
+    "Transfer",
+    "Reisekosten",
+    "Zinsen",
+    "Sonstiges",
+  };
+
+  string sPotentialTotalSpecIncome = "";
+  string sSoldSeasonalTickets = "";
+
+  List<CkAppShared.DataPointTL>? ltBalanceHist;
+  List<CkAppShared.DataPointIL>[]? ltBudgetHist;
+  List<FinanceModel.DataPointSpec>[]? ltSpecHist;
+
+  private Blazorise.Modal? modalBudgetChart;
+  class DataItem
+  {
+    public string Name { get; set; } = "";
+    public long Value { get; set; }
+  }
+  DataItem[]? dataChart;
+  bool bChartIncome = true;
+
+  protected override async Task OnInitializedAsync()
+  {
+    //await base.OnInitializedAsync();
+
+#if _WebApp
+    //_usr = await Http.GetFromJsonAsync<CornerkickManager.User>("member/Member/ckUser");
+    _usr = Controllers.Member.MemberController.ckUser(await _auth.GetUserId());
+
+    if (_usr == null) {
+      NavigationManager.NavigateTo("/authentication/register");
+      return;
+    }
+#else
+    _usr = CkAppShared.ckMng.ltUser[CkAppShared.iUserActive];
+#endif
+
+    model = CornerkickApp.Controllers.Member.FinanceController.Model(_usr);
+
+    if (model != null && _usr != null) {
+      selectedTab = _usr.iResp < CkAppShared.iUserRespFinanceAccountDetails ? "tabSpecPrice" : "tabBalanceHist";
+
+      SetSpecPrice(-1, 0);
+
+      int iSeasonalTicketsTotal = model.iSeasonalTickets[0] + model.iSeasonalTickets[1] + model.iSeasonalTickets[2];
+      sSoldSeasonalTickets = "Verkaufte Dauerkarten: " + iSeasonalTicketsTotal.ToString("N0") + " (" + model.iSeasonalTickets[0].ToString("N0") + "/" + model.iSeasonalTickets[1].ToString("N0") + "/" + model.iSeasonalTickets[2].ToString("N0") + ")";
+
+      GetBudget();
+
+      ltBalanceHist = Controllers.Member.FinanceController.GetBalanceHistory(_usr, model);
+      ltBudgetHist = Controllers.Member.FinanceController.GetBudgetHistory(_usr, model);
+      ltSpecHist = Controllers.Member.FinanceController.GetSpecHistory(_usr, model);
+#if _WebApp
+    } else {
+      NavigationManager.NavigateTo("/authentication/register");
+#endif
+    }
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender) {
+    }
+  }
+  
+  private Task OnSelectedTabChanged(string name)
+  {
+    selectedTab = name;
+
+    return Task.CompletedTask;
+  }
+
+  private async Task SetNetto(object o)
+  {
+    bool b;
+    if (!bool.TryParse(o.ToString(), out b)) return;
+
+    bNetto = b;
+
+    GetBudget();
+  }
+
+  private async Task GetBudget()
+  {
+    iBudget = Controllers.Member.FinanceController.GetBudgetPlan(_usr, iYear, bNetto);
+
+    InvokeAsync(StateHasChanged);
+  }
+  
+  private async Task drawBudgetChart(bool bIn)
+  {
+    bChartIncome = bIn;
+
+    List<DataItem> ltDi = new List<DataItem>();
+
+    for (int i = 0; i < (bIn ? sBudgetTypeIn : sBudgetTypeOut).Length; i++) {
+      long iVal = iBudget[1][i + (bIn ? 0 : 7)];
+      if (iVal > 0) {
+        ltDi.Add(new DataItem() {
+          Name = bIn ? sBudgetTypeIn[i] : sBudgetTypeOut[i],
+          Value = iVal
+        });
+      }
+    }
+
+    if (ltDi.Count > 0) {
+      dataChart = ltDi.ToArray();
+      modalBudgetChart.Show();
+    }
+  }
+
+  private async Task SetBudget(bool bIncome, int iType, long iValue)
+  {
+    if (_usr == null) return;
+
+    if (bIncome) {
+      if      (iType == 0) _usr.budget.iInSpec          = iValue;
+      else if (iType == 1) _usr.budget.iInBonusCup      = iValue;
+      else if (iType == 2) _usr.budget.iInBonusSponsor  = iValue;
+      else if (iType == 3) _usr.budget.iInTvBonus       = iValue;
+      else if (iType == 4) _usr.budget.iInMerchandising = iValue;
+      else if (iType == 5) _usr.budget.iInTransfer      = iValue;
+#if _WebApp
+      else if (iType == 6) _usr.budget.iInGenericA      = iValue;
+      else if (iType == 7) _usr.budget.iInMisc          = iValue;
+#else
+      else if (iType == 6) _usr.budget.iInMisc          = iValue;
+#endif
+
+      //iBudget[0][iType] = iValue;
+    } else {
+      if      (iType == 0) _usr.budget.iPaySalary                 = iValue;
+      else if (iType == 1) _usr.budget.iPayStaff                  = iValue;
+      else if (iType == 2) _usr.budget.iPayStadium                = iValue;
+      else if (iType == 3) _usr.budget.iPayStadiumSurrMaintenance = iValue;
+      else if (iType == 4) _usr.budget.iPayMerchandising          = iValue;
+      else if (iType == 5) _usr.budget.iPayTransfer               = iValue;
+      else if (iType == 6) _usr.budget.iPayTravel                 = iValue;
+      else if (iType == 7) _usr.budget.iPayInterest               = iValue;
+      else if (iType == 8) _usr.budget.iPayMisc                   = iValue;
+
+      //iBudget[0][sBudgetTypeIn.Length + iType] = iValue;
+    }
+
+    GetBudget();
+  }
+
+  private async Task SetYear(int jY)
+  {
+    iYear = jY;
+
+    if (model == null) return;
+
+    model.bEditable = iYear < 0;
+
+    GetBudget();
+  }
+
+  private async Task SetSpecPrice(int iType, int iValue, bool bSeasonalPrice = false)
+  {
+    int iIncomeTotal = Controllers.Member.FinanceController.SetAdmissionPrice(_usr, iType, iValue, bSeasonalPrice: bSeasonalPrice);
+    sPotentialTotalSpecIncome = iIncomeTotal.ToString("N0") + "€";
+  }
+
+  private async Task SetSeasonalTicketsMaxFrac()
+  {
+    if (model == null) return;
+
+    if (model.fSeasonalTicketsMaxFrac > 20f) {
+      model.fSeasonalTicketsMaxFrac = 20f;
+
+      if (MainLayout.ckToast != null) {
+        MainLayout.toastMessage = "Maximal 20% erlaubt";
+        MainLayout.ckToast.Show();
+      }
+    }
+    CornerkickManager.Club? clb = Controllers.Member.MemberController.ckClub(_usr);
+    if (clb != null) clb.fSeasonalTicketsMaxFrac = model.fSeasonalTicketsMaxFrac / 100f;
+  }
+
+  private async Task SetBalanceSecret(object o)
+  {
+    if (model == null) return;
+
+    float f;
+    if (!float.TryParse(o.ToString(), out f)) return;
+
+    if (f > 20f) {
+      f = 20f;
+
+      if (MainLayout.ckToast != null) {
+        MainLayout.toastMessage = "Maximal 20% erlaubt";
+        MainLayout.ckToast.Show();
+      }
+    }
+
+    model.fBalanceSecretFracAdmissionPrice = f;
+    CornerkickManager.Club? clb = Controllers.Member.MemberController.ckClub(_usr);
+    if (clb != null) clb.fBalanceSecretFracAdmissionPrice = f / 100f;
+  }
+
+  string FormatAsDate(object value)
+  {
+    if (value != null) {
+      return Convert.ToDateTime(value).ToString("dd.MM.yy");
+    }
+
+    return string.Empty;
+  }
+
+  string FormatAsSeasonStr(object value)
+  {
+    if (value == null) return "";
+
+    int iS;
+    if (!int.TryParse(value.ToString(), out iS)) return "";
+    //if (!int.TryParse(value.ToString(), out iS)) return value.ToString();
+
+    return Controllers.Tool.getSeasonString(iS);
+  }
+
+}

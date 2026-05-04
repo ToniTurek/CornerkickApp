@@ -1,0 +1,180 @@
+﻿@using CornerkickApp.Shared.Models
+@using CornerkickApp.Components.Shared.Components
+
+<head>
+  <link rel="stylesheet" href="./_content/CornerkickApp.Components/css/StaffBusinessCard.css" />
+</head>
+
+@if (Scout != null) {
+  getName();
+  plotScoutSigma();
+
+  <div class="businesscard">
+    <div style="position: relative; width: 90%; left: 5%; top: 7%; text-align: left; font-size: 1.4em; white-space: nowrap; overflow: hidden">@sFirstname <b>@sSurname</b></div>
+    <div style="position: absolute; width: 25%; left: 7%; top: 27%; text-align: center;">
+      <img src="@CkAppShared.sContentDir/Images/portraits/scouts/@(Scout.iId.ToString()).png" alt="Portrait" style="width:100%" title="@Scout.sName">
+    </div>
+    <div style="position: absolute; width: 30%; left: 36%; top: 27%; text-align: left; font-size: 1em;">
+      <p><b>Level:</b> @Scout.iSkill.ToString()</p>
+      <p><b>Daten/Sc.</b> @Scout.nDataPerScouting.ToString()</p>
+      <p><b>@(Scout.bFreelancer ? "Kosten:" : "Gehalt:")</b> @Scout.getSalary().ToString("N0") €</p>
+      @*
+      <table>
+        <tbody>
+          <tr>
+            <td class="lblSkill">Level:</td>
+            <td style="white-space: nowrap">@Scout.iSkill</td>
+          </tr>
+          <tr>
+            <td class="lblSkill">Daten/Sc.:</td>
+            <td style="white-space: nowrap">@Scout.nDataPerScouting</td>
+          </tr>
+          <tr>
+            <td class="lblSkill">@(Scout.bFreelancer ? "Kosten:" : "Gehalt:")</td>
+            <td style="white-space: nowrap">@Scout.getSalary().ToString("N0")</td>
+          </tr>
+        </tbody>
+      </table>
+      *@
+    </div>
+    <div id="chartContainerNormalDist" style="position: absolute; top: 10%; right: 0; width: 35%">
+      @{
+        string sChartTitle = "σ^2=" + Math.Pow(Scout.getSigma(), 2.0).ToString("0.00");
+      }
+      <RadzenChart Style="width: 100%; height: 100%">
+        <RadzenLineSeries Data="@calcNormalDist()" CategoryProperty="X" ValueProperty="Y" Stroke="blue" StrokeWidth="1" Title="@sChartTitle">
+          <TooltipTemplate Context="data">
+            @if (data.X.HasValue && data.Y.HasValue) {
+              <div>@(data.X.Value.ToString("0.0") + ": ")<b>@data.Y.Value.ToString("0.00")</b></div>
+            }
+          </TooltipTemplate>
+          <ChildContent>
+            <RadzenMarkers MarkerType="MarkerType.None" />
+          </ChildContent>
+        </RadzenLineSeries>
+        <RadzenCategoryAxis Visible="true" Min="-2" Max="+2" Step="1">
+          <RadzenGridLines Visible="true" Stroke="#ccc" LineType="Radzen.Blazor.LineType.Dashed" />
+        </RadzenCategoryAxis>
+        <RadzenValueAxis FormatString="{0:N1}" Min="0" Max="0.5" Step="0.1">
+          <RadzenGridLines Visible="true" StrokeWidth="2" />
+        </RadzenValueAxis>
+        <RadzenLegend Visible="true" Position="LegendPosition.Top" />
+      </RadzenChart>
+    </div>
+    <div style="position: absolute; left: 5%; bottom: 3%; width: auto;">
+      @if (Editable && iMinutesActivate >= 0) {
+        <button type="button" class="btn btn-outline-secondary" style="width: auto" @onclick="Free ? hireScout : fireScout">
+          @if (Free) {
+            <img width="26" height="26" style="margin-right: 6px;" src="@CkAppShared.sContentDir/Icons/plus.png">
+            <span>Scout einstellen</span>
+          } else {
+            <img width="26" height="26" style="margin-right: 6px;" src="@CkAppShared.sContentDir/Icons/minus.png">
+            <span>Scout kündigen</span>
+          }
+        </button>
+      }
+      <button type="button" class="btn btn-outline-secondary position-relative" style="margin-left: 6px" @onclick="showScoutedPlayer">
+        <Icon Name="Blazorise.IconName.Users" />
+      </button>
+    </div>
+  </div>
+}
+
+@code {
+  [Parameter] public CornerkickManager.Main.Staff.Scout? Scout { get; set; }
+  [Parameter] public bool Editable { get; set; }
+  [Parameter] public bool Free { get; set; }
+  [Parameter] public CornerkickManager.User? User { get; set; }
+  [Parameter] public Action? Action { get; set; }
+
+  private string sSurname { get; set; } = "";
+  private string sFirstname { get; set; } = "";
+  private RenderFragment[] rfStars = new RenderFragment[4];
+
+  int iMinutesActivate = 0;
+
+  protected override async Task OnInitializedAsync()
+  {
+    //await base.OnInitializedAsync();
+
+    if (Scout != null) {
+      if (Scout.bFreelancer) {
+        iMinutesActivate = -1;
+      } else if (!Scout.bActive) {
+        iMinutesActivate = (int)(CkAppShared.ckMng.dtDatum.Date.Add(new TimeSpan(12, 00, 00)) - CkAppShared.ckMng.dtDatum).TotalMinutes;
+        if (iMinutesActivate < 0) iMinutesActivate += 24 * 60;
+      }
+    }
+  }
+
+  private void getName()
+  {
+    if (Scout != null) {
+      string[] sNameSplit = Scout.sName.Split(" ");
+      if (sNameSplit.Length > 1) {
+        sSurname = sNameSplit[sNameSplit.Length - 1];
+        sFirstname = Scout.sName.Replace(sSurname, "").Trim();
+      } else {
+        sSurname = Scout.sName;
+      }
+    }
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender) {
+    }
+  }
+
+  /*
+  protected override bool ShouldRender()
+  {
+    Console.WriteLine("Checking if the component needs to re-render...");
+    return true; // Always re-render
+  }
+  */
+
+  private List<CkAppShared.DataPointDD> calcNormalDist()
+  {
+    List<CkAppShared.DataPointDD> dataPoints = new List<CkAppShared.DataPointDD>();
+
+    if (Scout == null) return dataPoints;
+
+    Meta.Numerics.Statistics.Distributions.ContinuousDistribution normal = new Meta.Numerics.Statistics.Distributions.NormalDistribution(mu: 0.0, sigma: Scout.getSigma());
+
+    for (double x = -2.0; x < 2.01; x += 0.1) {
+      dataPoints.Add(new CkAppShared.DataPointDD(x, normal.ProbabilityDensity(x)));
+    }
+
+    return dataPoints;
+  }
+
+  private Task plotScoutSigma()
+  {
+    if (Scout == null) return Task.CompletedTask;
+
+
+    return Task.CompletedTask;
+  }
+
+  private async Task hireScout()
+  {
+    if (Action != null) Action();
+  }
+
+  private async Task fireScout()
+  {
+    if (Scout == null) return;
+
+    await CkDialog.ckDialog.Show(
+      "Entlassen?",
+      "Möchten Sie Ihren Scout " + Scout.sName + " wirklich entlassen?<br>Die Abfindung beläuft sich auf " + Scout.getPayOff(CkAppShared.ckMng.dtDatum, CkAppShared.ckMng.dtSeasonEnd).ToString("N0") + " €.",
+      actionOnOk: Action != null ? Action : null);
+  }
+
+  private async Task showScoutedPlayer()
+  {
+
+  }
+
+}

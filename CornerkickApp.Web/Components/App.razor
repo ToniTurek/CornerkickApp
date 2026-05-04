@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cornerkick</title>
+  <base href="/" />
+
+  <link rel="stylesheet" href="_content/CornerkickApp.Shared/bootstrap/bootstrap.min.css" />
+  <link rel="stylesheet" href="_content/CornerkickApp.Shared/app.css" />
+  <link rel="stylesheet" href="CornerkickApp.Web.styles.css" />
+
+  <link rel="stylesheet" href="_content/Radzen.Blazor/css/standard-base.css">
+
+  <link rel="stylesheet" href="_content/CornerkickApp.Components/css/site.css" />
+  <link rel="stylesheet" href="_content/CornerkickApp.Components/css/mystyles.css" />
+  <link rel="stylesheet" href="_content/CornerkickApp.Components/css/tutorial.css" />
+
+  <link href="_content/Blazorise.Icons.FontAwesome/v6/css/all.min.css" rel="stylesheet">
+  <link href="_content/Blazorise/blazorise.css" rel="stylesheet" />
+  <link href="_content/Blazorise.Bootstrap5/blazorise.bootstrap5.css" rel="stylesheet" />
+
+  <link rel="icon" type="image/png" href="_content/CornerkickApp.Shared/logo_64.png" />
+  <HeadOutlet @rendermode="PageRenderMode" />
+</head>
+
+<body>
+  <Routes @rendermode="PageRenderMode" />
+  <script src="_framework/blazor.web.js"></script>
+  <script src="_content/Radzen.Blazor/Radzen.Blazor.js?v=@(typeof(Radzen.Colors).Assembly.GetName().Version)"></script>
+</body>
+
+</html>
+
+@code {
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    private IComponentRenderMode? PageRenderMode =>
+        HttpContext.AcceptsInteractiveRouting() ? InteractiveServer : null;
+}

@@ -1,0 +1,332 @@
+﻿@page "/newgame"
+
+@using CornerkickApp.Shared.Models
+@using CornerkickApp.Components.Pages.Templates
+@using Blazorise.Modules
+@inject MauiAuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavigationManager
+
+<!DOCTYPE html>
+<html style="height: 100%; min-height: 100%">
+<head>
+  <style>
+    input[type="color"] {
+      height: 90%;
+    }
+
+    div.form-group {
+      margin-top: 1%;
+      margin-bottom: 1%;
+    }
+
+    button.submit {
+      width: 100%;
+      font-size: 110%;
+      background-color: rgb( @(CkAppShared.sClCkRgb) );
+      opacity: 0.9;
+      border-color: darkgreen;
+    }
+
+    button.submit:hover {
+      background-color: rgb( @(CkAppShared.sClCkRgb) );
+      opacity: 1.0 !important;
+    }
+  </style>
+</head>
+
+<body style="height: 100%; min-height: 100%">
+  <div class="col-md-4">
+    <div style="display: flex; align-items: center">
+      <label style="margin-right: 6px">Anzahl Spieler:</label>
+      <input class="form-control" style="width: 64px; text-align: right" type="number" @oninput="(EventArgs) => { setNextButton(int.Parse(EventArgs.Value.ToString())); }" value="@iNoOfUser" min="1" disabled="@(CkAppShared.iUserActive > 0)" />
+    </div>
+    <hr />
+    <h3>Daten Spieler @(CkAppShared.iUserActive + 1)</h3>
+    <div class="form-group">
+      <input class="form-control" @bind="sFirstName" @bind:after="setNextButton" @bind:event="oninput" placeholder="Vorname" autofocus />
+    </div>
+    <div class="form-group">
+      <input class="form-control" @bind="sLastName" @bind:after="setNextButton" @bind:event="oninput" placeholder="Nachname" />
+    </div>
+    @if (iNoOfUser > 1) {
+      <AuthorizeView>
+        <Authorized>
+          <div style="display: flex; justify-content: space-between">
+            <span style="margin: 0">Eingeloggt als: <b>@context.User.Identity?.Name</b></span>
+            <Logout />
+          </div>
+        </Authorized>
+        <Authorizing>
+            Authorizing...
+        </Authorizing>
+        <NotAuthorized>
+          <div style="border: 1px solid black; border-radius: 6px; padding: 0.5rem; margin-bottom: 1rem">
+            Um die <b>Cornerkick-Cloud</b> zur Speicherung des Spielstandes nutzen zu können, müssen sich alle Spieler einloggen:
+            <Login @ref="loginform" />
+          </div>
+          Alternativ Passwort wählen (Spielstand kann nur lokal gespeichert werden, max. 16 Zeichen):
+          <input type="password" class="form-control" @bind="sUserPw" placeholder="Passwort" />
+        </NotAuthorized>
+      </AuthorizeView>
+    }
+    <div class="form-group" style="margin-top: 2rem">
+      <div style="display: flex; flex-wrap: wrap; max-width: 100%">
+        <div style="margin-right: 3rem; margin-bottom: 6px">
+          <h4>Liga</h4>
+          <div style="width: 280px; min-width: 200px; display: flex; flex-direction: column">
+            <Blazorise.Select TValue="int" SelectedValue="@iLand" SelectedValueChanged="@setLeagues" Style="margin-bottom: 6px">
+              @foreach (LayoutModel.SelectListItem sli in sliCountries) {
+                <Blazorise.SelectItem Value="@sli.Value">
+                  @*@((MarkupString)Controllers.Tool.getNatIcon(Convert.ToInt32(sli.Value)))*@
+                  @sli.Text
+                </Blazorise.SelectItem>
+              }
+            </Blazorise.Select>
+            <Blazorise.Select TValue="int" SelectedValue="@iDivision" SelectedValueChanged="@setClubs">
+              @foreach (LayoutModel.SelectListItem sli in sliLeagues) {
+                <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+              }
+            </Blazorise.Select>
+          </div>
+        </div>
+        @if (bCupEmblem != null) {
+          <img style="height: 150px; object-fit: contain; margin-bottom: 6px" src="data:image/*;base64,@Convert.ToBase64String(bCupEmblem)" />
+        }
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom: 2rem">
+      <div style="display: flex; flex-wrap: wrap; max-width: 100%; margin-bottom: 6px">
+        <div style="margin-right: 3rem">
+          <h4>Verein</h4>
+          <div style="width: 280px; min-width: 200px; display: flex; flex-direction: column">
+            <Blazorise.Select TValue="int" SelectedValue="@iClubId" SelectedValueChanged="@setClub">
+              @foreach (LayoutModel.SelectListItem sli in sliClubs) {
+                <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+              }
+            </Blazorise.Select>
+          </div>
+        </div>
+        @if (bClubEmblem != null) {
+          <img style="height: 150px; object-fit: contain" src="data:image/*;base64,@Convert.ToBase64String(bClubEmblem)" />
+        }
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap">
+        <Jersey @ref="jerseyH" iClubId="@iClubId" iSet="0" EditColors Header iNb="5"></Jersey>
+        <Jersey @ref="jerseyA" iClubId="@iClubId" iSet="1" EditColors Header iNb="5"></Jersey>
+      </div>
+    </div>
+    <div class="form-group">
+      <h4>Schwierigkeitsgrad</h4>
+      <Blazorise.Select TValue="int" @bind-SelectedValue="@iLevel">
+        <Blazorise.SelectItem Value="0">Fußball? Schon mal gehört...</Blazorise.SelectItem>
+        <Blazorise.SelectItem Value="1">Stammtischtrainer</Blazorise.SelectItem>
+        <Blazorise.SelectItem Value="2">Erfahrener Trainer</Blazorise.SelectItem>
+        <Blazorise.SelectItem Value="3">Lichtgestalt</Blazorise.SelectItem>
+      </Blazorise.Select>
+    </div>
+
+    <Accordion>
+      <AccordionItem @bind-Visible="@accordionItemVisible" Style="background-color: transparent">
+        <AccordionHeader>
+          <Heading Size="HeadingSize.Is5">
+            <AccordionToggle Style="background-color: transparent">Erweiterte Einstellungen</AccordionToggle>
+          </Heading>
+        </AccordionHeader>
+        <AccordionBody>
+          <table>
+            @if (!string.IsNullOrEmpty(CkAppShared.ckMng.sDatabaseName)) {
+              <tr>
+                <td style="padding: 6px">Vereinsausstattung</td>
+                <td>
+                  <Blazorise.Select TValue="int" @bind-SelectedValue="@iStartMode">
+                    <Blazorise.SelectItem Value="0">Neu</Blazorise.SelectItem>
+                    <Blazorise.SelectItem Value="1">Original</Blazorise.SelectItem>
+                  </Blazorise.Select>
+                </td>
+              </tr>
+            }
+            <tr>
+              <td style="padding: 6px">Scouting</td>
+              <td>
+                <input type="checkbox" id="cbScouting" title="Aktiviert das Scoutingsystem (Spielerfähigkeitswerte nicht direkt einsehbar)" @bind="bScouting" />
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 6px">Karrieremodus</td>
+              <td>
+                <input type="checkbox" title="Aktiviert den Karrieremodus" @bind="bUserCarrierMode" />
+              </td>
+              @*
+              <td style="padding: 6px">Stellung im Verein</td>
+              <td>
+                <Blazorise.Select @bind-SelectedValue="@iRespLvlStart">
+                  @for (int iL = 0; iL < CornerkickManager.Names.sUserRespLvlNames.Length; iL++) {
+                    int jL = iL;
+                    <Blazorise.SelectItem Value="@jL">@CornerkickManager.Names.sUserRespLvlNames[jL]</Blazorise.SelectItem>
+                  }
+                </Blazorise.Select>
+              </td>
+              *@
+            </tr>
+          </table>
+        </AccordionBody>
+      </AccordionItem>
+    </Accordion>
+    <hr />
+    <button id="bnStartNewGame" class="btn btn-primary submit" style="width: 100%" @onclick="next" disabled="@bNextButtonDisabled">@((MarkupString)sNextButtonText)</button>
+  </div>
+</body>
+</html>
+
+@code {
+  //[Parameter]
+  private static int iNoOfUser { get; set; } = 1;
+
+  List<LayoutModel.SelectListItem> sliCountries = new List<LayoutModel.SelectListItem>();
+  List<LayoutModel.SelectListItem> sliLeagues = new List<LayoutModel.SelectListItem>();
+  List<LayoutModel.SelectListItem> sliClubs = new List<LayoutModel.SelectListItem>();
+  //int iRespLvlStart = 0;
+  byte[]? bCupEmblem { get; set; }
+  byte[]? bClubEmblem { get; set; }
+  string sNextButtonText = "";
+  bool bNextButtonDisabled;
+  bool accordionItemVisible = false;
+
+  // User selects
+  private static int iLand = CkAppShared.iNations[0];
+  private static int iDivision = 0;
+  private static int iClubId = 0;
+  private static int iStartMode = 0;
+  private static int iLevel = 0;
+  private static string sFirstName = "";
+  private static string sLastName = "";
+  private static string sUserPw = "";
+  private static bool bScouting = true;
+  private static bool bUserCarrierMode = true;
+
+  CornerkickApp.Components.Pages.Templates.Jersey? jerseyH { get; set; }
+  CornerkickApp.Components.Pages.Templates.Jersey? jerseyA { get; set; }
+
+  Login loginform = new Login();
+
+  protected override async Task OnInitializedAsync()
+  {
+    setNextButton(iNoOfUser);
+
+    await setCountries();
+
+    iClubId = int.Parse(sliClubs[0].Value);
+    await updateClub();
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender) {
+    }
+
+    loginform.GetLoginData += GetLoginData;
+  }
+
+  private void setNextButton()
+  {
+    setNextButton(iNoOfUser);
+  }
+  private void setNextButton(int _iNoOfUser)
+  {
+    iNoOfUser = _iNoOfUser;
+
+    // Dis-/enable start button
+    bNextButtonDisabled = string.IsNullOrEmpty(sFirstName) || string.IsNullOrEmpty(sLastName);
+
+    if (CkAppShared.iUserActive + 1 < _iNoOfUser) {
+      sNextButtonText = "nächster Spieler &raquo;";
+    } else {
+      sNextButtonText = "Spiel starten";
+    }
+  }
+
+  private async Task next()
+  {
+    //if (loginform != null) sUserPw = loginform.LoginModel.Password;
+
+    CornerkickManager.Club? clb = CkAppShared.ckMng.ltClubs.Find(c => c.iId == iClubId);
+
+    if (clb != null && CornerkickApp.Controllers.AddUser.addUser(sFirstName, sLastName, clb, iLevel, bScouting, iStartMode, bUserCarrierMode, iNoOfUser, sUserPw: sUserPw)) {
+      // For multiplayer, set calendar speed to 0 for all users
+      if (iNoOfUser > 1) {
+        foreach (CornerkickManager.User usr in CkAppShared.ckMng.ltUser) usr.lti[UserOptionsModel.iUserOptionsIxCalSpeed] = 0;
+      }
+
+      string uri = iNoOfUser > 1 && !string.IsNullOrEmpty(CkAppShared.ckMng.ltUser[0].sPw) ? "userpassword" : "member/desk";
+      NavigationManager.NavigateTo(uri, true);
+      //await App.Current.MainPage.Navigation.PushAsync(new CornerkickApp.Controllers.Member.DeskController(CkAppShared.ckMng.ltUser[0]));
+    } else {
+      AuthStateProvider.Logout();
+
+      sFirstName = "";
+      sLastName = "";
+      sUserPw = "";
+      bUserCarrierMode = true;
+
+      iLand = CkAppShared.iNations[0];
+      iDivision = 0;
+      iClubId = int.Parse(sliClubs[0].Value);
+      await setCountries();
+
+      setNextButton(iNoOfUser);
+    }
+  }
+
+  protected async Task setCountries()
+  {
+    sliCountries = await CornerkickApp.Controllers.Tool.getCountries();
+    await setLeagues(iLand);
+  }
+
+  protected async Task setLeagues(int jLand)
+  {
+    iLand = jLand;
+    iDivision = 0;
+    sliLeagues = await CornerkickApp.Controllers.Tool.getLeagues(iLand);
+    await setClubs(iDivision);
+  }
+
+  protected async Task setClubs(int jDivision)
+  {
+    iDivision = jDivision;
+    bCupEmblem = await CornerkickApp.Services.StartGameService.loadMediaDataCup(CkAppShared.ckMng.sDatabaseName, CkAppShared.iCupIdLeague, iLand, jDivision);
+    sliClubs = await CornerkickApp.Controllers.Tool.getClubs(CkAppShared.iCupIdLeague, iLand, iId3: iDivision);
+    foreach (CornerkickManager.User u in CkAppShared.ckMng.ltUser) {
+      sliClubs.RemoveAll(s => s.Value.Equals(u.club.iId.ToString()));
+    }
+    sliClubs = sliClubs.OrderBy(c => c.Text).ToList();
+    int.TryParse(sliClubs[0].Value, out iClubId);
+    await setClub(iClubId);
+  }
+
+  protected async Task setClub(int jClubId)
+  {
+    iClubId = jClubId;
+    await updateClub();
+  }
+
+  protected async Task updateClub()
+  {
+    CornerkickManager.Club? clb = CkAppShared.ckMng.ltClubs.Find(c => c.iId == iClubId);
+    if (clb == null) return;
+
+    if (jerseyH != null) await jerseyH.draw(iClubId);
+    if (jerseyA != null) await jerseyA.draw(iClubId);
+
+    bClubEmblem = await CornerkickApp.Services.StartGameService.loadMediaDataClub(CkAppShared.ckMng.sDatabaseName, clb.iId);
+
+    await InvokeAsync(StateHasChanged);
+  }
+
+  public void GetLoginData(LoginRequest LoginData)
+  {
+    sUserPw = LoginData.Password;
+  }
+
+}

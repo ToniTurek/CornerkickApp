@@ -1,0 +1,97 @@
+﻿@using CornerkickApp.Shared.Models
+
+<div>
+  <div style="display: flex; margin-bottom: 10px">
+    @if (!string.IsNullOrEmpty(sPortrait)) {
+      <div id="divPortrait" style="position: relative; height: 144px; margin-right: 10px; border-style: outset; border-width: 3px; border-color: lightgray">
+        @((MarkupString)sPortrait)
+      </div>
+    }
+
+    <div>
+      <Blazorise.Select TValue="int" SelectedValue="@iSelectedPlId" SelectedValueChanged="@update" Style="margin-bottom: 10px; width: 200px">
+        @foreach (LayoutModel.SelectListItem sli in ltPlayer) {
+          <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+        }
+      </Blazorise.Select>
+      <p style="margin-bottom: 10px">Note letztes Spiel: @(fGradeLastGame > 0f ? fGradeLastGame.ToString("0.0") : "keine")</p>
+      <div>
+        Art des Gesprächs:
+        <Blazorise.Select TValue="int" @bind-SelectedValue="iMtgType" Style="width: 200px">
+          @foreach (LayoutModel.SelectListItem sli in ltMtgType) {
+            <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+          }
+        </Blazorise.Select>
+      </div>
+    </div>
+  </div>
+</div>
+
+@code {
+  [Parameter]
+  public int iClubUserId { get; set; }
+
+  private List<LayoutModel.SelectListItem> ltPlayer { get; set; } = new List<LayoutModel.SelectListItem>();
+  public int iSelectedPlId = -1;
+  public int iMtgType = 1;
+  public string selected_player = "";
+  private float fGradeLastGame = 0f;
+  //private byte[]? bPortrait;
+  private string? sPortrait;
+
+  class PlayerGrade {
+    public int iId { get; set; }
+    public float fGradeLastGame { get; set; }
+    public string sName { get; set; } = "";
+  }
+  List<PlayerGrade> ltPlGrades = new List<PlayerGrade>();
+
+  private float[]? fGradesLastGame { get; set; }
+
+  private List<LayoutModel.SelectListItem> ltMtgType { get; set; } = new List<LayoutModel.SelectListItem>();
+
+  protected override async Task OnInitializedAsync()
+  {
+    await base.OnInitializedAsync();
+
+    CornerkickManager.Club? clb = CkAppShared.ckMng.ltClubs.Find(c => c.iId == iClubUserId);
+    if (clb?.ltPlayer == null) return;
+
+    ltMtgType.Add(new LayoutModel.SelectListItem() { Value = "1", Text = "Spieler loben" });
+    ltMtgType.Add(new LayoutModel.SelectListItem() { Value = "2", Text = "Spieler über den grünen Klee loben" });
+    ltMtgType.Add(new LayoutModel.SelectListItem() { Value = "3", Text = "Spieler kritisieren" });
+    ltMtgType.Add(new LayoutModel.SelectListItem() { Value = "4", Text = "Spieler im KH besuchen" });
+    ltMtgType.Add(new LayoutModel.SelectListItem() { Value = "5", Text = "Spieler zum Geburtstag gratulieren" });
+
+    fGradesLastGame = Controllers.Member.CalendarController.GetGradesLastGame(clb);
+
+    int iPl = 0;
+    foreach (CornerkickManager.Player pl in clb.ltPlayer) {
+      ltPlayer.Add(new LayoutModel.SelectListItem() { Value = pl.plGame.iId.ToString(), Text = pl.plGame.sName });
+      if (fGradesLastGame != null && iPl < fGradesLastGame.Length) ltPlGrades.Add(new PlayerGrade() {
+        iId = pl.plGame.iId,
+        fGradeLastGame = fGradesLastGame[iPl],
+        sName = pl.plGame.sName
+      });
+
+      iPl++;
+    }
+    iSelectedPlId = int.Parse(ltPlayer[0].Value);
+
+    await update(iSelectedPlId);
+  }
+
+  private Task update(int jSelectedPlId)
+  {
+    iSelectedPlId = jSelectedPlId;
+    PlayerGrade? pg = ltPlGrades.Find(p => p.iId == iSelectedPlId);
+    if (pg != null) {
+      fGradeLastGame = pg.fGradeLastGame;
+      selected_player = pg.sName;
+    }
+
+    sPortrait = Controllers.Member.PlayerController.getPlayerPortraitHtmlImg(iSelectedPlId);
+
+    return Task.CompletedTask;
+  }
+}

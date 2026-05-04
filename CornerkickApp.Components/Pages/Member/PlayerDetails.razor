@@ -1,0 +1,1561 @@
+﻿@page "/member/playerdetails/{id}"
+
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using CornerkickApp.Controllers.Member
+@using CornerkickApp.Components.Shared.Components
+@using CornerkickApp.Shared.Models
+
+@inject IJSRuntime JS
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject Controllers.Shared.MyAuthenticationStateProvider _auth
+
+<PageTitle>Spielerdetails</PageTitle>
+
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    div.form-check-inline {
+      margin-right: 0px;
+    }
+
+    .table .compact>:not(caption)>*>* {
+      padding: 0.25rem;
+    }
+
+    /* Radzen inputs */
+    .rz-inputtext {
+      font-size: 1rem;
+      color: black;
+    }
+  </style>
+</head>
+
+<body>
+  @if (model != null) {
+    @if (model.iPlPrevId >= 0 || model.iPlNextId >= 0) {
+      <div style="position: relative; width: 100%; display: flex; justify-content: space-between">
+        @{
+          string sPlPrevName = "";
+          if (model.iPlPrevId >= 0) {
+            sPlPrevName = "<<   " + model.sPlPrevName;
+            <a href="/member/playerdetails/@model.iPlPrevId" style="text-decoration: none" @onclick="@(() => NavigationManager.NavigateTo("/member/playerdetails/" + @model.iPlPrevId.ToString(), forceLoad: true))">@sPlPrevName</a>
+          } else {
+            <div></div>
+          }
+
+          string sPlNextName = "";
+          if (model.iPlNextId >= 0) {
+            sPlNextName = model.sPlNextName + "   >>";
+            <a href="/member/playerdetails/@model.iPlNextId" style="text-decoration: none" @onclick="@(() => NavigationManager.NavigateTo("/member/playerdetails/" + @model.iPlNextId.ToString(), forceLoad: true))">@sPlNextName</a>
+          }
+        }
+      </div>
+    }
+    <div style="position: relative; width: 100%; margin-top: 4px; display: flex">
+      <div style="position: relative; height: fit-content">
+        @if (!model.bJouth && _clb != null) {
+          int iNb = model.iNo;
+          if ((model.bOwnPlayer && (model.iNo < 1 || model.bSeasonStart)) || model.bAdmin) iNb *= -1;
+          <CornerkickApp.Components.Pages.Templates.Jersey iClubId="_clb.iId" iSet="0" iPlayerId="iId" iNb="iNb" ltNbFree="model.ltNo" NumberChanged="(i) => setNumber(i)"></CornerkickApp.Components.Pages.Templates.Jersey>
+        }
+      </div>
+
+      <div>
+        <div style="width: @(iStarsRadiusPx)px; height: 84px">
+          <div style="position: absolute; width: @(iStarsRadiusPx)px; height: 84px; text-align: center">
+            <text style="position: absolute; top: 22px; left: 0px; width: 100%; font-size: 10px">@model.sPos</text>
+            <b id="txtAveSkill" style="position: absolute; top: 26px; left: 0px; font-size: 26px; width: 100%">@(fSkillAve > 0f ? fSkillAve.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) : "?")</b>
+            <text style="position: absolute; top: 54px; left: 0px; width: 100%; font-size: 10px">@model.iAge.ToString()</text>
+            @rfStars
+          </div>
+        </div>
+
+        @{
+          if ((model.bOwnPlayer && (model.bEditable || model.bJouth)) || model.bAdmin) {
+            <div class="form-group">
+              @* @Html.TextBoxFor(m => m.sName, new { @class = "form-control", @onChange = "setName()", @style = "width:180px" }) *@
+              <input type="text" class="form-control" style="width:180px" value="@model.sName" @onchange=@((s) => setName(s.Value.ToString()))>
+            </div>
+          } else {
+            <div style="position: relative; width: 100%; font-size: 28px">
+              <text>@model.sName</text>
+
+              @if (plCompare != null && plCompare.plGame.iId != iId) {
+                <span> / </span>
+                <span style="color: #64dfdf">@plCompare.plGame.sName</span>
+              }
+            </div>
+          }
+        }
+      </div>
+    </div>
+
+    <div style="position: absolute; top: 24px; height: fit-content; right: 0px; display: flex; flex-direction: column; align-items: end">
+      <div style="max-width: 128px; border-style: outset; border-width: 3px; border-color: lightgray">
+        @{
+          void RenderImg()
+          {
+            <div class="portrait">
+              @*<img style="height: 100%; object-fit: contain" src="@model.sPortrait" />*@
+              @((MarkupString)model.sPortrait)
+            </div>
+          }
+#if _WebApp
+        if (model.bOwnPlayer) {
+          <form asp-controller="Member" asp-action="PlayerDetails" asp-route-i="@id" method="post" enctype="multipart/form-data">
+            <div class="portrait" style="cursor: pointer">@((MarkupString)model.sPortrait)</div>
+            <input id="fileInput" name="file" type="file" accept="image/*" style="position: absolute; left: 0px; display: none" onchange="this.form.submit();">
+          </form>
+        } else {
+#endif
+          RenderImg();
+#if _WebApp
+        }
+#endif
+        }
+      </div>
+
+      @if (plCompare == null) {
+        <button class="btn btn-outline-secondary" style="width: 100%" @onclick="MarkForCompare">merken</button>
+      } else if (plCompare.plGame.iId == iId) {
+        <p>zum Vergl. gemerkt</p>
+      } else {
+        <button class="btn btn-outline-secondary" style="width: 100%" @onclick="DeleteCompare">Vergl. beenden</button>
+      }
+    </div>
+
+    <div class="scroll-anchor" id="div_top"></div>
+    <Blazorise.Tabs SelectedTab="@selectedTab" SelectedTabChanged="@OnSelectedTabChanged">
+      <Items>
+        <Blazorise.Tab Style="@CkAppShared.sCssStyleClubColors" Name="tabOverview">Überblick</Blazorise.Tab>
+        <Blazorise.Tab Style="@CkAppShared.sCssStyleClubColors" Name="tabSkills">Fähigkeiten</Blazorise.Tab>
+        <Blazorise.Tab Style="@CkAppShared.sCssStyleClubColors" Name="tabStatistic" hidden="@(iUserRespLevel < CkAppShared.iUserRespPlayerStatistic)">Statistik</Blazorise.Tab>
+      </Items>
+      <Content>
+        <Blazorise.TabPanel Name="tabOverview">
+          <div id="tabs-1" style="margin-top: 1rem; overflow: auto">
+            <div style="position: absolute; width: 10%; right: 10px">
+              <div id="divEmblemClub" style="position: relative; width: 100%; border-style: outset; border-width: 3px; border-color: lightgray">@((MarkupString)model.sEmblem)</div>
+            </div>
+
+            <div style="position: relative; width: 100%; height: auto">
+              <div style="position: relative; margin-right: 20px; margin-bottom: 20px; display: inline-grid">
+                <div style="position: absolute; top: 0px; right: 0px; width: auto; height: 40px; text-align: right">
+                  @if (!string.IsNullOrEmpty(model.sInjury)) {
+                    <img src="@CornerkickApp.Shared.Models.CkAppShared.sContentDir/Icons/ambulance.png" title="@model.sInjury" style="position: relative; width: 16px; margin-left: 4px" />
+                  }
+                  @if (model.bCaptain) {
+                    <img src="@CornerkickApp.Shared.Models.CkAppShared.sContentDir/Icons/captain.png" alt="Kapitän" title="Kapitän" style="position: relative; width: 24px; margin-left: 4px" />
+                  } else if (model.bCaptain2) {
+                    <img src="@CornerkickApp.Shared.Models.CkAppShared.sContentDir/Icons/captain2.png" alt="Vize-Kapitän" title="Vize-Kapitän" style="position: relative; width: 24px; margin-left: 4px" />
+                  }
+
+                  @{
+                    string sFlag = CornerkickApp.Shared.Models.CkAppShared.sContentDir + "/Icons/flags/" + model.sNat1 + ".png";
+                  }
+                  <img src=@sFlag alt=@model.sNat1 title=@model.sNat1 style="position: relative; width: 24px; margin-left: 4px" />
+                </div>
+
+                <h4>Allgemeine Daten</h4>
+                <table class="table table-bordered" cellpadding="0" style="width: 100%">
+                  <tbody>
+                    <tr>
+                      <td align="right">Verein:</td>
+                      <td align="right">@model.sClub</td>
+                    </tr>
+                    <tr>
+                      <td align="right">Geburtsdatum:</td>
+                      <td align="right">@model.sBirthday</td>
+                    </tr>
+                    <tr>
+                      <td align="right">Körpergröße/-gewicht:</td>
+                      <td align="right">@model.sHeightWeight</td>
+                    </tr>
+                    <tr>
+                      <td align="right">Positionen:</td>
+                      <td align="right">@model.sPos</td>
+                    </tr>
+                    <tr>
+                      <td align="right">Stärke (bereinigt):</td>
+                      <td id="tdAveSkill" align="right">@(fSkillAve > 0f ? fSkillAve.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) : "?")</td>
+                    </tr>
+                    <tr>
+                      <td align="right">Talent:</td>
+                      <td align="right">@model.fTalentAve.ToString("0.0")</td>
+                    </tr>
+                    <tr>
+                      <td align="right">Fuß (links/rechts):</td>
+                      @{
+                        <td align="right">
+                          @model.sFoot
+                          <button type="button" class="btn btn-outline-secondary" style="margin-left: 6px" @onclick="openPassChart">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pie-chart-fill" viewBox="0 0 16 16">
+                              <path d="M15.985 8.5H8.207l-5.5 5.5a8 8 0 0 0 13.277-5.5zM2 13.292A8 8 0 0 1 7.5.015v7.778l-5.5 5.5zM8.5.015V7.5h7.485A8.001 8.001 0 0 0 8.5.015z"></path>
+                            </svg>
+                          </button>
+                        </td>
+                      }
+                    </tr>
+                    <tr>
+                      <td align="right">Verletzung:</td>
+                      @{
+                        if (!string.IsNullOrEmpty(model.sInjury)) {
+                          <td align="right">@model.sInjury</td>
+                        } else {
+                          <td align="right">keine</td>
+                        }
+                      }
+                    </tr>
+                    <tr>
+                      <td align="right">Marktwert:</td>
+                      <td align="right">@model.sValue</td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <div style="position: relative; width: 100%">
+                  <div style="position: relative; top: 0px; width: 49%; display: inline-grid">
+                    <table class="table table-bordered">
+                      <thead>
+                        <tr>
+                          <td colspan="2" align="center">
+                            Sperren
+                            <i style="position: absolute; left: 8px; margin-right: 4px"><img src="@CornerkickApp.Shared.Models.CkAppShared.sContentDir/Icons/rCard.png" style="position: relative; width: 16px" /></i>
+                          </td>
+                        </tr>
+                      </thead>
+
+                      <tbody>
+                        @{
+                          if (model.iSuspension[0] + model.iSuspension[1] + model.iSuspension[2] + model.iSuspension[3] + model.iSuspension[4] + model.iSuspension[6] == 0) {
+                            <tr>
+                              <td colspan="2" align="center">keine</td>
+                            </tr>
+                          } else {
+                            if (model.iSuspension[0] > 0) {
+                              string sSp = model.iSuspension[0].ToString() + " Spiele";
+                              <tr>
+                                <td align="right">Liga</td>
+                                <td align="center">@sSp</td>
+                              </tr>
+                            }
+                            if (model.iSuspension[1] > 0) {
+                              string sSp = model.iSuspension[1].ToString() + " Spiele";
+                              <tr>
+                                <td align="right">Pokal</td>
+                                <td align="center">@sSp</td>
+                              </tr>
+                            }
+                            if (model.iSuspension[2] + model.iSuspension[3] > 0) {
+                              string sSp = (model.iSuspension[2] + model.iSuspension[3]).ToString() + " Spiele";
+                              <tr>
+                                <td align="right">Int.</td>
+                                <td align="center">@sSp</td>
+                              </tr>
+                            }
+                            if (model.iSuspension[4] > 0) {
+                              string sSp = model.iSuspension[4].ToString() + " Spiele";
+                              <tr>
+                                <td align="right">Testsp.</td>
+                                <td align="center">@sSp</td>
+                              </tr>
+                            }
+                            if (model.iSuspension[6] > 0) {
+                              string sSp = model.iSuspension[6].ToString() + " Spiele";
+                              <tr>
+                                <td align="right">Nat</td>
+                                <td align="center">@sSp</td>
+                              </tr>
+                            }
+                          }
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div style="position: relative; top: 0px; width: 49%; right: 0px; display: inline-grid">
+                    <table class="table table-bordered" id="tblDoping">
+                      <thead>
+                        <tr>
+                          <td colspan="2" style="text-align: center;">Doping<i style="position: absolute; left: 8px; margin-right: 4px;"><img src="@CornerkickApp.Shared.Models.CkAppShared.sContentDir/Icons/doping.png" style="width: 24px;"></i></td>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @if (model.fDoping != null && model.fDoping.Length > 3) {
+                          <tr>
+                            <td style="text-align: right">Mittel:</td>
+                            <td style="text-align: right; white-space: nowrap">@model.sDopingName</td>
+                          </tr>
+                          <tr>
+                            <td style="text-align: right">Kondition:</td>
+                            <td style="text-align: right">@model.fDoping[0].ToString("+0.0%;-0.0%;+0%")</td>
+                          </tr>
+                          <tr>
+                            <td style="text-align: right">Rest:</td>
+                            <td style="text-align: center">
+                              <div style="display: flex; align-items: center; justify-content: center">
+                                <Blazorise.Progress Value="(int)(100 * model.fDoping[1])" Animated Striped Color="Blazorise.Color.Danger" Style="width: 100%; height: 24px; background-color: white" />
+                                <span style="position: absolute">@(model.fDoping[1].ToString("0.0%"))</span>
+                              </div>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td style="text-align: right">Reduktion:</td>
+                            <td style="text-align: right">@model.fDoping[2].ToString("0.0%")/d</td>
+                          </tr>
+                          <tr>
+                            <td style="text-align: right">Akt. Det.-Risiko:</td>
+                            <td style="text-align: right">@model.fDoping[3].ToString("0.0%")</td>
+                          </tr>
+                        } else {
+                          <tr>
+                            <td colspan="2" style="text-align: center">keins</td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              <div style="position: relative; margin-right: 20px; margin-bottom: 20px; display: inline-grid">
+                @if (model.sCharacter != null) {
+                  <h4>Charakter</h4>
+                  <table class="table table-bordered" cellpadding="0" style="width: 100%; margin-bottom: 20px">
+                    <tbody>
+                      <tr>
+                        <td align="right">Führungspersönlichkeit:</td>
+                        <td align="right">@model.sCharacter[0]</td>
+                      </tr>
+                      <tr>
+                        <td align="right">Schußhäufigkeit:</td>
+                        <td align="right">@model.sCharacter[1]</td>
+                      </tr>
+                      <tr>
+                        <td align="right">Teamplayer:</td>
+                        <td align="right">@model.sCharacter[2]</td>
+                      </tr>
+                      <tr>
+                        <td align="right">Dribbler:</td>
+                        <td align="right">@model.sCharacter[3]</td>
+                      </tr>
+                      <tr>
+                        <td align="right">Flexibilität:</td>
+                        <td align="right">@model.sCharacter[4]</td>
+                      </tr>
+                      <tr>
+                        <td align="right">Robustheit:</td>
+                        <td align="right">@model.sCharacter[5]</td>
+                      </tr>
+                      <tr>
+                        <td align="right">Gemüt:</td>
+                        <td align="right">@model.sCharacter[6]</td>
+                      </tr>
+                      <tr>
+                        <td align="right">Geldgier:</td>
+                        <td align="right">@model.sCharacter[7]</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                }
+
+                @if (model.bOwnPlayer && iUserRespLevel >= CkAppShared.iUserRespPlayerContractsFast) {
+                  <h4>Vertrag</h4>
+                  <table class="table table-bordered" cellpadding="0" style="width: 100%">
+                    <tbody>
+                      @if (model.contract != null && model.contract.iLength > 0) {
+                        <tr>
+                          <td align="right">Gehalt:</td>
+                          <td align="right">@model.contract.iSalary.ToString("N0") €</td>
+                        </tr>
+                        if ((!model.bJouth || model.bJouthWithContract) && iUserRespLevel >= CkAppShared.iUserRespPlayerContractsExpert) {
+                          <tr>
+                            <td align="right">Auflaufprämie:</td>
+                            <td align="right">@model.contract.iPlay.ToString("N0") €</td>
+                          </tr>
+                          <tr>
+                            <td align="right">Punkteprämie:</td>
+                            <td align="right">@model.contract.iPoint.ToString("N0") €</td>
+                          </tr>
+                          <tr>
+                            <td align="right">Torprämie:</td>
+                            <td align="right">@model.contract.iGoal.ToString("N0") €</td>
+                          </tr>
+                          if (model.contract.ltCupBonus != null) {
+                            foreach (CornerkickManager.Player.Contract.CupBonus cb in model.contract.ltCupBonus) {
+                              if (cb.cup != null) {
+                                <tr>
+                                  <td align="right">@cb.cup.sName (Pl.):</td>
+                                  <td align="right">@cb.iValue.ToString("N0") € (@cb.iPlace.ToString())</td>
+                                </tr>
+                              }
+                            }
+                          }
+                          <tr>
+                            <td align="right">Fixe Ablöse:</td>
+                            <td align="right">@model.contract.iFixTransferFee.ToString("N0") €</td>
+                          </tr>
+                        }
+                        <tr>
+                          @{
+                            string sDauer = model.contract.iLength.ToString() + " Jahre";
+                            if (model.contract.iLength == 1) {
+                              sDauer = "Saisonende";
+                            }
+
+                            if (model.bRetire) {
+                              sDauer += " (beendet Karriere)";
+                            }
+                          }
+                          <td align="right">Laufzeit:</td>
+                          <td align="right">@sDauer</td>
+                        </tr>
+                        if (model.bOwnPlayer && !model.bJouth && !model.bNation) {
+                          <tr>
+                            <td align="right">Zufriedenheit:</td>
+                            @if (model.fContractHappyFactor < 0.5) {
+                              <td align="right" style="color: red">@model.fContractHappyFactor.ToString("0.0%")</td>
+                            } else if (model.fContractHappyFactor < 0.75) {
+                              <td align="right" style="color: orange">@model.fContractHappyFactor.ToString("0.0%")</td>
+                            } else {
+                              <td align="right" style="color: green">@model.fContractHappyFactor.ToString("0.0%")</td>
+                            }
+                          </tr>
+                        }
+                      } else {
+                        <tr>
+                          <td align="right">-</td>
+                        </tr>
+                      }
+                      @if (!string.IsNullOrEmpty(model.sClubNextSeason)) {
+                        <tr>
+                          <td align="right">Verein nächste Saison:</td>
+                          <td align="right">@model.sClubNextSeason</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                }
+              </div>
+
+              <div style="position: relative; height: auto; width: 300px; margin-right: 20px; margin-bottom: 20px; display: inline-grid">
+                @if ((model.bOwnPlayer && !model.bNation) || model.bAdmin) {
+                  <div style="position: relative; height: 340px; width: 100%; margin-bottom: 20px; display: inline-grid">
+                    <h4>Konstitution</h4>
+                    <div id="divChartCFM" style="position: relative; width: 100%; height: 310px">
+                      @if (data_CFM != null && data_CFM.Length > 0) {
+                        <RadzenRow Style="height:100%">
+                          <RadzenChart>
+                            @*
+                            <RadzenStackedColumnSeries Data="@data_CFM" CategoryProperty="x" ValueProperty="y" Fills="@(new[] {"red", "#00BFFF", "gold"})">
+                              <TooltipTemplate Context="data">
+                                @data.z
+                              </TooltipTemplate>
+                            </RadzenStackedColumnSeries>
+                            *@
+                            @{
+                              double fMax = 1.0;
+                              if (data_CFM     != null && data_CFM    .Length > 2 && data_CFM    [2].Y.HasValue) fMax = Math.Max(data_CFM    [2].Y.Value, fMax); // Moral
+                              if (data_CFM_max != null && data_CFM_max.Length > 0 && data_CFM_max[0].Y.HasValue) fMax = Math.Max(data_CFM_max[0].Y.Value, fMax); // Doping condi.
+                              if (fMax > 1.0) fMax = Math.Ceiling(fMax * 4.0) / 4.0;
+                              string[] sFills = new[] { "red", "#00BFFF", "gold" };
+                              for (int i = 0; i < data_CFM.Length; i++) {
+                                <RadzenStackedColumnSeries Data="@([data_CFM[i]])" CategoryProperty="X" ValueProperty="Y" Fill="@(sFills[i])">
+                                  <TooltipTemplate Context="data">
+                                    @data.Z
+                                  </TooltipTemplate>
+                                </RadzenStackedColumnSeries>
+                              }
+                            }
+                            <RadzenStackedColumnSeries Data="@data_CFM_max" CategoryProperty="X" ValueProperty="Y" Fill="#FFB6C1">
+                              <TooltipTemplate Context="data">
+                                @data.Z
+                              </TooltipTemplate>
+                            </RadzenStackedColumnSeries>
+                            <RadzenColumnOptions Radius="5" Width="40" />
+                            <RadzenCategoryAxis Visible="true">
+                              <RadzenGridLines Visible="true" Stroke="#ccc" LineType="Radzen.Blazor.LineType.Dashed" />
+                            </RadzenCategoryAxis>
+                            <RadzenValueAxis FormatString="{0:P0}" Min="0" Max="@fMax" Step="0.25">
+                              <RadzenGridLines Visible="true" StrokeWidth="2" />
+                            </RadzenValueAxis>
+                            <RadzenLegend Visible="false" />
+                          </RadzenChart>
+                        </RadzenRow>
+                      }
+                    </div>
+                  </div>
+                }
+
+                <div id="divPlOptionsContainer" style="position: relative; width: 100%; height: auto; display: inline-grid">
+                  @{
+                    if (model.bOwnPlayer && !model.bLiveGame) {
+                      <h4 class="scroll-anchor" id="header_options">Optionen</h4>
+
+                      @if (iUserRespLevel >= CkAppShared.iUserRespPlayerContractsExpert) {
+                        string sExtendContract = "Vertrag verlängern";
+                        if (model.iAge > 15) {
+                          if (model.bJouthWithContract) {
+                            sExtendContract = "In Profikader übernehmen";
+                          } else if (model.bJouth) {
+                            sExtendContract = "Profivertrag aushandeln";
+                          }
+                        }
+
+                        if (!model.bNation) {
+                          if (model.iAge > 15 || (model.contract != null && model.contract.iLength < 2)) {
+                            <button type="button" id="bnContract" class="btn btn-outline-secondary" style="width: 90%; margin-bottom: 4px" @onclick=NegotiatePlayerContract>@sExtendContract</button>
+                          }
+
+                          <button class="btn btn-outline-secondary" style="width: 90%; margin-bottom: 8px; @(model.bOnTransferlist ? "background-color: rgb(" + CkAppShared.sClCkRgb4 + ")" : "")" @onclick="PutOnTakeFromTransferlist">@(model.bOnTransferlist ? "Von Transferliste nehmen" : "Auf Transferliste setzen")</button>
+                        }
+                      }
+
+                      if (!model.bJouth) {
+                        if (!model.bCaptain) {
+                          <button type="button" id="bnCaptain" class="btn btn-outline-secondary" style="width: 90%; margin-bottom: 4px" @onclick="() => checkSetCapitain(0)">Zum Kapitän machen</button>
+                        }
+
+                        if (!model.bCaptain2) {
+                          <button type="button" id="bnCaptain2" class="btn btn-outline-secondary" style="width: 90%; margin-bottom: 4px" @onclick="() => checkSetCapitain(1)">Zum Vize-Kapitän machen</button>
+                        }
+
+                        /*
+                        if (!model.bNation) {
+                          <button type="button" id="bnDoping" class="btn btn-outline-secondary" style="width: 90%; margin-top: 4px">Spieler dopen</button>
+                        }
+                        */
+                      }
+                    } else if (model.bCpuPlayerNotOnTransferlist) {
+                      <h4>Optionen</h4>
+
+                      <button type="button" id="bnForcePutOnTransfer" class="btn btn-outline-secondary" style="width: 90%; margin-bottom: 8px" onclick="forcePutOnTransferlistGetSecretMoney()">Setzen auf Transferliste erstreiken</button>
+                    }
+                  }
+                </div>
+              </div>
+            </div>
+          </div>
+        </Blazorise.TabPanel>
+        <Blazorise.TabPanel Name="tabSkills">
+          <div style="position: relative; width: 100%; margin-top: 1rem; display: flex; flex-wrap: wrap">
+            @if (model.ltPlayerPosSkillData != null) {
+              <div class="scroll-anchor" id="divPosSkillContainer" style="position: relative; width: auto; height: auto; margin-bottom: 20px; margin-right: 20px">
+                <h4>Positionen</h4>
+                <table class="table table-bordered" id="tblPosSkill" cellpadding="0" style="width: auto">
+                  <thead>
+                    <tr>
+                      <th style="text-align:center">Pos.</th>
+                      <th style="text-align:center">Wert</th>
+                      <th style="text-align:center">Stärke</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @foreach (CkAppShared.DataPointDD dp in model.ltPlayerPosSkillData) {
+                      if (dp.X.HasValue && dp.Y.HasValue) {
+                        <tr style="font-weight: @(dp.X > 0.999 ? "bold" : "normal")">
+                          <td align="center">@dp.Z</td>
+                          <td align="right">@(dp.X.HasValue && dp.X.Value > 0.0 ? dp.X.Value.ToString("0.0%") : "?")</td>
+                          <td align="center">@(dp.Y.HasValue && dp.Y.Value > 0.0 ? dp.Y.Value.ToString("0.0") : "?")</td>
+                        </tr>
+                      }
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+
+            <div class="scroll-anchor" id="divPlayerSkills" style="position: relative; width: fit-content; max-width: 100%; height: auto; margin-bottom: 20px; margin-right: 20px">
+              <h4>Individuelle Fähigkeiten</h4>
+
+              <div style="display: flex; flex-wrap: wrap">
+                <div style="max-width: 100%; height: auto; margin-bottom: 1rem; margin-right: 1rem; overflow: auto">
+                  <Blazorise.RadioGroup TValue="int"
+                          Name="indtraining"
+                          @ref="rgSkills"
+                          CheckedValue="@model.iPlayerIndTr"
+                          CheckedValueChanged="@setIndTraining">
+                    <table class="table table-bordered" id="tblPlayerSkills" cellpadding="0" style="width: auto; background-color: white">
+                      <thead>
+                        <tr>
+                          <th style="text-align: center" class="category">Kat.</th>
+                          <th style="text-align: center">Tal.</th>
+                          <th style="text-align: center">Fähigkeit</th>
+                          <th>Wert</th>
+                          @if ((model.bOwnPlayer && !model.bNation && iUserRespLevel >= CkAppShared.iUserRespPlayerIndTraining) || model.bAdmin) {
+                            <th style="text-align: center" hidden>Eff.*</th>
+                            <th style="text-align: center">Training</th>
+                            <th style="text-align: center">Ind.</th>
+                          }
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @{
+                          if (model?.sSkillTable != null) {
+                            int i = 0;
+                            foreach (string[] sSkill in model.sSkillTable) {
+                              int jSkillIx;
+                              if (!int.TryParse(sSkill[0], out jSkillIx)) continue;
+
+                              <tr>
+                                @{
+                                  <td hidden class="td_skill_ix">@sSkill[0]</td>
+
+                                  int iRowSpan = 1;
+                                  if (!string.IsNullOrEmpty(sSkill[1])) {
+                                    while (i + iRowSpan < model.sSkillTable.Length && string.IsNullOrEmpty(model.sSkillTable[i + iRowSpan][1])) {
+                                      iRowSpan++;
+                                    }
+
+                                    <td align="center" rowspan=@iRowSpan.ToString() title="@sSkill[1]" style="vertical-align: middle">
+                                      @{ string sSkillIcon = CornerkickApp.Shared.Models.CkAppShared.sContentDir + "/Icons/skills/" + sSkill[8] + ".png"; }
+                                      <img width="24" src=@sSkillIcon />
+                                    </td>
+                                    <td align="center" rowspan=@iRowSpan.ToString() style="font-size: 1em; vertical-align: middle">@sSkill[2]</td>
+                                  }
+                                }
+
+                                @{
+                                  string sColor = "";
+                                  if (i == 0 || i == 2) {
+                                    sColor = "color: grey";
+                                  }
+                                }
+
+                                <td align="center" style="@sColor">@sSkill[3]</td>
+                                <td class="td_skill" align="center" style="@sColor">
+                                  <CornerkickApp.Components.Pages.Templates.PlayerSkill @ref="skillButton" usr="_usr" iPlayerId="iId" iSkillIx="Convert.ToInt32(sSkill[0])" ActDeleteScoutingData="() => getSkillAve()"></CornerkickApp.Components.Pages.Templates.PlayerSkill>
+                                </td>
+                                @{
+                                  if ((model.bOwnPlayer && !model.bNation && iUserRespLevel >= CkAppShared.iUserRespPlayerIndTraining) || model.bAdmin) {
+                                    <td align="right">@sSkill[6]</td>
+                                    if (i == 0 || i == 2) {
+                                      <td></td>
+                                    } else {
+                                      <td align="center">
+                                        <Blazorise.Radio Value="@(jSkillIx)"></Blazorise.Radio>
+                                      </td>
+                                    }
+                                    if (!model.bScouting || model.bAdmin) {
+                                      <td align="right">@sSkill[7]</td>
+                                    }
+                                  }
+                                }
+                              </tr>
+
+                              i++;
+                            }
+                          }
+                        }
+                      </tbody>
+                    </table>
+                  </Blazorise.RadioGroup>
+                  <p style="margin: 0">* Effektiver Wert</p>
+                  <p style="margin: 0">abh. z.B. von Frische, Moral und akt. Pos.</p>
+                </div>
+
+                @if (dataSpiderChart != null) {
+                  <div style="width: 400px; height: fit-content; display: flex; justify-content:center">
+                    <RadzenSpiderChart Style="width: 320px; height: 320px;">
+                      <RadzenSpiderLegend Visible="false" />
+                      <RadzenSpiderSeries TItem="SpiderData"
+                                          Data="@dataSpiderChart"
+                                          CategoryProperty="@nameof(SpiderData.Feature)"
+                                          ValueProperty="@nameof(SpiderData.Skill)"
+                                          ValueFormatter="@GetValueFormatter()"
+                                          Title="@(dataSpiderChart2 != null && plCompare != null ? model.sName : "")" />
+                      @if (dataSpiderChart2 != null && plCompare != null) {
+                        <RadzenSpiderSeries TItem="SpiderData"
+                                            Data="@dataSpiderChart2"
+                                            CategoryProperty="@nameof(SpiderData.Feature)"
+                                            ValueProperty="@nameof(SpiderData.Skill)"
+                                            ValueFormatter="@GetValueFormatter()"
+                                            Title="@plCompare.plGame.sName" />
+                      }
+                    </RadzenSpiderChart>
+                  </div>
+                }
+              </div>
+            </div>
+
+            <div>
+              @*
+              Scouts
+              *@
+              @if (model.bScouting && model.ltScouts != null && model.ltScouts.Count > 0) {
+                <div style="position: relative; width: auto; height: auto; display: inline-grid; margin-bottom: 20px; margin-right: 20px">
+                  <h4>Scouts</h4>
+                  <div id="divScouts" style="position: relative; display: flex; flex-direction:column; flex-wrap:nowrap">
+                    @foreach (PlayerModel.Scout scout in model.ltScouts) {
+                      <button type="button" class="btn btn-outline-secondary" style="display: flex; position: relative; width: 100%; margin-top: 6px; text-align: left;" @onclick="(() => scoutPlayer(scout.iId))" disabled="@(scout.iMinActive > 0)">
+                        <img src="@CornerkickApp.Shared.Models.CkAppShared.sContentDir/Icons/menu/binoculars.svg" width="48" height="48" style="margin-right: 10px;">
+                          <div>
+                            <p style="margin: 0px;">@(scout.sName + " (Level: " + scout.iSkill.ToString() + ", n: " + scout.nDataPerScouting.ToString() + ")")</p>
+                            <p style="margin: 0px;">
+                              @if (scout.iMinActive < 0) {
+                                <img src="@CornerkickApp.Shared.Models.CkAppShared.sContentDir/Icons/news/coins.png" width="24" height="24" style="margin-right: 10px;">
+                                <span>@scout.sCost</span>
+                              } else {
+                                <Blazorise.Icon Name="Blazorise.IconName.Clock" />
+                                if (scout.iMinActive > 0) {
+                                  <span style="flex: 1 1 0%; text-align: right; white-space: nowrap; margin-left: 6px;">@(TimeSpan.FromMinutes(scout.iMinActive).ToString())</span>
+                                } else {
+                                  <span style="flex: 1 1 0%; text-align: right; white-space: nowrap; margin-left: 6px;">verfügbar</span>
+                                }
+                              }
+                            </p>
+                          </div>
+                      </button>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+
+            @*
+            <div id="divChartChanceDevelopmentContainer" style="position: relative; width: 36%; min-width: 320px; height: auto; display: inline-grid; margin-bottom: 20px">
+              <h4>Entwicklungschancen</h4>
+              <div id="divChartChanceDevelopment" style="position: relative; height: 310px; width: 100%">
+              </div>
+            </div>
+            *@
+          </div>
+        </Blazorise.TabPanel>
+        <Blazorise.TabPanel Name="tabStatistic">
+          @if (model.bOwnPlayer) {
+            <div style="position: relative; margin-top: 1rem; margin-bottom: 1rem; width: 100%">
+              <h4>Spielerentwicklung</h4>
+              <div id="divChartDevelopment" style="position: relative; width: 100%; display: flex; flex-wrap: wrap">
+                @if (model.ltDevData != null) {
+                  @* 
+                  <SfChart Title="Inflation - Consumer Price" Width="60%">
+                    <ChartPrimaryXAxis IntervalType="IntervalType.Years" LabelFormat="yyyy" ValueType="Syncfusion.Blazor.Charts.ValueType.DateTime">
+                    </ChartPrimaryXAxis>
+	                  <ChartSeriesCollection>
+                      <ChartSeries DataSource="@ConsumerReports" XName="XValue" YName="YValue" Type="ChartSeriesType.Line">
+                      </ChartSeries>
+                    </ChartSeriesCollection>
+                  </SfChart>
+                  *@
+
+                  @if (model.bOwnPlayer || model.bAdmin) {
+                    <RadzenChart Style="width: 50%; min-width: 300px; height: 320px">
+                      <RadzenLineSeries Data="@model.ltDevData[0]" CategoryProperty="X" ValueProperty="Y" Stroke="blue" StrokeWidth="1">
+                        <TooltipTemplate Context="data">
+                          @if (data.X.HasValue && data.Y.HasValue) {
+                            <div>@(data.X.Value.ToString("dd.MM.yy") + ": ")<b>@data.Y.Value.ToString("0.00")</b></div>
+                          }
+                        </TooltipTemplate>
+                        <ChildContent>
+                          <RadzenMarkers MarkerType="MarkerType.Circle" Size="6" Fill="blue" StrokeWidth="0" />
+                        </ChildContent>
+                      </RadzenLineSeries>
+                      <RadzenCategoryAxis Visible="true" Formatter="@FormatAsDate">
+                        <RadzenGridLines Visible="true" Stroke="#ccc" LineType="Radzen.Blazor.LineType.Dashed" />
+                      </RadzenCategoryAxis>
+                      <RadzenValueAxis FormatString="{0:N1}">
+                        <RadzenAxisTitle Text="Stärke" />
+                        <RadzenGridLines Visible="true" StrokeWidth="2" />
+                      </RadzenValueAxis>
+                      <RadzenLegend Visible="false" />
+                    </RadzenChart>
+                  }
+
+                  @*
+                  <RadzenChart Style="width: 50%; min-width: 300px; height: 320px">
+                    <RadzenLineSeries Data="@model.ltDevData[1]" CategoryProperty="x" ValueProperty="y" Stroke="red" StrokeWidth="1">
+                      <TooltipTemplate Context="data">
+                        @if (data.x.HasValue && data.y.HasValue) {
+                          <div>@(data.x.Value.ToString("dd.MM.yy") + ": ")<b>@(String.Format("{0:C0}", data.y))</b></div>
+                        }
+                      </TooltipTemplate>
+                      <ChildContent>
+                        <RadzenMarkers MarkerType="MarkerType.Circle" Size="6" Fill="red" StrokeWidth="0" />
+                      </ChildContent>
+                    </RadzenLineSeries>
+                    <RadzenCategoryAxis Visible="true" Formatter="@FormatAsDate">
+                      <RadzenGridLines Visible="true" Stroke="#ccc" LineType="Radzen.Blazor.LineType.Dashed" />
+                    </RadzenCategoryAxis>
+                    <RadzenValueAxis FormatString="{0:G3}">
+                      <RadzenAxisTitle Text="Marktwert [€]" />
+                      <RadzenGridLines Visible="true" StrokeWidth="2" />
+                    </RadzenValueAxis>
+                    <RadzenLegend Visible="false" />
+                  </RadzenChart>
+                  *@
+                }
+              </div>
+            </div>
+
+            <h4>Trainingshistorie</h4>
+            <div style="display: flex; flex-wrap: wrap">
+              <div style="flex: 1; min-width: 300px">
+                <CornerkickApp.Components.Pages.Templates.TrainingDataChart @ref=trainingDataChart></CornerkickApp.Components.Pages.Templates.TrainingDataChart>
+              </div>
+              <div style="max-width: 100%">
+                <CornerkickApp.Components.Pages.Templates.PlayerTrainingHistoryTable @ref=playerTrainingHistoryTable></CornerkickApp.Components.Pages.Templates.PlayerTrainingHistoryTable>
+              </div>
+            </div>
+          }
+
+          @if (ltClubHist?.Count > 0) {
+            <h4>Vereinshistorie</h4>
+            <div style="width: fit-content; max-width: 100%; overflow-x: auto; margin-bottom: 2rem">
+              <DataGrid TItem="PlayerModel.ClubHistory"
+                        Data="@ltClubHist"
+                        Style="white-space: nowrap; margin: 0"
+                        PageSize="20"
+                        Narrow
+                        Responsive
+                        Sortable
+                        SortMode="DataGridSortMode.Single"
+                        RowSelectable=@((x) => false)>
+                <DataGridColumns>
+                  <DataGridColumn Field="@nameof(PlayerModel.ClubHistory.iIx)" Displayable="false" Sortable="false" />
+                  <DataGridColumn Field="@nameof(PlayerModel.ClubHistory.dt)" Caption="Datum" TextAlignment="Blazorise.TextAlignment.Center">
+                    <DisplayTemplate>
+                      @(context.dt.CompareTo(DateTime.MinValue) > 0 ? context.dt.ToString("d") : "-")
+                    </DisplayTemplate>
+                  </DataGridColumn>
+                  <DataGridColumn Field="@nameof(PlayerModel.ClubHistory.sClubTakeName)" Caption="Verein" />
+                  <DataGridColumn Field="@nameof(PlayerModel.ClubHistory.iTransferFee)" Caption="Ablöse [€]" DisplayFormat="{0:N0}" TextAlignment="Blazorise.TextAlignment.End" />
+                  <DataGridColumn Field="@nameof(PlayerModel.ClubHistory.iValue)" Caption="Marktwert [€]" DisplayFormat="{0:N0}" TextAlignment="Blazorise.TextAlignment.End" />
+                </DataGridColumns>
+                <EmptyTemplate>
+                  <div class="box">
+                    Keine Historie ...
+                  </div>
+                </EmptyTemplate>
+                <LoadingTemplate>
+                  <div class="box">
+                    <progress class="progress is-small is-primary" max="100" />
+                  </div>
+                </LoadingTemplate>
+              </DataGrid>
+            </div>
+          }
+
+          @if (ltInjuryHist?.Count > 0) {
+            <h4>Verletzungshistorie</h4>
+            <div style="width: fit-content; max-width: 100%; overflow-x: auto; margin-bottom: 2rem">
+              <DataGrid TItem="PlayerModel.InjuryHistory"
+                        Data="@ltInjuryHist"
+                        Style="white-space: nowrap; margin: 0"
+                        PageSize="20"
+                        Narrow
+                        Responsive
+                        Sortable
+                        SortMode="DataGridSortMode.Single"
+                        RowSelectable=@((x) => false)>
+                <DataGridColumns>
+                  <DataGridColumn Field="@nameof(PlayerModel.InjuryHistory.iIx)" Displayable="false" Sortable="false" />
+                  <DataGridColumn Field="@nameof(PlayerModel.InjuryHistory.dt)" Caption="Datum" TextAlignment="Blazorise.TextAlignment.Center">
+                    <DisplayTemplate>
+                      @(context.dt.CompareTo(DateTime.MinValue) > 0 ? context.dt.ToString("d") : "-")
+                    </DisplayTemplate>
+                  </DataGridColumn>
+                  <DataGridColumn Field="@nameof(PlayerModel.InjuryHistory.sInjuryName)" Caption="Verletzung" />
+                  <DataGridColumn Field="@nameof(PlayerModel.InjuryHistory.iInjuryLength)" Caption="Dauer [d]" DisplayFormat="{0:N0}" TextAlignment="Blazorise.TextAlignment.End" />
+                </DataGridColumns>
+                <EmptyTemplate>
+                  <div class="box">
+                    Keine Historie ...
+                  </div>
+                </EmptyTemplate>
+                <LoadingTemplate>
+                  <div class="box">
+                    <progress class="progress is-small is-primary" max="100" />
+                  </div>
+                </LoadingTemplate>
+              </DataGrid>
+            </div>
+          }
+
+          @*
+          <div id="divTableInjuryHistory" style="position: relative; width: auto; margin-right: 40px; margin-bottom: 20px">
+            <h4>Verletzungshistorie</h4>
+            <table id="tableInjuryHistory" cellspacing="0" style="width: auto" class="display responsive nowrap compact">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Datum</th>
+                  <th>Verletzung</th>
+                  <th>Dauer [d]</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!---Data and tags are dynamically generated--->
+              </tbody>
+            </table>
+          </div>
+          *@
+
+          @if (!model.bJouth) {
+            <div style="position: relative">
+              <h4>Spielstatistiken</h4>
+              <table class="table table-bordered compact" id="tblStatistic" cellpadding="0" style="width: auto">
+                <thead>
+                  <tr>
+                    <th align="center">
+                      <Blazorise.RadioGroup TValue="int" Name="form" CheckedValue="@iStatOption" CheckedValueChanged="@getStatistic">
+                        <Blazorise.Radio Value="0" Inline="true">l. Sp.</Blazorise.Radio>
+                        <Blazorise.Radio Value="1" Inline="true">Sais.</Blazorise.Radio>
+                        <Blazorise.Radio Value="2" Inline="true">Tot.</Blazorise.Radio>
+                      </Blazorise.RadioGroup>
+                    </th>
+                    <th style="text-align:center">Liga</th>
+                    <th style="text-align:center">Pokal</th>
+                    <th style="text-align:center">Int.</th>
+                    <th style="text-align:center">Nat.</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @foreach (PlayerModel.Stat ps in ltPlStat) {
+                    string sForm = "0.0%";
+                    if      (ps.Name.Equals("Min./Spiel"))     sForm = "0";
+                    else if (ps.Name.Equals("Note"))           sForm = "0.0";
+                    else if (ps.Name.Equals("Tore pro Spiel")) sForm = "0.00";
+                    else if (ps.Name.Equals("Tors. pro Tor"))  sForm = "0.00";
+                    <tr>
+                      <td align="right">@ps.Name</td>
+                      @for (int j = 0; j < ps.iStat.Length; j++) {
+                        <td align="center">@(ps.iStat[j] < 0 ? "-" : (ps.iRef != null ? (ps.iRef[j] > 0 ? (ps.iStat[j] / (float)ps.iRef[j]).ToString(sForm) : "-") : ps.iStat[j].ToString()))</td>
+                      }
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </Blazorise.TabPanel>
+      </Content>
+    </Blazorise.Tabs>
+    @*
+    <Blazorise.Modal @ref="modalSkillDetails">
+      <Blazorise.ModalContent Centered Size="Blazorise.ModalSize.ExtraLarge">
+        <Blazorise.ModalHeader>
+          <Blazorise.ModalTitle>Scouting-Bericht für: @model.sName</Blazorise.ModalTitle>
+          <Blazorise.CloseButton />
+        </Blazorise.ModalHeader>
+        <Blazorise.ModalBody>
+          @if (ltScData != null) {
+            <ul>
+              <li><b>Beob. Fähigkeit: </b>@sSkillName</li>
+              <li><b>Anzahl Beobachtungen: </b>@ltScData.Count.ToString()</li>
+              <li><b>Durchschnittswert: </b>@fScSkillAve.ToString("0.00")</li>
+            </ul>
+            <div style="position: relative; width: 100%; height: auto; overflow: auto">
+              <table class="table table-bordered" cellpadding="4">
+                <tbody>
+                  <tr>
+                    <td style="text-align: right; font-weight: bold;">Datum:</td>
+                    @foreach (PlayerModel.ScoutingDataPlus sd in ltScData) {
+                      <td style="text-align: center; font-size: 90%;"><p style="margin: 0px;">@sd.dt.ToShortDateString()</p><p style="margin: 0px;">@sd.dt.ToShortTimeString()</p></td>
+                    }
+                  </tr>
+                  <tr>
+                    <td style="text-align: right; font-weight: bold;">Scout:</td>
+                    @foreach (PlayerModel.ScoutingDataPlus sd in ltScData) {
+                      <td align="center" style="font-size: 90%;"><div>@sd.sScoutName</div></td>
+                    }
+                  </tr>
+                  <tr>
+                    <td style="text-align: right; font-weight: bold;">Wert:</td>
+                    @foreach (PlayerModel.ScoutingDataPlus sd in ltScData) {
+                      <td style="font-size: 130%;">
+                        <div style="position: relative; text-align: center; display: flex; justify-content: center; align-items: center;">
+                          <div style="position: relative; width: 30px; height: 30px; color: black; background-color: white; border: 2px solid @(PlayerController.getColorFromValue(-1, sd.iSkill)); border-radius: 50%; display: flex; justify-content: center; align-items: center; box-shadow: rgb(105, 105, 105) 2px 2px;" title="@sd.iSkill.ToString()">@sd.iSkill</div>
+                        </div>
+                      </td>
+                    }
+                  </tr>
+                  <tr>
+                    <td></td>
+                    @foreach (PlayerModel.ScoutingDataPlus sd in ltScData) {
+                      <td style="text-align: center;">
+                        <button title="Daten löschen" disabled="@bRemoveScoutingDataButtonDisabled" @onclick="@(() => removeScoutingData(sd.iScoutId, sd.iSkillIx, sd.iSkill, sd.dt))"><i class="fa fa-trash" style="color: red;"></i></button>
+                      </td>
+                    }
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div id="divChartContainer" style="position: relative; width: 100%; height: 300px;">
+              <RadzenChart Style="height:100%">
+                <RadzenLineSeries Data="@ltScDataDayAve" CategoryProperty="dt" ValueProperty="fSkillAve" Stroke="red" StrokeWidth="1">
+                  <TooltipTemplate Context="data">
+                    @((MarkupString)(data.dt.ToShortDateString() + ":<br />" + data.fSkillAve.ToString("0.00")))
+                  </TooltipTemplate>
+                  <ChildContent>
+                    <RadzenMarkers MarkerType="MarkerType.Circle" Size="6" Fill="red" StrokeWidth="0" />
+                  </ChildContent>
+                </RadzenLineSeries>
+                <RadzenLineSeries Data="@ltScData" CategoryProperty="dt" ValueProperty="iSkill" Stroke="blue" StrokeWidth="0">
+                  <TooltipTemplate Context="data">
+                    @((MarkupString)(data.dt.ToShortDateString() + ":<br />" + data.iSkill.ToString()))
+                  </TooltipTemplate>
+                  <ChildContent>
+                    <RadzenMarkers MarkerType="MarkerType.Circle" Size="4" Fill="blue" StrokeWidth="0" />
+                  </ChildContent>
+                </RadzenLineSeries>
+                <RadzenCategoryAxis Visible="true">
+                  <RadzenGridLines Visible="true" Stroke="#ccc" LineType="Radzen.Blazor.LineType.Dashed" />
+                </RadzenCategoryAxis>
+                <RadzenValueAxis>
+                  <RadzenGridLines Visible="true" Stroke="#ccc" LineType="Radzen.Blazor.LineType.Dashed" />
+                </RadzenValueAxis>
+                <RadzenLegend Visible="false" />
+              </RadzenChart>
+            </div>
+          }
+        </Blazorise.ModalBody>
+      </Blazorise.ModalContent>
+    </Blazorise.Modal>
+    *@
+
+    <CornerkickApp.Components.Pages.Templates.PlayerContract @ref="contract"></CornerkickApp.Components.Pages.Templates.PlayerContract>
+
+    <Blazorise.Modal @ref="modalPass">
+      <Blazorise.ModalContent Centered>
+        <Blazorise.ModalHeader Style="color: white; background-color: rgb(31, 158, 69)">
+          <Blazorise.ModalTitle>
+            Pass-/Flankenweite
+          </Blazorise.ModalTitle>
+          <Blazorise.CloseButton />
+        </Blazorise.ModalHeader>
+        <Blazorise.ModalBody Style="overflow: auto">
+          <div style="width: 100%; height: 100%; background-color: white; border-style: ridge; border-width: 4px; border-color: lightgray">
+            <Blazorise.RadioGroup TValue="int" Name="form" CheckedValue="@iPassChartHighLow" CheckedValueChanged="@drawPassChart" Style="display: flex; flex-wrap: wrap">
+              <Blazorise.Radio Value="0" Inline="true">Flanke</Blazorise.Radio>
+              <Blazorise.Radio Value="1" Inline="true">Pass</Blazorise.Radio>
+            </Blazorise.RadioGroup>
+            <div style="width: 100%; overflow-x: auto">
+              <canvas width="458" height="400" @ref="refPassCanvas"></canvas>
+            </div>
+          </div>
+        </Blazorise.ModalBody>
+      </Blazorise.ModalContent>
+    </Blazorise.Modal>
+  }
+
+  <script src="./_content/CornerkickApp.Components/js/Player.js"></script>
+</body>
+</html>
+
+@code {
+  [Parameter]
+  public string id { get; set; } = "";
+
+  int iId = -1;
+
+  private CornerkickManager.User? _usr;
+  private CornerkickManager.Club? _clb;
+
+  public PlayerModel model { get; set; }
+  private IJSObjectReference? module;
+
+  string selectedTab = "tabOverview";
+
+  //ElementReference ReferenceToInputControl;
+  private RenderFragment? rfStars;
+  private const int iStarsRadiusPx = 84;
+  private float fSkillAve = -1f;
+
+  int iUserRespLevel = 0;
+
+  CkAppShared.DataPointSD[]? data_CFM;
+  CkAppShared.DataPointSD[]? data_CFM_max;
+
+  Blazorise.RadioGroup<int>? rgSkills { get; set; }
+  List<CornerkickApp.Components.Pages.Templates.PlayerSkill> ltSkillButtons = new List<CornerkickApp.Components.Pages.Templates.PlayerSkill>();
+  CornerkickApp.Components.Pages.Templates.PlayerSkill skillButton {
+    set { ltSkillButtons.Add(value); }
+  }
+  private Blazorise.Modal? modalSkillDetails;
+  private int iSkillIx = 0;
+  private string sSkillName = "?";
+  //private float fScSkillAve = -1f;
+  private int[] iScSkillCount;
+  List<PlayerModel.ScoutingDataPlus>? ltScData;
+  private bool bRemoveScoutingDataButtonDisabled = false;
+
+  private Blazorise.Modal? modalPass { get; set; }
+  ElementReference refPassCanvas;
+  int iPassChartHighLow = 0;
+
+  CornerkickApp.Components.Pages.Templates.PlayerContract? contract { get; set; }
+  CornerkickApp.Components.Pages.Templates.TrainingDataChart? trainingDataChart { get; set; }
+  CornerkickApp.Components.Pages.Templates.PlayerTrainingHistoryTable? playerTrainingHistoryTable { get; set; }
+
+  List<PlayerModel.Stat> ltPlStat = new List<PlayerModel.Stat>();
+  int iStatOption = 1;
+
+  List<PlayerModel.ClubHistory>? ltClubHist = new List<PlayerModel.ClubHistory>();
+  List<PlayerModel.InjuryHistory>? ltInjuryHist = new List<PlayerModel.InjuryHistory>();
+
+  CornerkickManager.Player? plCompare { get; set; }
+
+  public class ScoutingDataAve
+  {
+    public DateTime dt { get; set; }
+    public float fSkillAve { get; set; }
+  }
+  List<ScoutingDataAve>? ltScDataDayAve;
+
+  // Spider Chart
+  class SpiderData
+  {
+    public string Feature { get; set; } = "";
+    public double Skill { get; set; }
+  }
+  IEnumerable<SpiderData>? dataSpiderChart;
+  IEnumerable<SpiderData>? dataSpiderChart2;
+
+  protected override async Task OnInitializedAsync()
+  {
+    await base.OnInitializedAsync();
+
+    if (int.TryParse(id, out iId)) {
+#if _WebApp
+  /*
+  //model = await Http.GetFromJsonAsync<PlayerModel>("member/Player/Model?id=" + id, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true, ReferenceHandler = ReferenceHandler.Preserve, IncludeFields = true });
+  var response = (await Http.GetAsync("member/Player/Model?id=" + id));
+  if (response.IsSuccessStatusCode) {
+  var jsonString = await response.Content.ReadAsStringAsync();
+  if (jsonString != null) {
+  //model = JsonSerializer.Deserialize<PlayerModel>(jsonString, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true, IncludeFields = true });
+  model = Newtonsoft.Json.JsonConvert.DeserializeObject<PlayerModel>(jsonString);
+  }
+  }
+  */
+  _usr = Controllers.Member.MemberController.ckUser(_auth.GetUserId().Result);
+#else
+      _usr = CkAppShared.ckMng.ltUser[CkAppShared.iUserActive];
+#endif
+      if (_usr != null) model = PlayerController.Model(_usr.id, iId);
+
+      if (_usr != null && model != null) {
+        _clb = MemberController.ckClub(_usr);
+
+        //iUserRespLevel = _usr.getResposibleLevel(CkAppShared.ckMng.dtDatum);
+        iUserRespLevel = _usr.iResp;
+
+        /*
+        IJSObjectReference? playerjs = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/CornerkickApp.Components/js/Player.js");
+
+        if (playerjs != null) {
+          var sStars = await playerjs.InvokeAsync<IJSObjectReference>("plotStarsTalent", ReferenceToInputControl, model.fTalentAve);
+          }
+        */
+                rfStars = Controllers.Tool.createStars(model.fTalentAve, iWidthPx: iStarsRadiusPx);
+
+        if (model.sSkillTable != null) {
+          iScSkillCount = new int[model.sSkillTable.Length];
+          for (int i = 0; i < model.sSkillTable.Length; i++) {
+            int iSkillIx = Convert.ToInt32(model.sSkillTable[i][0]);
+            if (iSkillIx < iScSkillCount.Length) iScSkillCount[iSkillIx] = Convert.ToInt32(model.sSkillTable[i][11]);
+          }
+        }
+
+        getStatistic(iStatOption);
+
+        // Get compare player
+        CornerkickManager.Player? plCompare2 = Controllers.Member.PlayerController.GetComparePlayer(_usr);
+        if (plCompare2 != null) {
+          if (plCompare == null || plCompare2.plGame.iId != plCompare.plGame.iId) plCompare = plCompare2;
+        }
+#if _WebApp
+  } else {
+  NavigationManager.NavigateTo("/authentication/register");
+#endif
+      }
+    }
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender) {
+      //await JS.InvokeAsync<IJSObjectReference>("import", "./_content/CornerkickApp.Components/js/Player.js");
+      await update();
+
+      await ShowTutorial();
+    }
+  }
+
+  private async Task update()
+  {
+    getSkillAve();
+
+    CkAppShared.DataPointSD[]? data_CFM_tmp = PlayerController.getCFM(iId);
+
+    if (data_CFM_tmp != null) {
+      data_CFM     = new CkAppShared.DataPointSD[] { data_CFM_tmp[1], data_CFM_tmp[2], data_CFM_tmp[3] };
+      data_CFM_max = new CkAppShared.DataPointSD[] { new CkAppShared.DataPointSD(data_CFM_tmp[0].X, (data_CFM_tmp[0].Y - data_CFM_tmp[1].Y).Value, z: data_CFM_tmp[0].Z) };
+    }
+
+    await drawSpiderGraph();
+
+    // Get club history table data
+    ltClubHist = Controllers.Member.PlayerController.GetClubHistoryTable(iId);
+    if (ltClubHist != null) ltClubHist = ltClubHist.OrderByDescending(h => h.dt).ToList();
+
+    // Get injuries history table data
+    ltInjuryHist = Controllers.Member.PlayerController.GetInjuryHistoryTable(iId);
+    if (ltInjuryHist != null) ltInjuryHist = ltInjuryHist.OrderByDescending(h => h.dt).ToList();
+
+    await InvokeAsync(StateHasChanged);
+  }
+
+  private async Task getSkillAve() {
+    int iId = -1;
+
+    if (int.TryParse(id, out iId)) {
+      fSkillAve = PlayerController.getAveSkill(_usr, iId)[0];
+      await InvokeAsync(StateHasChanged);
+    }
+  }
+
+  private Task OnSelectedTabChanged(string name)
+  {
+    selectedTab = name;
+
+    ShowTutorial(1);
+
+    return Task.CompletedTask;
+  }
+
+  private Task setNumber(int jNb)
+  {
+    bool bOk = Controllers.Member.PlayerController.setPlayerNo(iId, jNb);
+
+    if (bOk) model.iNo = jNb;
+
+    return Task.CompletedTask;
+  }
+
+  private async Task setIndTraining(int iIndTr) {
+    int iId = -1;
+
+    if (int.TryParse(id, out iId)) {
+      model.iPlayerIndTr = iIndTr;
+#if _WebApp
+      var responseIndTr = (await Http.GetAsync("member/Player/setIndTraining?id=" + id + "&indtr=" + iIndTr.ToString()));
+#else
+      PlayerController.setIndTraining(iId, iIndTr);
+#endif
+    }
+  }
+
+  private async Task showScoutingDetails(int jSkillIx) {
+    int iId = -1;
+    iSkillIx = jSkillIx;
+
+    if (CornerkickManager.Names.sSkills != null && iSkillIx >= 0 && iSkillIx < CornerkickManager.Names.sSkills.Length) {
+      sSkillName = CornerkickManager.Names.sSkills[iSkillIx];
+    }
+
+    if (int.TryParse(id, out iId)) {
+      PlayerModel.ScoutingDataPlus[]? arScData = PlayerController.getScoutingData(_clb, iId, iSkillIx);
+      if (arScData != null) ltScData = arScData.ToList();
+      await updateSkills(iId);
+
+      if (modalSkillDetails != null) modalSkillDetails.Show();
+    }
+  }
+
+  private List<ScoutingDataAve> get_data_points_day_ave(List<PlayerModel.ScoutingDataPlus> ltScData2)
+  {
+    List<ScoutingDataAve> ltScDataDayAve2 = new List<ScoutingDataAve>();
+    if (ltScData2 == null) return ltScDataDayAve2;
+
+    List<PlayerModel.ScoutingDataPlus> ltScData2Copy = new List<PlayerModel.ScoutingDataPlus>(ltScData2);
+    for (int i = 0; i < ltScData2Copy.Count; i++) {
+      long date_ave = ltScData2Copy[i].dt.Ticks;
+      float skill_ave = ltScData2Copy[i].iSkill;
+
+      int k = 1;
+      for (int j = i + 1; j < ltScData2Copy.Count; j++) {
+        if (ltScData2Copy[i].dt.Date.Equals(ltScData2Copy[j].dt.Date)) {
+          date_ave += ltScData2Copy[j].dt.Ticks;
+          skill_ave += ltScData2Copy[j].iSkill;
+          k += 1;
+
+          ltScData2Copy.RemoveAt(j);
+          j -= 1;
+        }
+      }
+
+      if (k > 1) {
+        date_ave /= k;
+        skill_ave /= k;
+      }
+
+      ltScDataDayAve2.Add(new ScoutingDataAve() { dt = new DateTime(date_ave), fSkillAve = skill_ave });
+    }
+
+    return ltScDataDayAve2;
+  }
+
+  private async Task removeScoutingData(int iScoutId, int iSkillIx, int iSkill, DateTime dt)
+  {
+    bRemoveScoutingDataButtonDisabled = true;
+    await InvokeAsync(StateHasChanged);
+
+    int iId;
+    if (int.TryParse(id, out iId)) {
+      PlayerModel.ScoutingDataPlus[]? arScData = await PlayerController.removeScoutingData(_clb, iScoutId, iId, iSkillIx, iSkill, dt);
+      if (arScData != null) ltScData = arScData.ToList();
+      updateSkills(iId);
+      if (iSkillIx < iScSkillCount.Length) iScSkillCount[iSkillIx]--;
+      //await InvokeAsync(StateHasChanged);
+    }
+
+    bRemoveScoutingDataButtonDisabled = false;
+    await InvokeAsync(StateHasChanged);
+  }
+
+  private async Task updateSkills(int iId)
+  {
+    model.sSkillTable = Controllers.Member.PlayerController.getSkillTable(iId, model.iPos, _usr);
+    getSkillAve();
+
+    foreach (CornerkickApp.Components.Pages.Templates.PlayerSkill skillButton in ltSkillButtons) {
+      skillButton.update();
+    }
+
+    // Not used?
+    //fScSkillAve = PlayerController.getScoutedSkillAve(_clb, iId, iSkillIx);
+
+    if (ltScData != null) {
+      //model.sSkillTable[iSkillIx][11] = ltScData.Count.ToString();
+      ltScDataDayAve = get_data_points_day_ave(ltScData);
+    }
+
+    await drawSpiderGraph();
+
+    await InvokeAsync(StateHasChanged);
+  }
+
+  private SpiderData[] getSpiderGraphData(int iPlSdId)
+  {
+    List<SpiderData> ltSpiderData = new List<SpiderData>();
+    foreach (byte iSC in CornerkickGame.Game.iSkillCategorys) {
+      if (iSC == CornerkickGame.Game.iSkillCategoryIxCharacter) continue;
+      if (CornerkickGame.Game.iSkillsOfCategory[iSC] == null) continue;
+
+      float fSkillAveCat = 0f;
+      int nSkills = 0;
+      foreach (byte iS in CornerkickGame.Game.iSkillsOfCategory[iSC]) {
+        float f = PlayerController.getScoutedSkillAve(_clb, iPlSdId, iS);
+        if (f > 0f) {
+          fSkillAveCat += f;
+          nSkills++;
+        }
+      }
+      ltSpiderData.Add(new SpiderData() {
+        Feature = CornerkickManager.Names.sSkillCategorys != null && iSC < CornerkickManager.Names.sSkillCategorys.Length ? CornerkickManager.Names.sSkillCategorys[iSC] : "?",
+        Skill = nSkills > 0 ? (fSkillAveCat / nSkills) * 10.0 : 0.0
+      });
+    }
+    return ltSpiderData.ToArray();
+  }
+
+  private async Task drawSpiderGraph()
+  {
+    dataSpiderChart = getSpiderGraphData(iId);
+    if (plCompare != null && plCompare.plGame.iId != iId) dataSpiderChart2 = getSpiderGraphData(plCompare.plGame.iId);
+  }
+
+  private async Task scoutPlayer(int iScoutId)
+  {
+    if (_clb == null) return;
+
+    int iId;
+    if (int.TryParse(id, out iId)) {
+      int iBalanceStart = _clb.iBalance;
+      float[]? fSkillData = Task.Run(() => PlayerController.scoutPlayer(_clb, iId, iScoutId)).Result;
+      MainLayout.headline.Refresh(_clb, iBalanceStart: iBalanceStart);
+      await updateSkills(iId);
+    }
+  }
+
+  private async Task setName(string sName) {
+    Controllers.Member.PlayerController.setName(iId, sName);
+  }
+
+  private static void ShowTutorial(CornerkickManager.User _usr, PlayerModel md, NavigationManager navmng)
+  {
+    if (md?.tutorial == null) return;
+    if (MainLayout.tutorial == null) return;
+
+    CkAppShared.Tutorial tt = md.tutorial;
+
+    if (_usr != null && tt != null && tt.bShow) {
+      //if (tt.iLevel == (TutorialController.iTtMainLevelTeam * 10) + 4) tt.iLevel = TutorialController.iTtMainLevelPlayer * 10;
+      if (TutorialController.IsLastSubLevel(tt.iLevel, TutorialController.iTtMainLevelTeam)) tt.iLevel = TutorialController.iTtMainLevelPlayer * 10;
+
+      if ((tt.iLevel / 10) == TutorialController.iTtMainLevelPlayer) {
+        TutorialController.TutorialReturn ttr = TutorialController.getTutorial(
+          _usr,
+          tt.iLevel,
+          /*
+          [
+            new Tt_highlight((iTtMainLevelPlayer * 10) + 1, document.getElementById("divPlOptionsContainer")),
+            new Tt_highlight((iTtMainLevelPlayer * 10) + 2, document.getElementById("aTabSkills")),
+            new Tt_highlight((iTtMainLevelPlayer * 10) + 8, document.getElementById("navbarDropdownOffice")),
+            new Tt_highlight((iTtMainLevelPlayer * 10) + 8, document.getElementById("aMenuOfficeUser"))
+          ]*/
+          _usr.bScouting
+        );
+
+        MainLayout.tutorial.Show(ttr, usr: _usr, iLevel: tt.iLevel, actionOnOk: () => ShowTutorial(_usr, md, navmng), actionOnCancel: () => ShowTutorial(_usr, md, navmng), actionOn3: () => navmng.NavigateTo("/member/desk", forceLoad: true));
+        //CkDialog.ckDialog.Show(ttr, usr: _usr, iLevel: tt.iLevel, actionOnOk: () => ShowTutorial(_usr, md, navmng), actionOnCancel: () => ShowTutorial(_usr, md, navmng), actionOn3: () => navmng.NavigateTo("/member/desk", forceLoad: true));
+      }
+    }
+  }
+
+  protected async Task ShowTutorial(int iLevelChange = 0)
+  {
+    if (_usr != null && model?.tutorial != null)  {
+      model.tutorial.iLevel += iLevelChange;
+      await Task.Run(() => ShowTutorial(_usr, model, NavigationManager));
+    }
+  }
+
+  private async Task checkSetCapitain(int iC)
+  {
+    if (_clb == null) return;
+
+    string sCapType = iC == 0 ? "Kapitän" : "Vize-Kapitän";
+    string? sCapName = PlayerController.getClubCaptain(_clb, iC);
+    if (string.IsNullOrEmpty(sCapName)) await setCapitain(iC);
+    else                                await CkDialog.ckDialog.Show("Kapitän absetzen?", "Möchten Sie Ihren bisherigen " + sCapType + " " + sCapName + " wirklich absetzen?", bKeepOpen2: true, actionOnOk: () => setCapitain(iC));
+  }
+
+  private async Task setCapitain(int iC)
+  {
+    if (_clb == null) return;
+
+    string? sRet = PlayerController.makeCaptain(_clb, iId, iC);
+
+    if (!string.IsNullOrEmpty(sRet)) {
+      if (iC == 0) model.bCaptain  = true;
+      else         model.bCaptain2 = true;
+      await CkDialog.ckDialog.Show("Kapitän bestimmt", sRet, sButtonCancelText2: "", actionOnOk: () => update());
+    }
+  }
+
+  private async Task getStatistic(int value)
+  {
+    iStatOption = value;
+    ltPlStat = Controllers.Member.PlayerController.GetStatistic(iId, iMode: value);
+
+    List<CkAppShared.DataPointTD>[]? _ltTrainingData = Controllers.Member.PlayerController.GetTrainingHistoryData(iId);
+    trainingDataChart?.draw(_ltTrainingData);
+    playerTrainingHistoryTable?.draw(iId);
+  }
+
+  private async Task drawPassChart(int iHighLow)
+  {
+    iPassChartHighLow = iHighLow;
+
+    float[] fPassDetails = Controllers.Member.PlayerController.GetPassDetails(iId);
+
+    await JS.InvokeVoidAsync(
+      "drawPassChart",
+      refPassCanvas,
+      iHighLow == 0 ? fPassDetails[0] : fPassDetails[1],
+      fPassDetails[2],
+      fPassDetails[3],
+      fPassDetails[4]
+    );
+  }
+
+  private async Task openPassChart()
+  {
+    if (modalPass == null) return;
+
+    await drawPassChart(0);
+    modalPass.Show();
+  }
+
+  /*
+  private void setMoodText(float fMood, txtMood, thumb) {
+    float fMoodAdj = (float)Math.Max((fMood - 0.1) / 0.9, 0);
+    //string color_mood = getColor0_1(fMoodAdj);
+
+    if (thumb) {
+      double angle = (1.0 - fMoodAdj) * 180.0;
+      thumb.style.transform = "rotate(" + angle + "deg)";
+      if (thumb.getElementsByTagName("img").length > 0) {
+        thumb.getElementsByTagName("img")[0].style.backgroundColor = color_mood;
+        } else {
+        thumb.style.backgroundColor = color_mood;
+        }
+      }
+    }
+  */
+
+  public async Task NegotiatePlayerContract()
+  {
+    if (contract == null) return;
+
+    contract.Negotiate(iId);
+  }
+
+  // iTypeOfClose: 0 - ok, 1 - cancel
+  private Task PutOnTakeFromTransferlist()
+  {
+    string? sRet = "";
+    int iRet = Controllers.Member.TransferController.PutOnTakeFromTransferList(_usr, iId, out sRet);
+    if      (iRet == 0) model.bOnTransferlist = true;
+    else if (iRet == 1) model.bOnTransferlist = false;
+
+    if (!string.IsNullOrEmpty(sRet)) CkDialog.ckDialog.Show("Info", sRet, sButtonCancelText2: "", actionOnOk: () => update());
+
+    return Task.CompletedTask;
+  }
+
+  string FormatAsStr(object value)
+  {
+    string[] sNames = new string[] { "Kondition", "Frische", "Moral" };
+    if (value != null) {
+      int iVal = Convert.ToInt32(value);
+      if (iVal >= 0 && iVal < sNames.Length) return sNames[iVal];
+    }
+
+    return string.Empty;
+  }
+
+  string FormatAsDate(object value)
+  {
+    if (value != null) {
+      if (DateTime.TryParse(value.ToString(), out DateTime dt)) return dt.ToString("dd.MM.yy");
+      if (int.TryParse(value.ToString(), out int i)) return i.ToString();
+      //return Convert.ToDateTime(value).ToString("dd.MM.yy");
+    }
+
+    return string.Empty;
+  }
+
+  Func<double, string> GetValueFormatter()
+  {
+    return (value) => (value / 10.0).ToString("F1");
+  }
+
+  public async Task MarkForCompare()
+  {
+    plCompare = Controllers.Member.PlayerController.MarkComparePlayer(_usr, iId);
+  }
+
+  public async Task DeleteCompare()
+  {
+    Controllers.Member.PlayerController.DeleteComparePlayer(_usr);
+    plCompare = null;
+    dataSpiderChart2 = null;
+  }
+
+}

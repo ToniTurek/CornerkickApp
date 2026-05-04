@@ -1,0 +1,800 @@
+﻿@page "/member/stadium"
+
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using CornerkickApp.Shared.Models
+
+@inject IJSRuntime JS
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject Controllers.Shared.MyAuthenticationStateProvider _auth
+
+<PageTitle>Stadion</PageTitle>
+
+<!DOCTYPE html>
+<html>
+<head>
+</head>
+
+<body>
+  @if (model != null) {
+    <div style="margin-bottom: 1rem">
+      <Blazorise.Select TValue="int" SelectedValue="iSelectedStadium" SelectedValueChanged="@SelectStadium" Style="width: fit-content; max-width: 310px">
+        <Blazorise.SelectItem Value="-1">@CkAppShared.stadiumDefaultTrainingCourt.sName</Blazorise.SelectItem>
+        @if (_usr?.club != null) {
+          <Blazorise.SelectItem Value="0">@_usr.club.stadium.sName</Blazorise.SelectItem>
+        }
+        <Blazorise.SelectItem Value="1">@CkAppShared.stadiumDefaultSmall.sName</Blazorise.SelectItem>
+        <Blazorise.SelectItem Value="2">@CkAppShared.stadiumDefaultBig.sName</Blazorise.SelectItem>
+      </Blazorise.Select>
+    </div>
+
+    if (model.bEditable) {
+      <div class="form-group">
+        <input type="text" class="form-control" style="width:180px" value="@model.sName" @onchange=@((s) => setName(s.ToString()))>
+      </div>
+    } else {
+      <h3>@model.sName</h3>
+    }
+
+    <div style="position: relative; width: 100%; max-width: 1200px; min-height: 1600px">
+      <div id="divStadiumSeats" style="position: relative; width: 100%; font-size: 1.2em">
+        @((model.iSeats[0] + model.iSeats[1] + model.iSeats[2]).ToString("N0"))&nbsp;(@(model.iSeats[0].ToString("N0"))&nbsp;/&nbsp;@(model.iSeats[1].ToString("N0"))&nbsp;/&nbsp;@(model.iSeats[2].ToString("N0")))
+      </div>
+      @if (model.iSeatsConstr[0] + model.iSeatsConstr[1] + model.iSeatsConstr[2] > 0) {
+        <div id="divStadiumSeats" style="position: relative; width: 100%; font-size: 1.2em; color: grey">
+          @((model.iSeatsConstr[0] + model.iSeatsConstr[1] + model.iSeatsConstr[2]).ToString("N0"))&nbsp;(@(model.iSeatsConstr[0].ToString("N0"))&nbsp;/&nbsp;@(model.iSeatsConstr[1].ToString("N0"))&nbsp;/&nbsp;@(model.iSeatsConstr[2].ToString("N0")))
+        </div>
+      }
+
+      <div class="image" style="position: relative; width: 100%; margin-bottom: 1%">
+        <img id="imgStadium" style="position: relative; width: 100%" src="@CkAppShared.sContentDir/Images/stadium/stadium_@(model.bTopring ? "L" : "S").png" alt="" />
+        <div style="position: absolute; margin-left: 0%; width: 100%; height: 100%; top: 0%; left: 0%; border: 1px solid black">
+          @{
+            int iB = 0;
+            foreach (StadiumModel.Block b in model.blocks) {
+              <div
+                class="block"
+                style="left: @b.X.ToString("0%");
+                       top: @b.Y.ToString("0%");
+                       @(b.iSeats > 0 ? "min-width: 64px;" : "")
+                       @(bConstructionMode && iCctBlock == iB ? "" : "opacity: 0.75;")
+                       @(b.iSeatsDaysConstruct > 0 ? "background-color: yellow;" : "" )
+                       @(b.bRoof ? "border-width: 4px;" : "");
+                       z-index: 2">
+                @if (bConstructionMode && iCctBlock == iB) {
+                  <input @ref="iptSeats" type="number" style="width: 100%; text-align: right" value="@b.iSeats" autofocus @onchange="(i) => changeSeats(i.Value)">
+                  <select @onchange="(i) => changeBlockType(i.Value)">
+                    @for (int iBt = 0; iBt < CornerkickManager.Stadium.sBlocktype.Length; iBt++) {
+                      <option value="@iBt" selected="@(iBt == b.iType)">@CornerkickManager.Stadium.sBlocktype[iBt]</option>
+                    }
+                  </select>
+                  if (model.facility.iTopringDaysConstruct == 0 && ((iB < 10 && !model.bTopring) || (iB > 9 && model.bTopring))) {
+                    <label>
+                      <input type="checkbox" checked="@b.bRoof" @onchange="(b) => changeBlockRoof(b.Value)" />
+                      Dach
+                    </label>
+                  }
+                } else {
+                  <div>
+                    <b>@b.sName</b><span>: @b.iSeats</span>
+                  </div>
+                  @if (b.iSeats > 0) {
+                    <div>@CornerkickManager.Stadium.sBlocktype[b.iType]</div>
+                  }
+                  @if (b.iSeatsDaysConstruct > 0) {
+                    <div style="display: flex; align-items: center; justify-content: center">
+                      <Blazorise.Progress Value="b.iSeatsDaysConstructIni - b.iSeatsDaysConstruct" Max="b.iSeatsDaysConstructIni" Animated Striped Color="Blazorise.Color.Success" Style="width: 100%; height: 24px; background-color: white" />
+                      <span style="position: absolute">@(((b.iSeatsDaysConstructIni - b.iSeatsDaysConstruct) / (float)b.iSeatsDaysConstructIni).ToString("0.0%"))</span>
+                    </div>
+                  }
+                }
+              </div>
+
+              iB++;
+            }
+          }
+        </div>
+
+        @* Pitch quality *@
+        <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; padding-left: 4rem; padding-right: 4rem">
+          <div style="min-width: 160px; text-align: center">
+            <p id="txtPitchQuality" style="font-weight: bold; margin-bottom: 0.5rem">Rasenqualität: @(model.fPitchQuality.ToString("0%"))</p>
+            @if (iSelectedStadium == 0) {
+              <button class="btn btn-secondary" @onclick="renewPitch" disabled="@(model.fPitchQuality > 0.99f)">@sRenewPitch</button>
+            }
+          </div>
+        </div>
+
+        @*
+        <button type="button" id="bnShow3D" class="btn btn-outline-secondary" style="position: absolute; bottom: 7%; right: 6%; width: 8%; height: 8%; min-width: 50px; min-height: 32px; font-size: 150%">3D</button>
+        *@
+      </div>
+
+      @if (_usr != null && _usr.iResp >= CkAppShared.iUserRespStadium) {
+        @if (iSelectedStadium == 0) {
+          <div style="width: 100%; margin-bottom: 1rem; display: flex; flex-wrap: wrap; align-items: center">
+            <label style="margin-right: 8px">
+              Baumodus:
+              <input type="checkbox" checked="@bConstructionMode" @bind-value="@bConstructionMode">
+            </label>
+            <select class="form-control" style="width: 60px; margin-right: 8px; margin-bottom: 4px" @bind="@iCctBlock" disabled="@(!bConstructionMode)">
+              @{
+                int jB = 0;
+                foreach (StadiumModel.Block b in model.blocks) {
+                  if (b.iSeatsDaysConstruct == 0) {
+                    <option value="@jB">@b.sName</option>
+                  }
+                  jB++;
+                }
+              }
+            </select>
+            <button type="button" id="bnBuild" class="btn btn-outline-secondary" style="flex-grow: 1" @onclick="buildBlock" disabled="@bCctButtonDisabled">@sCctButton</button>
+          </div>
+
+          <div id="divTopring" style="position: relative; width: 100%; margin-bottom: 20px">
+            <button type="button" id="bnBuildTopring" class="btn btn-outline-secondary" style="width: 100%">Oberring bauen. Kosten: 0</button>
+            <div id="pbTopring" style="position: absolute; width: 100%; top: 28px"></div>
+          </div>
+
+          <div style="position: relative; float: left; width: 100%; margin-bottom: 20px">
+            <h4 style="position: relative;">Stadionausbau</h4>
+            <table style="width: auto; table-layout: fixed;" class="table table-bordered">
+              <thead>
+                <tr style="background-color: gray; color: white;">
+                  <td style="text-align: center; font-weight: bold;">Name</td>
+                  <td style="text-align: center; font-weight: bold;">Art</td>
+                  <td style="text-align: center; font-weight: bold;">Menge</td>
+                  <td style="text-align: center; font-weight: bold;">Dach</td>
+                  <td style="text-align: center; font-weight: bold;">Dauer</td>
+                </tr>
+              </thead>
+              <tbody>
+                @foreach (StadiumModel.Block b in model.blocks) {
+                  if (b.iSeatsDaysConstruct > 0) {
+                    <tr>
+                      <td style="padding-right: 4px; text-align: center;">@b.sName</td>
+                      <td style="padding-right: 4px; text-align: center;">@CornerkickManager.Stadium.sBlocktype[b.iType]</td>
+                      <td style="padding-right: 4px; text-align: center;">@(b.iSeats.ToString("N0"))</td>
+                      <td style="padding-right: 4px; text-align: center;">@(b.bRoof ? "X" : "-")</td>
+                      <td style="padding-right: 4px; text-align: center;">@(b.iSeatsDaysConstruct.ToString()) d</td>
+                    </tr>
+                  }
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+
+        <h3 style="position: relative">Stadionextras</h3>
+        <div style="position: relative; width: 100%; margin-bottom: 10px; display: flex; flex-wrap: wrap">
+          <div style="position: relative; width: 320px; margin-right: 10px; margin-bottom: 10px; padding: 6px; border: 1px solid black; background-color: white; flex-shrink: 0">
+            <div style="position: absolute; top: 2px; right: 4px">
+              <img src="@CkAppShared.sContentDir/Icons/news/info.png" style="cursor:pointer" @onclick="() => showInfo(0)" />
+            </div>
+            <strong style="position: relative; width: 308px; font-size: 1.2em">@CornerkickManager.Stadium.facVideo.sName</strong>
+            <p style="position: relative; width: 308px; margin: 0; font-size: 1.2em">Aktuell: @CornerkickManager.Stadium.facVideo.sLevelNames[iExtras[0][0]]</p>
+            @if (iSelectedStadium == 0) {
+              @if (iExtras[0][2] > 0) {
+                <p style="position: relative; width: 308px; margin-top: 4px; margin-bottom: 2px">Ausbau zu: @CornerkickManager.Stadium.facVideo.sLevelNames[iExtras[0][1]] (noch @(iExtras[0][2]) d)</p>
+                <Blazorise.Progress Value="iExtras[0][3] - iExtras[0][2]" Max="iExtras[0][3]" Animated Striped Color="Blazorise.Color.Warning" Style="position: relative; width: 100%; height: 24px; background-color: lightgrey" />
+              } else {
+                <div id="divVideo" style="position: relative; width: 100%; height: 40px">
+                  <text style="position: absolute; left: 0px; top: 6px">Neu:</text>
+                  <Blazorise.Select TValue="int" SelectedValue="iVideoNew" SelectedValueChanged="@GetVideoCost" Style="position: absolute; width: 268px; min-width: 268px; left: 40px">
+                    @foreach (var sli in model.ddlVideo) {
+                      <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+                    }
+                  </Blazorise.Select>
+                </div>
+                <button type="button" class="btn btn-outline-secondary" style="width: 49%; min-width: 308px" disabled="@(iCostDaysVideo[1] == 0 || iCostDaysVideo[2] == 0)" @onclick=BuildVideo>@getStrCostDays(iCostDaysVideo)</button>
+              }
+            }
+          </div>
+
+          <div id="divSnackbarContainer" style="position: relative; width: 320px; margin-right: 10px; margin-bottom: 10px; padding: 6px; border: 1px solid black; background-color: white; flex-shrink: 0">
+            @{
+              if (model.iSnackbarReq > model.facility.iSnackbar && iSelectedStadium == 0) {
+                string sInfo = "Ihre Fans verlangen bei ausverkauftem Stadion min. " + model.iSnackbarReq.ToString() + " Imbissbuden";
+                <img title="@sInfo" style="position: absolute; top: 6px; right: 6px; width: 30px; z-index: 99" src="@CkAppShared.sContentDir/Icons/attention.png" @onclick="() => showInfo(2)">
+              } else {
+                <div style="position: absolute; top: 2px; right: 4px">
+                  <img src="@CkAppShared.sContentDir/Icons/news/info.png" style="cursor:pointer" @onclick="() => showInfo(2)" />
+                </div>
+              }
+            }
+            <strong style="position: relative; width: 308px; font-size: 1.2em">Imbissbuden</strong>
+            <p style="position: relative; width: 308px; margin: 0; font-size: 1.2em">Aktuell: @iExtras[2][0]</p>
+            @if (iSelectedStadium == 0) {
+              @if (iExtras[2][2] > 0) {
+                <p style="position: relative; width: 308px; margin-top: 4px; margin-bottom: 2px">Ausbau zu: @iExtras[2][1] (noch @(iExtras[2][2]) d)</p>
+                <Blazorise.Progress Value="iExtras[2][3] - iExtras[2][2]" Max="iExtras[2][3]" Animated Striped Color="Blazorise.Color.Warning" Style="position: relative; width: 100%; height: 24px; background-color: lightgrey" />
+              } else {
+                <div id="divSnackbar" style="position: relative; width: 100%; height: 40px">
+                  <text style="position: absolute; left: 0px; top: 6px">Neu:</text>
+                  <input type="number" style="position: absolute; left: 40px; top: 6px" value="@model.iSnackbar" @onchange="(i) => GetSnackbarCost(int.Parse(i.Value.ToString()))" />
+                </div>
+                <button type="button" class="btn btn-outline-secondary" style="width: 49%; min-width: 308px" disabled="@(iCostDaysSnackbars[1] == 0 || iCostDaysSnackbars[2] == 0)" @onclick=BuildSnackbars>@getStrCostDays(iCostDaysSnackbars)</button>
+              }
+            }
+          </div>
+
+          <div id="divToiletsContainer" style="position: relative; width: 320px; margin-right: 10px; margin-bottom: 10px; padding: 6px; border: 1px solid black; background-color: white; flex-shrink: 0">
+            @{
+              if (model.iToiletsReq > model.facility.iToilets && iSelectedStadium == 0) {
+                string sInfo = "Ihre Fans verlangen bei ausverkauftem Stadion min. " + model.iToiletsReq.ToString() + " Toiletten";
+                <img title="@sInfo" style="position: absolute; top: 6px; right: 6px; width: 30px; z-index: 99" src="@CkAppShared.sContentDir/Icons/attention.png" @onclick="() => showInfo(3)">
+              } else {
+                <div style="position: absolute; top: 2px; right: 4px">
+                  <img src="@CkAppShared.sContentDir/Icons/news/info.png" style="cursor:pointer" @onclick="() => showInfo(3)" />
+                </div>
+              }
+            }
+            <strong style="position: relative; width: 308px; font-size: 1.2em">Toiletten</strong>
+            <p style="position: relative; width: 308px; margin: 0; font-size: 1.2em">Aktuell: @iExtras[3][0]</p>
+            @if (iSelectedStadium == 0) {
+              @if (iExtras[3][2] > 0) {
+                <p style="position: relative; width: 308px; margin-top: 4px; margin-bottom: 2px">Ausbau zu: @iExtras[3][1] (noch @(iExtras[3][2]) d)</p>
+                <Blazorise.Progress Value="iExtras[3][3] - iExtras[3][2]" Max="iExtras[3][3]" Animated Striped Color="Blazorise.Color.Warning" Style="position: relative; width: 100%; height: 24px; background-color: lightgrey" />
+              } else {
+                <div id="pbToilets" style="position: relative; width: 308px"><div id="plToilets" class="progress-label"></div></div>
+                <div id="divToilets" style="position: relative; width: 100%; height: 40px">
+                  <text style="position: absolute; left: 0px; top: 6px">Neu:</text>
+                  <input type="number" style="position: absolute; left: 40px; top: 6px" value="@model.iToilets" @onchange="(i) => GetToiletsCost(int.Parse(i.Value.ToString()))" />
+                </div>
+                <button type="button" class="btn btn-outline-secondary" style="width: 49%; min-width: 308px" disabled="@(iCostDaysToilets[1] == 0 || iCostDaysToilets[2] == 0)" @onclick=BuildToilets>@getStrCostDays(iCostDaysToilets)</button>
+              }
+            }
+          </div>
+
+          <div id="divSecurityContainer" style="position: relative; width: 320px; margin-right: 10px; margin-bottom: 10px; padding: 6px; border: 1px solid black; background-color: white; flex-shrink: 0">
+            <div style="position: absolute; top: 2px; right: 4px">
+              <img src="@CkAppShared.sContentDir/Icons/news/info.png" style="cursor:pointer" @onclick="() => showInfo(1)" />
+            </div>
+            <strong style="position: relative; width: 308px; font-size: 1.2em">@CornerkickManager.Stadium.facSecurity.sName</strong>
+            <p style="position: relative; width: 308px; margin: 0; font-size: 1.2em">Aktuell: @CornerkickManager.Stadium.facSecurity.sLevelNames[iExtras[1][0]]</p>
+            @if (iSelectedStadium == 0) {
+              @if (iExtras[1][2] > 0) {
+                <p style="position: relative; width: 308px; margin-top: 4px; margin-bottom: 2px">Ausbau zu: @CornerkickManager.Stadium.facSecurity.sLevelNames[iExtras[1][1]] (noch @(iExtras[1][2]) d)</p>
+                <Blazorise.Progress Value="iExtras[1][3] - iExtras[1][2]" Max="iExtras[1][3]" Animated Striped Color="Blazorise.Color.Warning" Style="position: relative; width: 100%; height: 24px; background-color: lightgrey" />
+              } else {
+                @*
+                <div id="divSecurity" style="position: relative; width: 100%; height: 40px">
+                  <text style="position: absolute; left: 0px; top: 6px">Neu:</text>
+                  <Blazorise.Select TValue="int" SelectedValue="model.iSecurity" SelectedValueChanged="@GetSecurityCost" Style="position: absolute; width: 268px; min-width: 268px; left: 40px">
+                    @foreach (var sli in model.ddlSecurity) {
+                      <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+                    }
+                  </Blazorise.Select>
+                </div>
+                *@
+                <button type="button" class="btn btn-outline-secondary" style="width: 49%; min-width: 308px" disabled="@(iCostDaysSecurity[1] == 0 || iCostDaysSecurity[2] == 0)" @onclick=BuildSecurity>
+                  Ausbau zu: <b>@CornerkickManager.Stadium.facSecurity.sLevelNames[model.iSecurity + 1]</b><br />
+                  @getStrCostDays(iCostDaysSecurity)
+                </button>
+              }
+            }
+          </div>
+
+          <div id="divSecurityStaffContainer" style="position: relative; width: 320px; margin-right: 10px; margin-bottom: 10px; padding: 6px; border: 1px solid black; background-color: white; flex-shrink: 0">
+            <strong style="position: relative; width: 308px; font-size: 1.2em">Sicherheitspersonal</strong>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px">
+              <input type="number" style="position: relative; width: 100px; height: fit-content; text-align: right" min="0" step="10" value="@model.iSecurityStaff" @onchange="(i) => SetSecurityStaff(int.Parse(i.Value.ToString()))" />
+              <div style="position: relative; margin-left: 6px; text-align: right">
+                <p style="margin: 0"><b>Kosten / Heimspiel:</b></p>
+                <p style="margin: 0">@(fSecurityStaff[0].ToString("N0")) €</p>
+              </div>
+            </div>
+            <p style="position: relative; margin: 0"><b>Risiko für Ausschreitungen:</b> <span style="color: @GetColorSecurityRisk(fSecurityStaff[1])">@(fSecurityStaff[1].ToString("P1"))</span></p>
+            <p style="position: relative; margin: 0; font-size: 90%">(bei ausverkauftem Stadion)</p>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <Blazorise.Modal @ref="mlInfo">
+    <Blazorise.ModalContent Centered>
+      <Blazorise.ModalHeader Style="color: white; background-color: rgb(31, 158, 69)">
+        <Blazorise.ModalTitle>
+          @sInfoHeader
+        </Blazorise.ModalTitle>
+        <Blazorise.CloseButton />
+      </Blazorise.ModalHeader>
+      <Blazorise.ModalBody Style="overflow: auto">
+        @if (model != null) {
+          if (!string.IsNullOrEmpty(sInfoBuild)) {
+            <p style="font-size: 110%">Bei Ausbau zu: <b>@sInfoBuild</b></p>
+          }
+          if (iInfoType == 0) {
+            float fVideo0 = Controllers.Member.StadiumController.GetVideoInfo(_usr, model.iVideo);
+            float fVideo1 = Controllers.Member.StadiumController.GetVideoInfo(_usr, Math.Max(iVideoNew, model.iVideo + 1));
+            <div>Steigerung Zuschaueraufkommen: <b>@((fVideo1 - fVideo0).ToString("P1"))</b></div>
+          } else if (iInfoType == 1) {
+            <table class="table table-bordered center" cellpadding="2">
+              <thead>
+                <tr>
+                  <th colspan="4">Gefahr für Ausschreitungen *</th>
+                </tr>
+                <tr>
+                  <th>Sicherheitspersonal</th>
+                  <th>alt</th>
+                  <th></th>
+                  <th>neu</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  @{
+                    float fRiskA0 = Controllers.Member.StadiumController.GetSecurityInfo(_usr, model.iSecurity, iSecurityStaff: model.iSecurityStaff);
+                    float fRiskA1 = Controllers.Member.StadiumController.GetSecurityInfo(_usr, model.iSecurity + 1, iSecurityStaff: model.iSecurityStaff);
+                  }
+                  <td>@model.iSecurityStaff (aktuell)</td>
+                  <td style="color: @GetColorSecurityRisk(fRiskA0)">@fRiskA0.ToString("P1")</td>
+                  <td>
+                    <img width="18" src="@CkAppShared.sContentDir/Icons/menu/down.png" />
+                    <span>@((fRiskA1 - fRiskA0).ToString("P1"))</span>
+                  </td>
+                  <td style="color: @GetColorSecurityRisk(fRiskA1)">@fRiskA1.ToString("P1")</td>
+                </tr>
+                <tr>
+                  @{
+                    float fRiskB0 = Controllers.Member.StadiumController.GetSecurityInfo(_usr, model.iSecurity, iSecurityStaff: 0);
+                    float fRiskB1 = Controllers.Member.StadiumController.GetSecurityInfo(_usr, model.iSecurity + 1, iSecurityStaff: 0);
+                  }
+                  <td>keins</td>
+                  <td style="color: @GetColorSecurityRisk(fRiskB0)">@fRiskB0.ToString("P1")</td>
+                  <td>
+                    <img width="18" src="@CkAppShared.sContentDir/Icons/menu/down.png" />
+                    <span>@((fRiskB1 - fRiskB0).ToString("P1"))</span>
+                  </td>
+                  <td style="color: @GetColorSecurityRisk(fRiskB1)">@fRiskB1.ToString("P1")</td>
+                </tr>
+              </tbody>
+            </table>
+            <p>* bei ausverkauftem Stadion</p>
+          } else if (iInfoType == 2) {
+            <p>Bedarf Imbissbuden / aktuell: <b style="color: @(model.iSnackbarReq > model.iSnackbar ? "orange" : "black")">@model.iSnackbarReq / @model.iSnackbar</b></p>
+          } else if (iInfoType == 3) {
+            <p>Bedarf Toiletten / aktuell: <b style="color: @(model.iToiletsReq > model.iToilets ? "orange" : "black")">@model.iToiletsReq / @model.iToilets</b></p>
+          }
+        }
+      </Blazorise.ModalBody>
+    </Blazorise.ModalContent>
+  </Blazorise.Modal>
+</body>
+</html>
+
+@code {
+  private CornerkickManager.User? _usr;
+  private StadiumModel? model;
+  private IJSObjectReference? module;
+
+  int iSelectedStadium { get; set; } = 0;
+
+  bool bMobile = false;
+
+  bool bConstructionMode = false;
+  string sRenewPitch = "";
+
+  byte jCctBlock = 0;
+  byte iCctBlock {
+    get => jCctBlock;
+    set {
+      jCctBlock = value;
+      if (model != null) {
+        iSeatsCct = model.blocks[value].iSeats; 
+        iTypeCct  = model.blocks[value].iType;
+        if (iptSeats.Id != null) iptSeats.FocusAsync();
+      }
+    }
+  }
+  int iSeatsCct = 0;
+  byte iTypeCct = 0;
+  bool bRoofCct = false;
+  string sCctButton = "Block ausbauen";
+  bool bCctButtonDisabled = true;
+
+  private ElementReference iptSeats;
+
+  int[][] iExtras { get; set; } = new int[4][]; // [0] = Video, [1] = Snackbar, [2] = Toilets
+
+  int[] iCostDaysVideo = new int[3];
+  int[] iCostDaysToilets = new int[3];
+  int[] iCostDaysSnackbars = new int[3];
+  int[] iCostDaysSecurity = new int[3];
+  double[] fSecurityStaff = new double[2];
+
+  Blazorise.Modal? mlInfo { get; set; }
+  string sInfoHeader = "";
+  string sInfoText = "";
+  string sInfoBuild = "";
+  int iInfoType = 0;
+
+  protected override async Task OnInitializedAsync()
+  {
+    //await base.OnInitializedAsync();
+
+#if _WebApp
+    //_usr = await Http.GetFromJsonAsync<CornerkickManager.User>("member/Member/ckUser");
+    _usr = Controllers.Member.MemberController.ckUser(await _auth.GetUserId());
+
+    if (_usr == null) {
+      NavigationManager.NavigateTo("/authentication/register");
+      return;
+    }
+#else
+    _usr = CkAppShared.ckMng.ltUser[CkAppShared.iUserActive];
+#endif
+
+    model = CornerkickApp.Controllers.Member.StadiumController.Model(_usr);
+
+    if (model != null) {
+      iVideoNew = model.iVideo;
+      setRenewPitchStr();
+      setCctValues();
+      await GetExtras();
+    }
+  }
+
+  private void SelectStadium(int i)
+  {
+    iSelectedStadium = i;
+
+    if (_usr == null) return;
+    model = CornerkickApp.Controllers.Member.StadiumController.Model(_usr, iStadium: iSelectedStadium);
+
+    GetExtras();
+  }
+
+  void setCctValues()
+  {
+    if (model == null) return;
+
+    byte jB = 0;
+    foreach (StadiumModel.Block b in model.blocks) {
+      if (b.iSeatsDaysConstruct == 0) {
+        iSeatsCct = b.iSeats;
+        iTypeCct  = b.iType;
+        bRoofCct  = b.bRoof;
+        iCctBlock = jB;
+        if (iptSeats.Id != null) iptSeats.FocusAsync();
+        break;
+      }
+      jB++;
+    }
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender) {
+    }
+  }
+
+  private async Task setName(string sName)
+  {
+    Controllers.Member.StadiumController.setName(_usr, sName);
+  }
+
+  private async Task setRenewPitchStr()
+  {
+    float[] f = Controllers.Member.StadiumController.GetRenewPitchCost(_usr);
+
+    sRenewPitch = "";
+    if (!bMobile) sRenewPitch = "Rasen ";
+    sRenewPitch += "+" + f[0].ToString("0%") + ", ";
+    if (!bMobile) sRenewPitch += "Kosten: ";
+    sRenewPitch += f[1].ToString("N0") + "€";
+  }
+
+  private async Task renewPitch()
+  {
+    if (model == null) return;
+
+    CornerkickManager.Club? clb = Controllers.Member.MemberController.ckClub(_usr);
+    if (clb == null) return;
+    int iBalanceStart = clb.iBalance;
+
+    string sMsg;
+    float fPitchQualityNew = Controllers.Member.StadiumController.RenewPitch(_usr, out sMsg);
+
+    if (fPitchQualityNew > 0f) {
+      model.fPitchQuality = fPitchQualityNew;
+      await setRenewPitchStr();
+      MainLayout.headline.Refresh(clb, iBalanceStart: iBalanceStart);
+
+      //await InvokeAsync(StateHasChanged);
+      if (!string.IsNullOrEmpty(sMsg) && MainLayout.ckToast != null) {
+        MainLayout.toastMessage = sMsg;
+        await MainLayout.ckToast.Show();
+      }
+    }
+  }
+
+  private async Task changeSeats(object o)
+  {
+    int iS;
+    if (!int.TryParse(o.ToString(), out iS)) return;
+
+    iSeatsCct = iS;
+
+    await getBlockBuildCost();
+  }
+
+  private async Task changeBlockType(object o)
+  {
+    byte iBt;
+    if (!byte.TryParse(o.ToString(), out iBt)) return;
+
+    iTypeCct = iBt;
+
+    await getBlockBuildCost();
+  }
+
+  private async Task changeBlockRoof(object o)
+  {
+    bool bRoof;
+    if (!bool.TryParse(o.ToString(), out bRoof)) return;
+
+    bRoofCct = bRoof;
+
+    await getBlockBuildCost();
+  }
+
+  private async Task getBlockBuildCost()
+  {
+    if (model == null) return;
+
+    int[]? i = Controllers.Member.StadiumController.GetBuildCost(_usr, iCctBlock, iSeatsCct, iTypeCct, bRoofCct);
+
+    if (i != null) {
+      sCctButton = "Block ausbauen";
+      if (i[2] < 0) {
+        sCctButton += ": Maximale Anzahl Plätze: " + i[0].ToString("N0");
+      } else {
+        sCctButton += ": Kosten: " + i[0].ToString("N0") + " €, Dauer: " + i[1].ToString() + " Tage";
+
+        if (i[1] == 0 || i[1] == 0 || i[2] == 0) {
+          if (i[2] == 0) sCctButton = ". Zu wenig Geld!";
+          bCctButtonDisabled = true;
+        } else {
+          bCctButtonDisabled = false;
+        }
+      }
+    }
+  }
+
+  private async Task buildBlock()
+  {
+    if (model == null) return;
+
+    CornerkickManager.Club? clb = Controllers.Member.MemberController.ckClub(_usr);
+    if (clb == null) return;
+    int iBalanceStart = clb.iBalance;
+
+    string sMsg;
+    int i = Controllers.Member.StadiumController.BuildBlock(_usr, iCctBlock, iSeatsCct, iTypeCct, bRoofCct, out sMsg);
+
+    if (i > 0) {
+      model.blocks[iCctBlock].iSeats = iSeatsCct;
+      model.blocks[iCctBlock].iType  = iTypeCct;
+      model.blocks[iCctBlock].iSeatsDaysConstruct    = i;
+      model.blocks[iCctBlock].iSeatsDaysConstructIni = i;
+      sCctButton = "Block ausbauen";
+      bConstructionMode = false;
+      bCctButtonDisabled = true;
+      model.iSeatsConstr[iTypeCct] += iSeatsCct;
+      setCctValues();
+      await InvokeAsync(StateHasChanged);
+
+      await JS.InvokeAsync<string>("PlaySound", "construction");
+      MainLayout.headline.Refresh(clb, iBalanceStart: iBalanceStart);
+
+      //await InvokeAsync(StateHasChanged);
+      if (!string.IsNullOrEmpty(sMsg) && MainLayout.ckToast != null) {
+        MainLayout.toastMessage = sMsg;
+        await MainLayout.ckToast.Show();
+      }
+    }
+  }
+
+  private async Task GetExtras()
+  {
+    iExtras = Controllers.Member.StadiumController.GetExtras(_usr, iStadium: iSelectedStadium);
+    GetSecurityCost(model.iSecurity + 1);
+    SetSecurityStaff(model.iSecurityStaff);
+  }
+
+  private string getStrCostDays(int[] iCostDays)
+  {
+    string s = "Kosten: " + iCostDays[0].ToString("N0") + " €";
+    if (iCostDays[1] > 0) s += ", " + iCostDays[1].ToString() + " Tage";
+    return s;
+  }
+
+  int iVideoNew = 0;
+  private async Task GetVideoCost(int iNewLevel)
+  {
+    if (model == null) return;
+
+    iVideoNew = (byte)iNewLevel;
+
+    iCostDaysVideo = Controllers.Member.StadiumController.GetCostVideo(_usr, iNewLevel);
+  }
+
+  private async Task BuildVideo()
+  {
+    if (model == null) return;
+
+    CornerkickManager.Club? clb = Controllers.Member.MemberController.ckClub(_usr);
+    if (clb == null) return;
+    int iBalanceStart = clb.iBalance;
+
+    string sRet = Controllers.Member.StadiumController.BuildVideo(_usr, iVideoNew);
+
+    if (!string.IsNullOrEmpty(sRet)) {
+      await JS.InvokeAsync<string>("PlaySound", "construction");
+      MainLayout.headline.Refresh(clb, iBalanceStart: iBalanceStart);
+
+      //await InvokeAsync(StateHasChanged);
+      if (!string.IsNullOrEmpty(sRet) && MainLayout.ckToast != null) {
+        MainLayout.toastMessage = sRet;
+        await MainLayout.ckToast.Show();
+      }
+
+      await GetExtras();
+      InvokeAsync(StateHasChanged);
+    }
+  }
+
+  private async Task GetToiletsCost(int iNew)
+  {
+    if (model == null) return;
+
+    model.iToilets = (byte)iNew;
+
+    iCostDaysToilets = Controllers.Member.StadiumController.GetCostToilets(_usr, iNew);
+  }
+
+  private async Task BuildToilets()
+  {
+    if (model == null) return;
+    if (model.iToilets == 0) return;
+
+    CornerkickManager.Club? clb = Controllers.Member.MemberController.ckClub(_usr);
+    if (clb == null) return;
+    int iBalanceStart = clb.iBalance;
+
+    string sRet = Controllers.Member.StadiumController.BuildToilets(_usr, model.iToilets);
+
+    if (!string.IsNullOrEmpty(sRet)) {
+      await JS.InvokeAsync<string>("PlaySound", "construction");
+      MainLayout.headline.Refresh(clb, iBalanceStart: iBalanceStart);
+
+      //await InvokeAsync(StateHasChanged);
+      if (!string.IsNullOrEmpty(sRet) && MainLayout.ckToast != null) {
+        MainLayout.toastMessage = sRet;
+        await MainLayout.ckToast.Show();
+      }
+
+      await GetExtras();
+      InvokeAsync(StateHasChanged);
+    }
+  }
+
+  private async Task GetSnackbarCost(int iNew)
+  {
+    if (model == null) return;
+
+    model.iSnackbar = (byte)iNew;
+
+    iCostDaysSnackbars = Controllers.Member.StadiumController.GetCostSnackbar(_usr, iNew);
+  }
+
+  private async Task BuildSnackbars()
+  {
+    if (model == null) return;
+    if (model.iSnackbar == 0) return;
+
+    CornerkickManager.Club? clb = Controllers.Member.MemberController.ckClub(_usr);
+    if (clb == null) return;
+    int iBalanceStart = clb.iBalance;
+
+    string sRet = Controllers.Member.StadiumController.BuildSnackbar(_usr, model.iSnackbar);
+
+    if (!string.IsNullOrEmpty(sRet)) {
+      await JS.InvokeAsync<string>("PlaySound", "construction");
+      MainLayout.headline.Refresh(clb, iBalanceStart: iBalanceStart);
+
+      //await InvokeAsync(StateHasChanged);
+      if (!string.IsNullOrEmpty(sRet) && MainLayout.ckToast != null) {
+        MainLayout.toastMessage = sRet;
+        await MainLayout.ckToast.Show();
+      }
+
+      await GetExtras();
+      InvokeAsync(StateHasChanged);
+    }
+  }
+
+  private async Task GetSecurityCost(int iNewLevel)
+  {
+    if (model == null) return;
+
+    //model.iSecurity = (byte)iNewLevel;
+
+    iCostDaysSecurity = Controllers.Member.StadiumController.GetCostSecurity(_usr, iNewLevel);
+  }
+
+  private static string GetColorSecurityRisk(double fRisk)
+  {
+    if      (fRisk > 0.20) return "red";
+    else if (fRisk > 0.05) return "orange";
+    else if (fRisk > 0.02) return "YellowGreen";
+    return "green";
+  }
+
+  private async Task BuildSecurity()
+  {
+    if (model == null) return;
+
+    CornerkickManager.Club? clb = Controllers.Member.MemberController.ckClub(_usr);
+    if (clb == null) return;
+    int iBalanceStart = clb.iBalance;
+
+    string sRet = Controllers.Member.StadiumController.BuildSecurity(_usr, model.iSecurity + 1);
+
+    if (!string.IsNullOrEmpty(sRet)) {
+      await JS.InvokeAsync<string>("PlaySound", "construction");
+      MainLayout.headline.Refresh(clb, iBalanceStart: iBalanceStart);
+
+      //await InvokeAsync(StateHasChanged);
+      if (!string.IsNullOrEmpty(sRet) && MainLayout.ckToast != null) {
+        MainLayout.toastMessage = sRet;
+        await MainLayout.ckToast.Show();
+      }
+
+      await GetExtras();
+      InvokeAsync(StateHasChanged);
+    }
+  }
+
+  private async Task SetSecurityStaff(int nSecStaff)
+  {
+    if (model == null) return;
+
+    model.iSecurityStaff = nSecStaff;
+
+    fSecurityStaff = Controllers.Member.StadiumController.SetSecurityStaff(_usr, nSecStaff, iStadium: iSelectedStadium);
+  }
+
+  private async Task showInfo(int iType)
+  {
+    if (model == null) return;
+    if (mlInfo == null) return;
+
+    sInfoHeader = "";
+    sInfoBuild = "";
+
+    iInfoType = iType;
+
+    if (iType == 0) {
+      sInfoHeader = CornerkickManager.Stadium.facVideo.sName;
+      if (model.iVideo + 1 < CornerkickManager.Stadium.facVideo.sLevelNames.Length) {
+        sInfoBuild = CornerkickManager.Stadium.facVideo.sLevelNames[Math.Max(iVideoNew, model.iVideo + 1)];
+      }
+    } else if (iType == 1) {
+      sInfoHeader = CornerkickManager.Stadium.facSecurity.sName;
+      if (model.iSecurity + 1 < CornerkickManager.Stadium.facSecurity.sLevelNames.Length) {
+        sInfoBuild = CornerkickManager.Stadium.facSecurity.sLevelNames[model.iSecurity + 1];
+      }
+    } else if (iType == 2) {
+      sInfoHeader = "Imbissbuden";
+    } else if (iType == 3) {
+      sInfoHeader = "Toiletten";
+    }
+
+    await mlInfo.Show();
+  }
+
+}

@@ -1,0 +1,25 @@
+.staff_lvl_container {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  background-color: transparent;
+}
+
+.star_container {
+  position: relative;
+  white-space: nowrap;
+}
+
+.bnHireStaff {
+  background-color: white;
+}
+
+@media (max-width: 640.98px) {
+  .staff_lvl_container {
+    flex-wrap: wrap;
+  }
+
+  .star_container {
+    white-space: normal;
+  }
+}

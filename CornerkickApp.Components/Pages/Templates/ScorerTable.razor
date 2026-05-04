@@ -1,0 +1,251 @@
+﻿@using CornerkickApp.Shared.Models
+
+@inject Controllers.Shared.MyAuthenticationStateProvider _auth
+
+<head>
+  <style>
+    div.row {
+      margin-right: 0 !important;
+    }
+
+    a.page-link {
+      font-size: 0.9rem;
+    }
+
+    ul.pagination {
+      margin-bottom: 0;
+    }
+  </style>
+</head>
+
+@if (ltScorer != null) {
+  <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center">
+    <h4>Torschützen</h4>
+    @if (ltScorer.Count > 0) {
+      <label>
+        <input type="checkbox" value="@bInteractive" @onchange="(o) => OnCheckboxChange(o.Value)" />
+        interaktiv
+      </label>
+    }
+  </div>
+@*
+<Blazorise.Accordion>
+  <Blazorise.AccordionItem Style="background-color: transparent" VisibleChanged="OnAccordionVisibleChange">
+    <Blazorise.AccordionHeader>
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center">
+        <Blazorise.Heading Size="Blazorise.HeadingSize.Is5">
+          <Blazorise.AccordionToggle Style="background-color: transparent">Torschützen</Blazorise.AccordionToggle>
+        </Blazorise.Heading>
+        @if (bVisible) {
+          <label>
+            <input type="checkbox" value="@bInteractive" @onchange="(o) => OnCheckboxChange(o.Value)" />
+            interaktiv
+          </label>
+        }
+      </div>
+    </Blazorise.AccordionHeader>
+    <Blazorise.AccordionBody>
+*@
+  if (bInteractive) {
+    <div style="width: 100%; overflow: auto">
+      <div style="width: fit-content; font-size: 90%">
+        <DataGrid TItem="LeagueModel.ScorerItem"
+                  Data="@ltScorer"
+                  Virtualize
+                  VirtualizeOptions="@(new() { DataGridHeight = "21rem"})"
+                  Style="white-space: nowrap; margin-bottom: 0"
+                  Striped
+                  Narrow
+                  RowStyling="OnRowStyling"
+                  Sortable
+                  SortMode="DataGridSortMode.Single">
+          <ChildContent>
+            <DataGridColumn Field="@nameof(LeagueModel.ScorerItem.iId)" Sortable="false" Displayable="false" />
+            <DataGridColumn Field="@nameof(LeagueModel.ScorerItem.iIx)"
+                            Caption=""
+                            TextAlignment="Blazorise.TextAlignment.End" />
+            <DataGridColumn Field="@nameof(LeagueModel.ScorerItem.sPlName)" Caption="Spieler">
+              <DisplayTemplate>
+                <a href="/member/playerdetails/@context.iId.ToString()" style="text-decoration: none">@context.sPlName</a>
+              </DisplayTemplate>
+            </DataGridColumn>
+            <DataGridColumn Field="@nameof(LeagueModel.ScorerItem.iGoals)" Caption="Tore" TextAlignment="Blazorise.TextAlignment.Center" />
+            <DataGridColumn Field="@nameof(LeagueModel.ScorerItem.iAssists)" Caption="Vorl." TextAlignment="Blazorise.TextAlignment.Center" />
+            <DataGridColumn Field="@nameof(LeagueModel.ScorerItem.iScorer)" Caption="Sc." TextAlignment="Blazorise.TextAlignment.Center" />
+            <DataGridColumn Field="@nameof(LeagueModel.ScorerItem.sClubName)" Caption="Verein" TextAlignment="Blazorise.TextAlignment.Center">
+              @*
+              <DisplayTemplate>
+                @((MarkupString)context.sClubEmblem)
+                <img src="@context.sClubEmblem" title="@context.sClubName" />
+              </DisplayTemplate>
+                *@
+            </DataGridColumn>
+          </ChildContent>
+          <EmptyTemplate>
+            <div class="box">
+              Noch keine Torschützen ...
+            </div>
+          </EmptyTemplate>
+          <LoadingTemplate>
+            <div class="box">
+              <progress class="progress is-small is-primary" max="100" />
+            </div>
+          </LoadingTemplate>
+        </DataGrid>
+      </div>
+    </div>
+  } else {
+    @if (ltScorer.Count > 0) {
+      <div class="table-fixed-header" style="width: fit-content; max-width: 100%; height: 22rem; max-height: 500px; overflow: auto; font-size: 90%;">
+        <table class="b-table table table-striped table-sm b-datagrid" style="white-space: nowrap; margin-bottom: 0">
+          <thead>
+            <tr>
+              <th scope="col" class="cursor-pointer text-end">
+                <div class="d-inline-flex"></div>
+              </th>
+              <th scope="col" class="cursor-pointer">
+                <div class="d-inline-flex">Spieler</div>
+              </th>
+              <th scope="col" class="cursor-pointer text-center">
+                <div class="d-inline-flex">Tore</div>
+              </th>
+              <th scope="col" class="cursor-pointer text-center">
+                <div class="d-inline-flex">Vorl.</div>
+              </th>
+              <th scope="col" class="cursor-pointer text-center">
+                <div class="d-inline-flex">Sc.</div>
+              </th>
+              <th scope="col" class="cursor-pointer text-center">
+                <div class="d-inline-flex">Verein</div>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            @foreach (LeagueModel.ScorerItem si in ltScorer) {
+              <tr class="table-row-selectable" style="font-weight: @(si.bBold ? "bold" : "normal")">
+                <td class="text-end">@si.iIx</td>
+                <td data-caption="Spieler">
+                  <a href="/member/playerdetails/@si.iId" style="text-decoration: none">@si.sPlName</a>
+                </td>
+                <td class="text-center" data-caption="Tore">@si.iGoals</td>
+                <td class="text-center" data-caption="Vorl.">@si.iAssists</td>
+                <td class="text-center" data-caption="Sc.">@(si.iGoals + si.iAssists)</td>
+                <td class="text-center" data-caption="Verein">
+                  @si.sClubEmblem
+                  @*
+                  <img src="@si.sClubEmblem" title="@si.sClubName" />
+                  @if (si.bClubEmblem != null) {
+                    <img src="data:image;base64,@Convert.ToBase64String(si.bClubEmblem)" />
+                  }
+                  *@
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } else {
+      <div class="box">
+        Noch keine Torschützen ...
+      </div>
+    }
+  }
+  if (fElapsedTime > 0.0 && AppConstants.IS_DEBUG) {
+    <div>
+      Elapsed time: @(fElapsedTime.ToString("0.000")) s
+    </div>
+  }
+}
+@*
+    </Blazorise.AccordionBody>
+  </Blazorise.AccordionItem>
+</Blazorise.Accordion>
+*@
+
+@code {
+  [Parameter]
+  //public List<LeagueModel.ScorerItem>? ltScorer { get; set; }
+  public int iCupId1 { get; set; }
+
+  [Parameter]
+  public int iCupId2 { get; set; }
+
+  [Parameter]
+  public int iCupId3 { get; set; }
+
+  private List<LeagueModel.ScorerItem>? ltScorer;
+  private CornerkickManager.User? _usr;
+
+  bool bVisible = false;
+  bool bInteractive = false;
+
+  System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
+  double fElapsedTime = 0.0;
+
+  public static class AppConstants
+  {
+#if DEBUG
+    public const bool IS_DEBUG = true;
+#else
+    public const bool IS_DEBUG = false;
+#endif
+  }
+
+  protected override async Task OnInitializedAsync()
+  {
+    await base.OnInitializedAsync();
+
+#if _WebApp
+    _usr = Controllers.Member.MemberController.ckUser(await _auth.GetUserId());
+#else
+    _usr = CkAppShared.ckMng.ltUser[CkAppShared.iUserActive];
+#endif
+
+    GetScorer();
+  }
+
+  public async Task Refresh(int _iCupId1, int _iCupId2, int _iCupId3)
+  {
+    iCupId1 = _iCupId1;
+    iCupId2 = _iCupId2;
+    iCupId3 = _iCupId3;
+
+    ltScorer = null;
+    await GetScorer();
+
+    await InvokeAsync(StateHasChanged);
+  }
+
+  private async Task GetScorer()
+  {
+    sw.Restart();
+
+    if (ltScorer == null) ltScorer = CornerkickApp.Controllers.Member.MemberController.getScorerTable(iCupId1, iCupId2, iCupId3, clb: Controllers.Member.MemberController.ckClub(_usr));
+    if (!bInteractive) ltScorer = ltScorer?.Take(50).ToList();
+
+    bool bRefresh = sw.IsRunning;
+    sw.Stop();
+    fElapsedTime = sw.ElapsedMilliseconds / 1000.0;
+    if (bRefresh) await InvokeAsync(StateHasChanged);
+  }
+
+  private async Task OnAccordionVisibleChange(bool b)
+  {
+    bVisible = b;
+    if (bVisible) await GetScorer();
+  }
+
+  private async Task OnCheckboxChange(object o)
+  {
+    if (!bool.TryParse(o.ToString(), out bInteractive)) return;
+
+    GetScorer();
+  }
+
+  private void OnRowStyling(LeagueModel.ScorerItem pl, DataGridRowStyling styling)
+  {
+    if (pl.bBold) {
+      styling.Style = "font-weight: bold";
+    }
+  }
+}

@@ -1,0 +1,506 @@
+﻿@page "/member/cup/{id1:int}/{id2:int}/{id3:int}"
+
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using CornerkickApp.Controllers.Member
+@using CornerkickApp.Components.Pages.Templates
+@using CornerkickApp.Shared.Models
+
+@inject IJSRuntime JS
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject Controllers.Shared.MyAuthenticationStateProvider _auth
+
+<PageTitle>Pokal</PageTitle>
+
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    label {
+      margin-right: 10px;
+    }
+
+    td.desc {
+      font-weight: bold;
+      padding-right: 0.5rem;
+    }
+  </style>
+</head>
+
+<body>
+  @if (model != null) {
+    <h3>@model.sCupName <img src="@CkAppShared.sContentDir/Icons/news/info.png" style="cursor:pointer" @onclick=showInfo/></h3>
+    <div style="position: relative; width: 100%; display: flex; flex-direction: row; flex-wrap: wrap">
+      <div style="width: min-content; max-width: 100%; margin-bottom: 20px; margin-right: 20px">
+        <div style="position: relative; width: 100%; margin-bottom: 20px; display: flex; flex-direction: row">
+          @* Cup emblem *@
+          <div style="width: 96px; margin-right: 10px">
+            @{
+              string sErrorImg = CkAppShared.sContentDir + "/Images/cup_emblems/" + id1.ToString() + "_-1_-1.png";
+            }
+            @*
+            <img id="imgLeagueEmblem" style="width: 100%; object-fit: contain" src="@model.sCupEmblem" onerror="this.onerror=null;this.src='@sErrorImg'" />
+            *@
+            @if (model.bCupEmblem != null && model.bCupEmblem.Length > 0) {
+              <img id="imgLeagueEmblem" style="width: 100%; object-fit: contain" src="data:image/*;base64,@Convert.ToBase64String(model.bCupEmblem)" onerror="this.onerror=null;this.src='@sErrorImg'" />
+            } else {
+              <img id="imgLeagueEmblem" style="width: 100%; object-fit: contain" src="@sErrorImg" />
+            }
+          </div>
+
+          <div style="display: flex; flex-wrap: wrap">
+            <label>
+              Saison:
+              <select class="form-horizontal" @onchange="updateSeason">
+                @foreach (LayoutModel.SelectListItem sli in model.ddlSeason) {
+                  <option value="@sli.Value" selected="@sli.Selected">@sli.Text</option>
+                }
+              </select>
+            </label>
+            @if (model.ddlLand.Count > 1) {
+              <label>
+                Land:
+                <select class="form-horizontal" @onchange="updateLand">
+                  @foreach (LayoutModel.SelectListItem sli in model.ddlLand) {
+                    <option value="@sli.Value" selected="@sli.Selected">@sli.Text</option>
+                  }
+                </select>
+              </label>
+            }
+            @if (model.ddlDivision != null && model.ddlDivision.Count > 1) {
+              <label>
+                Liga:
+                <select class="form-horizontal" @onchange="updateDivision">
+                  @foreach (LayoutModel.SelectListItem sli in model.ddlDivision) {
+                    <option value="@sli.Value" selected="@sli.Selected">@sli.Text</option>
+                  }
+                </select>
+              </label>
+            }
+            @if (model.ddlMatchdays.Count > 1) {
+              <label style="white-space: nowrap">
+                Spieltag:
+                <a class="noselect" style="cursor: pointer; text-decoration: none" @onclick="() => updateMatchday(model.iMatchday - 1)" hidden="@(model.iMatchday < 1)">&nbsp;&lt;&nbsp;</a>
+                <select class="form-horizontal" @onchange="updateMatchday">
+                  @foreach (LayoutModel.SelectListItem sli in model.ddlMatchdays) {
+                    <option value="@sli.Value" selected="@sli.Selected">@sli.Text</option>
+                  }
+                </select>
+                <a class="noselect" style="cursor: pointer; text-decoration: none" @onclick="() => updateMatchday(model.iMatchday + 1)" hidden="@(model.iMatchday + 1 >= model.ddlMatchdays.Count)">&nbsp;&gt;&nbsp;</a>
+              </label>
+            }
+            @if (model.ddlGroups.Count > 1 && model.iMatchday < model.nMdsGroup) {
+              <label>
+                Gruppe:
+                <select class="form-horizontal" @onchange="updateGroup">
+                  @foreach (LayoutModel.SelectListItem sli in model.ddlGroups) {
+                    <option value="@sli.Value" selected="@sli.Selected">@sli.Text</option>
+                  }
+                </select>
+              </label>
+            }
+          </div>
+        </div>
+        <div style="margin-bottom: 20px">
+          <h4>Begegnungen</h4>
+          <LeagueFixtures ltGameInfos="@ltGameInfos"></LeagueFixtures>
+        </div>
+
+        @if (model.ddlGroups.Count > 0 && ltClubs != null) {
+          <div>
+            <h4 style="margin: 0">Tabelle</h4>
+            <LeagueTable @ref="table" ltClubs="@ltClubs" iClubUserId="model.iClubId"></LeagueTable>
+          </div>
+        }
+      </div>
+      @if (model.iSeason == CkAppShared.ckMng.iSeason) {
+        <div style="max-width: 100%; margin-bottom: 20px; margin-right: 20px">
+          <ScorerTable @ref="scorer" iCupId1="id1" iCupId2="id2" iCupId3="id3"></ScorerTable>
+        </div>
+        <div style="max-width: 100%; margin-bottom: 20px; margin-right: 20px">
+          <KeeperTable @ref="keeper" iCupId1="id1" iCupId2="id2" iCupId3="id3"></KeeperTable>
+        </div>
+      }
+    </div>
+  }
+  @if (fElapsedTime > 0.0 && AppConstants.IS_DEBUG) {
+    <div>
+      Elapsed time: @(fElapsedTime.ToString("0.000")) s (@(fElapsedTime2.ToString("0.000")) s / @((fElapsedTime2 / fElapsedTime).ToString("0.0%")))
+    </div>
+  }
+
+  @if (model != null) {
+    <Blazorise.Modal @ref="mlInfo">
+      <Blazorise.ModalContent Centered>
+        <Blazorise.ModalHeader Style="color: white; background-color: rgb(31, 158, 69)">
+          <Blazorise.ModalTitle>
+            Eigenschaften @model.sCupName
+          </Blazorise.ModalTitle>
+          <Blazorise.CloseButton />
+        </Blazorise.ModalHeader>
+        <Blazorise.ModalBody Style="overflow: auto">
+          @if (cup != null) {
+            <table>
+              <tr>
+                <td align="right" class="desc">Wochentag:</td>
+                <td>
+                  @(new DateTime(2015, 4, 12).AddDays(cup.settings.iDayOfWeek).ToString("dddd"))
+                </td>
+              </tr>
+              <tr>
+                <td align="right" class="desc">Anstoßzeit:</td>
+                <td>@(cup.settings.tsTimeOfDay.TotalSeconds > 0 ? cup.settings.tsTimeOfDay.ToString(@"hh\:mm") : "15:30") Uhr</td>
+              </tr>
+              <tr>
+                <td align="right" class="desc">Modus:</td>
+                @if (cup.settings.nGroups > 0 && cup.settings.bKo) {
+                  <td>Gruppen- & K.O.-Phase</td>
+                } else if (cup.settings.nGroups > 0) {
+                  <td>Liga</td>
+                } else if (cup.settings.bKo) {
+                  <td>K.O.</td>
+                }
+              </tr>
+              @if (cup.settings.nGroups > 0) {
+                <tr>
+                  <td align="right" class="desc">Anzahl Gruppen:</td>
+                  <td>@cup.settings.nGroups</td>
+                </tr>
+                <tr>
+                  <td align="right" class="desc">Gruppenphase Hin- & Rückspiel:</td>
+                  <td>@cup.settings.bGroupsTwoGames</td>
+                </tr>
+              }
+              @if (cup.settings.bKo) {
+                <tr>
+                  <td align="right" class="desc">K.O.-Phase Hin- & Rückspiel:</td>
+                  <td>@cup.settings.bKoTwoGames</td>
+                </tr>
+              }
+              @if (cup.settings.bKo && cup.settings.nGroups > 0) {
+                <tr>
+                  <td align="right" class="desc">Anzahl Qualif. für K.O.-Phase pro Gruppe:</td>
+                  <td>@cup.settings.nQualifierKo</td>
+                </tr>
+              }
+              <tr>
+                <td align="right" class="desc">Prioritätsfaktor:</td>
+                <td>@cup.settings.fAttraction.ToString("0.00")</td>
+              </tr>
+              <tr>
+                <td align="right" class="desc">Spieldauer:</td>
+                <td>@(cup.settings.nGameMin.ToString()) min</td>
+              </tr>
+              <tr>
+                <td align="right" class="desc">Anzahl Spieler:</td>
+                <td>@cup.settings.nPlStart</td>
+              </tr>
+              <tr>
+                <td align="right" class="desc">Anzahl Reservespieler:</td>
+                <td>@cup.settings.nPlRes</td>
+              </tr>
+              <tr>
+                <td align="right" class="desc">Anzahl Spielerwechsel:</td>
+                <td>@cup.settings.nSubstitutions</td>
+              </tr>
+              <tr>
+                <td align="right" class="desc">Abseits:</td>
+                <td>@cup.settings.bOffsite</td>
+              </tr>
+              <tr>
+                <td align="right" class="desc">Karten:</td>
+                <td>@cup.settings.bCards</td>
+              </tr>
+              @if (cup.settings.bCards) {
+                <tr>
+                  <td align="right" class="desc">Sperre nach N gelben Karten:</td>
+                  <td>@cup.settings.nYellowCardSuspension</td>
+                </tr>
+              }
+              @if (cup.settings.bKo && cup.settings.bKoTwoGames) {
+                <tr>
+                  <td align="right" class="desc">Auswärtstorregel:</td>
+                  <td>@cup.settings.bAwayGoalRule</td>
+                </tr>
+              }
+              <tr>
+                <td align="right" class="desc">Größe Spielfeld:</td>
+                <td>@cup.settings.fPitchSizeRel.ToString("0%")</td>
+              </tr>
+              <tr>
+                <td align="right" class="desc">Antrittsprämie:</td>
+                <td>@cup.settings.iBonusStart.ToString("N0") €</td>
+              </tr>
+              @if (cup.settings.nGroups > 0) {
+                <tr>
+                  <td align="right" class="desc">Prämie Sieg Gruppenphase:</td>
+                  <td>@cup.settings.iBonusVicGroup.ToString("N0") €</td>
+                </tr>
+              }
+              <tr>
+                <td align="right" class="desc">Prämie Titelgewinn:</td>
+                <td>@cup.settings.iBonusCupWin.ToString("N0") €</td>
+              </tr>
+              @if (cup.settings.bKo) {
+                <tr>
+                  <td align="right" class="desc">Ausschüttung Prämie während K.O. Phase:</td>
+                  <td>@cup.settings.bBonusReleaseCupWinInKo</td>
+                </tr>
+              }
+              <tr>
+                <td align="right" class="desc">Ausschüttung TV-Gelder pro Spiel:</td>
+                <td>@cup.settings.iTvBonus.ToString("N0") €</td>
+              </tr>
+            </table>
+          }
+        </Blazorise.ModalBody>
+      </Blazorise.ModalContent>
+    </Blazorise.Modal>
+  }
+</body>
+</html>
+
+@code {
+  [Parameter] public int id1 { get; set; } = -1;
+  [Parameter] public int id2 { get; set; } = -1;
+  [Parameter] public int id3 { get; set; } = -1;
+
+  private CornerkickManager.Cup? cup { get; set; }
+
+  private CornerkickManager.User? _usr;
+  private IJSObjectReference? moduleSite;
+  private CupModel? model;
+  private List<LeagueModel.TableItem>? ltClubs { get; set; }
+  private List<LeagueModel.GameInfo>? ltGameInfos { get; set; }
+
+  MainLayout.BrowserDimension? bd { get; set; }
+
+  LeagueTable? table { get; set; }
+  ScorerTable? scorer { get; set; }
+  KeeperTable? keeper { get; set; }
+
+  Blazorise.Modal? mlInfo { get; set; }
+
+  System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
+  double fElapsedTime = 0.0;
+  System.Diagnostics.Stopwatch sw2 = new System.Diagnostics.Stopwatch();
+  double fElapsedTime2 = 0.0;
+
+  public static class AppConstants
+  {
+#if DEBUG
+    public const bool IS_DEBUG = true;
+#else
+    public const bool IS_DEBUG = false;
+#endif
+  }
+
+  protected override async Task OnInitializedAsync()
+  {
+    await base.OnInitializedAsync();
+
+#if _WebApp
+    _usr = Controllers.Member.MemberController.ckUser(await _auth.GetUserId());
+#else
+    _usr = CkAppShared.ckMng.ltUser[CkAppShared.iUserActive];
+#endif
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender) {
+      moduleSite = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/CornerkickApp.Components/js/site.js");
+
+      if (moduleSite != null) {
+        MainLayout.BrowserService browserService = new MainLayout.BrowserService(JS);
+        bd = await browserService.GetDimensions();
+      }
+
+      /*
+      Task tkUpdate = update(iWindowWidth: bd != null ? bd.Width : 0);
+      tkUpdate.Wait();
+
+      await InvokeAsync(StateHasChanged);
+
+      updateStats();
+      */
+    }
+  }
+
+  // This event will fire when the parameters change
+  protected override async Task OnParametersSetAsync()
+  {
+    await GetDataAndUpdate();
+  }
+
+  private Task GetDataAndUpdate()
+  {
+#if DEBUG
+    sw.Restart();
+#endif
+
+    model = CornerkickApp.Controllers.Member.CupController.Get(id1, id2, id3, _usr);
+
+    cup = Controllers.Member.MemberController.getCup(model.iSeason, id1, id2, id3);
+
+    update(iWindowWidth: bd != null ? bd.Width : 0);
+    updateStats();
+
+    StateHasChanged();
+
+#if DEBUG
+    sw.Stop();
+    fElapsedTime = sw.ElapsedMilliseconds / 1000.0;
+#endif
+
+    return Task.CompletedTask;
+  }
+
+  private Task update(int iWindowWidth = 0)
+  {
+    if (model == null) return Task.CompletedTask;
+
+    if (model.iMatchday < 0) model.iMatchday = CupController.getCupMatchday(model.iSeason, id1, id2, id3, clb: _usr != null ? _usr.club : null) - 1;
+
+    model.ddlDivision = Controllers.Member.CupController.getDdlDivisions(id2, id3);
+    model.ddlMatchdays = Controllers.Member.CupController.getDdlMatchdays(model.iSeason, id1, id2, id3, iMdSelected: model.iMatchday);
+
+    /*
+    if (cup != null) {
+      model.sCupName = cup.sName;
+      //model.sCupEmblem = MemberController.getCupEmblem(cup);
+      }
+    */
+
+    // Get table
+  if (model.iMatchday <= model.nMdsGroup) {
+#if DEBUG
+      sw2.Restart();
+#endif
+      if (model.iMatchday <= model.iMatchdayCurrent || ltClubs == null) {
+        ltClubs = CornerkickApp.Controllers.Member.CupController.getTable(cup, iMd: model.iMatchday, iGroup: model.iGroup);
+        if (table != null) table.Redraw(ltClubs);
+      }
+
+#if DEBUG
+      sw2.Stop();
+      fElapsedTime2 = sw2.ElapsedMilliseconds / 1000.0;
+#endif
+    } else {
+      ltClubs = null;
+    }
+
+    // Get fixtures
+    ltGameInfos = CornerkickApp.Controllers.Member.CupController.getGameInfos(model.iSeason, id1, id2, id3, iMd: model.iMatchday, usr: _usr, iGroup: model.iGroup, bCompact: iWindowWidth < 600);
+    foreach (LeagueModel.GameInfo gi in ltGameInfos) {
+      if (gi.sNameH.Equals("-")) gi.sNameH = "freilos";
+      if (gi.sNameA.Equals("-")) gi.sNameA = "freilos";
+    }
+
+    return Task.CompletedTask;
+  }
+
+  private Task updateStats()
+  {
+    if (model == null) return Task.CompletedTask;
+
+    if (model.iSeason == CkAppShared.ckMng.iSeason) {
+      if (scorer != null) scorer.Refresh(id1, id2, id3);
+      if (keeper != null) keeper.Refresh(id1, id2, id3);
+    }
+
+    return Task.CompletedTask;
+  }
+
+  private Task updateSeason(ChangeEventArgs e)
+  {
+    if (e.Value == null) return Task.CompletedTask;
+    return updateSeason(Convert.ToInt32(e.Value));
+  }
+  private Task updateSeason(int j)
+  {
+    if (model == null) return Task.CompletedTask;
+
+    model.iSeason = j;
+    model.iMatchday = -1;
+
+    GetDataAndUpdate();
+
+    return Task.CompletedTask;
+  }
+
+  private Task updateLand(ChangeEventArgs e)
+  {
+    if (e.Value == null) return Task.CompletedTask;
+    return updateLand(Convert.ToInt32(e.Value));
+  }
+  private Task updateLand(int j)
+  {
+    if (model == null) return Task.CompletedTask;
+
+    id2 = j;
+    id3 = 0;
+
+    GetDataAndUpdate();
+
+    return Task.CompletedTask;
+  }
+
+  private Task updateDivision(ChangeEventArgs e)
+  {
+    if (e.Value == null) return Task.CompletedTask;
+    return updateDivision(Convert.ToInt32(e.Value));
+  }
+  private Task updateDivision(int j)
+  {
+    if (model == null) return Task.CompletedTask;
+
+    id3 = j;
+
+    GetDataAndUpdate();
+
+    return Task.CompletedTask;
+  }
+
+  private Task updateMatchday(ChangeEventArgs e)
+  {
+    if (e.Value == null) return Task.CompletedTask;
+    return updateMatchday(Convert.ToInt32(e.Value));
+  }
+  private Task updateMatchday(int j)
+  {
+    if (model == null) return Task.CompletedTask;
+    if (j < 0) return Task.CompletedTask;
+
+    model.iMatchday = j;
+
+    update();
+
+    return Task.CompletedTask;
+  }
+
+  private Task updateGroup(ChangeEventArgs e)
+  {
+    if (e.Value == null) return Task.CompletedTask;
+    return updateGroup(Convert.ToByte(e.Value));
+  }
+  private Task updateGroup(byte j)
+  {
+    if (model == null) return Task.CompletedTask;
+
+    model.iGroup = j;
+    update();
+
+    return Task.CompletedTask;
+  }
+
+  private async Task showInfo()
+  {
+    if (model == null) return;
+    if (mlInfo == null) return;
+
+    await mlInfo.Show();
+  }
+
+}

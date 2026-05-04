@@ -1,0 +1,502 @@
+﻿@page "/member/desk"
+
+@using Microsoft.JSInterop
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using CornerkickApp.Components.Shared.Components
+@using CornerkickApp.Controllers.Member
+@using CornerkickApp.Shared.Models
+
+@inject IJSRuntime JS
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject DialogService DialogService
+@inject Controllers.App.TriggerService _triggerSerivce
+@inject Controllers.Shared.MyAuthenticationStateProvider _auth
+
+@implements IAsyncDisposable
+
+<PageTitle>Schreibtisch</PageTitle>
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width" />
+  <title>Schreibtisch</title>
+
+  <style>
+    td {
+      white-space: nowrap;
+    }
+
+    table.compact td {
+      padding-right: 0.5rem;
+    }
+
+    td.wrapok {
+      white-space: normal;
+    }
+
+    .ui-dialog .ui-dialog-buttonpane {
+      text-align: left !important;
+      height: 50px !important;
+    }
+
+    div.ui-dialog-buttonset {
+      width: 100%;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="divBody" style="position: relative; width: 100%; max-width: 100vw" @onclick="hideNewspaper">
+    @{
+      if (!string.IsNullOrEmpty(CkAppShared.settings.sInfo)) {
+        <div id="divInfo" style="position: relative; margin-top: 6px; margin-bottom: 6px; width: 100%; text-align: center; background-color: yellow; border: 2px solid rgb(@CkAppShared.sClCkRgb)">
+          <text style="font-size: 20px; color: rgb(@CkAppShared.sClCkRgb)">@CkAppShared.settings.sInfo</text>
+        </div>
+      }
+
+      if (desk == null) {
+        <p><em>Loading...</em></p>
+      } else {
+        <DeskWarnings @ref=deskwarnings />
+
+        <DeskStatus @ref=deskstatus></DeskStatus>
+
+        @*
+        <div style="position: relative; width: 100%">
+          <div style="display: flex; justify-content: space-between; align-items: center">
+            <div style="position: relative">
+              <h3><span id="h3CurrentStatus" style="white-space: nowrap">Aktuelle Lage</span></h3>
+
+              <text>Wetter:</text>
+              <img src=@(CkAppShared.sContentDir + "/Icons/weather/" + desk.iWeather.ToString() + ".png") alt="Wetter" style="position: relative; top: 0px; left: 10px; width: 20px" title=@sWeatherTitles[desk.iWeather]>
+              <p></p>
+              @if (!desk.bNation) {
+                <p><a href="member/league" style="text-decoration: none">Liga: </a><span>@sPlaceLeague</span></p>
+                <p><a href="member/cup/@CkAppShared.iCupIdNatCup/@desk.iNatCupId2/-1" style="text-decoration: none">Pokal: </a><span>@sRoundCup</span></p>
+                if (!string.IsNullOrEmpty(desk.sIntCupRound)) {
+                  <p><a href="member/cup/@CkAppShared.iCupIdInt/@desk.iIntCupId2/-1" style="text-decoration: none">@desk.sIntCupName: </a><span>@desk.sIntCupRound</span></p>
+                }
+              } else {
+                if (!string.IsNullOrEmpty(desk.sIntCupRound)) {
+                  <p><span><a href="/member/CupWc" style="text-decoration: none">@desk.sIntCupName: </a>@desk.sIntCupRound</span></p>
+                }
+              }
+              <p><span><a href="/member/team" id="aDeskStrength" style="text-decoration: none">@sStrength</a></span></p>
+              <p><span><a href="/member/training" id="aDeskCFM" style="text-decoration: none">@sCFM</a></span></p>
+            </div>
+
+            <div style="position: relative; width: 30%; min-width: 180px">
+              <RadzenChart @ref="teamTrainingChart">
+                @{
+                  if (ltTeamData != null) {
+                    string[] sFillColors = new string[] { "red", "#00BFFF", "gold" };
+                    foreach (List<CkAppShared.DataPointTD>[] ltdp0 in ltTeamData) {
+                      if (ltdp0 == null) continue;
+
+                      int i = 0;
+                      foreach (List<CkAppShared.DataPointTD> ltlg in ltdp0) {
+                        if (ltlg != null && ltlg.Count > 0) {
+                          string sFillCl = sFillColors[i++];
+                          <RadzenLineSeries Data="@ltlg" CategoryProperty="x" ValueProperty="y" Stroke="@sFillCl" StrokeWidth="1">
+                            <TooltipTemplate Context="data">
+                              @if (data.x.HasValue && data.y.HasValue) {
+                                <u>@(data.x.Value.ToString("dd.MM HH:mm"))</u>
+                                <br />
+
+                                @(String.Format("{0:P2}", data.y))
+                              }
+                              @if (!string.IsNullOrEmpty(data.z)) {
+                                @((MarkupString)(" - " + data.z))
+                              }
+                            </TooltipTemplate>
+                            <ChildContent>
+                              <RadzenMarkers MarkerType="MarkerType.Circle" Size="6" Fill="@sFillCl" StrokeWidth="0" />
+                            </ChildContent>
+                          </RadzenLineSeries>
+                        }
+                      }
+                    }
+                  }
+                }
+                <RadzenCategoryAxis Visible="true" Formatter="@FormatAsDay" Step="TimeSpan.FromDays(1)">
+                  <RadzenGridLines Visible="true" Stroke="#ccc" LineType="Radzen.Blazor.LineType.Dashed" />
+                </RadzenCategoryAxis>
+                <RadzenValueAxis FormatString="{0:P0}">
+                  <RadzenGridLines Visible="true" StrokeWidth="2" />
+                </RadzenValueAxis>
+                <RadzenLegend Visible="false" />
+              </RadzenChart>
+            </div>
+          </div>
+        </div>
+
+        <h3>Nächstes Spiel</h3>
+        <p>
+          <span style="color: #0366d6; font-weight: @(desk.sNextGameInfo.Contains("Jetzt - ") ? "bold" : "normal"); cursor: pointer" @onclick="showPreviewGame">@desk.sNextGameInfo</span>
+        </p>
+        *@
+
+        @if (ltLastGames != null && ltLastGames.Length > 3 && ltLastGames[0] != null && ltLastGames[1] != null && ltLastGames[2] != null && ltLastGames[3] != null && ltLastGames[0].Count + ltLastGames[1].Count + ltLastGames[2].Count + ltLastGames[3].Count > 0) {
+          <h3>Letzte Spiele</h3>
+          if (!string.IsNullOrEmpty(desk.sSeries)) {
+            <p id="pLastGames"><b>Serie: </b>@desk.sSeries</p>
+          }
+
+          <div id="chartContainerLastGames">
+            <RadzenChart Style="height:100%">
+              @{
+                string[] sFillColors = new string[] { "green", "blue", "rgb(255, 200, 14)", "rgb(91, 146, 229)" };
+                int i = 0;
+                foreach (List<CkAppShared.DataPointII> ltlg in ltLastGames) {
+                  if (ltlg.Count > 0) {
+                    string sFillCl = sFillColors[i];
+                    <RadzenLineSeries Data="@ltlg" CategoryProperty="X" ValueProperty="Y" StrokeWidth="0">
+                      <TooltipTemplate Context="data">
+                        <div>
+                          @((MarkupString)data.Z)
+                        </div>
+                      </TooltipTemplate>
+                      <ChildContent>
+                        <RadzenMarkers MarkerType="MarkerType.Circle" Size="12" Fill="@sFillCl" StrokeWidth="0" />
+                      </ChildContent>
+                    </RadzenLineSeries>
+                  }
+
+                  i++;
+                  if (i >= sFillColors.Length) i = 0;
+                }
+              }
+              <RadzenCategoryAxis Visible="true" Step="1" Max="0" Formatter="@FormatAsEmpty">
+                <RadzenGridLines Visible="true" Stroke="#ccc" LineType="Radzen.Blazor.LineType.Dashed" />
+              </RadzenCategoryAxis>
+              <RadzenValueAxis Step="1" Min="-1" Max="1" Formatter="@FormatAsWDD">
+                <RadzenGridLines Visible="true" Stroke="#ccc" LineType="Radzen.Blazor.LineType.Dashed" />
+              </RadzenValueAxis>
+              <RadzenLegend Visible="false" />
+              <RadzenChartTooltipOptions Visible="true" />
+            </RadzenChart>
+          </div>
+        }
+
+        <div id="divNewspaper"></div>
+
+        <h3>Nachrichten</h3>
+        <div style="position: relative; width: 100%">
+          @*
+          <div style="position: absolute; top: -32px; right: 0px; z-index: 2">
+            <label>
+              löschen nach:
+              <Blazorise.Select style="width: 84px; text-align: right" @bind-SelectedValue="@desk.iDeleteLog" TValue="int">
+                @foreach (LayoutModel.SelectListItem sli in DeskModel.ddlDeleteLog) {
+                  <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+                }
+              </Blazorise.Select>
+            </label>
+          </div>
+          *@
+          <div id="tableDivNews">
+            @if (bUseBlazorise) {
+              @*<DeskNews @ref="news"></DeskNews>*@
+              <CornerkickApp.Components.Pages.Templates.Table @ref=news></CornerkickApp.Components.Pages.Templates.Table>
+            } else {
+              @*
+              <RadzenDataGrid @ref="newsGrid" AllowFiltering="false" FilterPopupRenderMode="PopupRenderMode.OnDemand" AllowPaging="true" PageSize="20" AllowSorting="false"
+                              Data="@ltNewsRadzen" TItem="DeskModel.DatatableNews">
+                <Columns>
+                  <RadzenDataGridColumn TItem="DeskModel.DatatableNews" Property="iId" Sortable="false" Visible="false" />
+                  <RadzenDataGridColumn TItem="DeskModel.DatatableNews" Property="iType" Width="50px" TextAlign="TextAlign.Center">
+                    <Template Context="news">
+                      @((MarkupString)Controllers.Tool.getNewsIcon(news.iType))
+                    </Template>
+                  </RadzenDataGridColumn>
+                  <RadzenDataGridColumn TItem="DeskModel.DatatableNews" Property="sDate" Width="140px" TextAlign="TextAlign.Center" />
+                  <RadzenDataGridColumn TItem="DeskModel.DatatableNews" Property="sText">
+                    <Template Context="news">
+                      @((MarkupString)news.sText)
+                    </Template>
+                  </RadzenDataGridColumn>
+                  <RadzenDataGridColumn TItem="DeskModel.DatatableNews" Property="bOld" Sortable="false" Visible="false" />
+                </Columns>
+              </RadzenDataGrid>
+              *@
+            }
+          </div>
+        </div>
+      }
+    }
+  </div>
+</body>
+</html>
+
+@code {
+  const bool bUseBlazorise = true;
+
+  private CornerkickManager.User? _usr;
+  private DeskModel? desk;
+  private IJSObjectReference? moduleSite;
+  private IJSObjectReference? moduleDesk;
+
+  MainLayout.BrowserDimension? bd { get; set; }
+
+  //private DeskNews? news { get; set; }
+  private CornerkickApp.Components.Pages.Templates.Table? news { get; set; }
+
+  RadzenDataGrid<DeskModel.DatatableNews>? newsGrid;
+  IList<DeskModel.DatatableNews>? ltNewsRadzen;
+
+  public class DataPointII
+  {
+    public int X { get; set; }
+    public int y{ get; set; }
+    public string z { get; set; }
+  }
+  DataPointII[] dataPointIIs = new DataPointII[] {
+    new DataPointII { X = 1, y  = 1, z = "Test1" },
+    new DataPointII { X = 2, y  = 0, z = "Test2" }
+  };
+  List<CkAppShared.DataPointII>[]? ltLastGames;
+  int iLgMin = 0;
+
+  DeskStatus? deskstatus;
+  DeskWarnings? deskwarnings;
+
+  private bool _navigateToRegister = false;
+
+  protected override async Task OnInitializedAsync()
+  {
+    await base.OnInitializedAsync();
+
+    _triggerSerivce.OnTriggerAsync += UpdatePage;
+
+    //var identity = await _auth.GetIdentity();
+    await setActiveUser();
+
+    if (_usr == null) {
+#if _WebApp
+      _navigateToRegister = true;
+#endif
+      return;
+    }
+
+    desk = DeskController.Desk(_usr);
+
+    if (desk == null || !desk.bUserExist) {
+#if _WebApp
+      _navigateToRegister = true;
+#endif
+      return;
+    }
+    //await UpdatePage();
+    //UpdatePage();
+  }
+
+  private async Task setActiveUser()
+  {
+#if _WebApp
+    string userId = await _auth.GetUserId();
+    _usr = Controllers.Member.MemberController.ckUser(userId);
+#else
+    if (CkAppShared.iUserActive < CkAppShared.ckMng.ltUser.Count) _usr = CkAppShared.ckMng.ltUser[CkAppShared.iUserActive];
+#endif
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender) {
+      if (_navigateToRegister) {
+        // Navigation während Render-Phase nach Fertigstellung ausführen
+        //NavigationManager.NavigateTo(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = "/member/desk" }), forceLoad: true);
+        NavigationManager.NavigateTo("/Account/Register", forceLoad: true);
+        return;
+      }
+
+      //moduleSite = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/CornerkickApp.Components/js/site.js");
+      moduleDesk = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/CornerkickApp.Components/Pages/Member/Desk.razor.js");
+
+      if (moduleDesk != null) {
+        //await module.InvokeAsync<string>("init", CkAppShared.bWebApp, JsonSerializer.Serialize(desk));
+
+        MainLayout.BrowserService browserService = new MainLayout.BrowserService(JS);
+        bd = await browserService.GetDimensions();
+
+        UpdatePage();
+        GetNews(bShortDateFormat: true, bForce: true);
+
+        if (moduleDesk != null) await GetNewspaper();
+      }
+
+      await ShowTutorial();
+
+      await InvokeAsync(StateHasChanged);
+    }
+
+    /*
+    if (CkDialog.ckDialog.modalRef.Opening == null && !CkDialog.ckDialog.modalRef.Visible) {
+      await Refresh();
+      }
+    */
+  }
+
+  async ValueTask IAsyncDisposable.DisposeAsync()
+  {
+    if (moduleSite is not null) {
+      await moduleSite.DisposeAsync();
+    }
+  }
+
+  private async Task UpdatePage()
+  {
+    await setActiveUser();
+
+    //updateDesk();
+    if (desk != null) {
+      if (deskstatus   != null) deskstatus  .updateAsync(_usr, desk, bMobile: bd != null && bd.Width < 600);
+      if (deskwarnings != null) deskwarnings.updateAsync(_usr);
+
+      if (desk.tutorial != null && desk.tutorial.iLevel == TutorialController.iTtMainLevelPart2Start * 10) ShowTutorial();
+    }
+
+    //GetNews(bShortDateFormat: bd != null ? bd.Width < 641 : false);
+    //GetNews(bShortDateFormat: true, bForce: bForce);
+    GetNews(bShortDateFormat: true);
+    GetLastGames();
+
+    //InvokeAsync(StateHasChanged);
+  }
+
+  string FormatAsWDD(object value)
+  {
+    if (value != null) {
+      int iValue = Convert.ToInt32(value);
+      return iValue == 1 ? "G" : iValue == 0 ? "U" : "V";
+    }
+
+    return string.Empty;
+  }
+
+  string FormatAsEmpty(object value)
+  {
+    return string.Empty;
+  }
+
+  private static void ShowTutorial(CornerkickManager.User _usr, DeskModel desk, NavigationManager navmng)
+  {
+    if (desk?.tutorial == null) return;
+    if (MainLayout.tutorial == null) return;
+
+    CkAppShared.Tutorial tt = desk.tutorial;
+
+    if (_usr != null && tt != null && tt.bShow) {
+      //if ((tt.iLevel / 10) == TutorialController.iTtMainLevelStSurr) tt.iLevel = TutorialController.iTtMainLevelEnd * 10;
+      //if (tt.iLevel == TutorialController.GetNbOfSubLevels(TutorialController.iTtMainLevelTactic)) tt.iLevel = TutorialController.iTtMainLevelEnd * 10;
+      if (TutorialController.IsLastSubLevel(tt.iLevel, TutorialController.iTtMainLevelTactic)) tt.iLevel = TutorialController.iTtMainLevelEnd * 10;
+
+      if ((tt.iLevel / 10) == TutorialController.iTtMainLevelStart || tt.iLevel == (TutorialController.iTtMainLevelEnd * 10) + 0) {
+        TutorialController.TutorialReturn ttr = TutorialController.getTutorial(
+          _usr,
+          tt.iLevel,
+            /*
+            [
+            new Tt_highlight((iTtMainLevelStart * 10) + 1, document.getElementById("navbarSupportedContent"), true),
+            new Tt_highlight((iTtMainLevelStart * 10) + 2, document.getElementById("txtDate")),
+            new Tt_highlight((iTtMainLevelStart * 10) + 3, document.getElementById("divWarningContainer")),
+            new Tt_highlight((iTtMainLevelStart * 10) + 4, document.getElementById("navbarDropdownTeam")),
+            new Tt_highlight((iTtMainLevelStart * 10) + 4, document.getElementById("aMenuTeamTeam")),
+            new Tt_highlight((iTtMainLevelStart * 10) + 4, document.getElementById("aDeskStrength"), true)
+          ]*/
+          _usr.bScouting
+        );
+
+        MainLayout.tutorial.Show(
+          ttr,
+          usr: _usr,
+          iLevel: tt.iLevel,
+          actionOnOk: () => ShowTutorial(_usr, desk, navmng),
+          actionOnCancel: () => ShowTutorial(_usr, desk, navmng),
+          //actionOn3: tt.iLevel > 0 ? () => navmng.NavigateTo("/member/desk", forceLoad: true) : () => MainLayout.tutorial.Close()
+          actionOn3: () => Task.Run(() => MainLayout.tutorial.Close())
+        );
+        //CkDialog.ckDialog.Show(ttr, usr: _usr, iLevel: tt.iLevel, actionOnOk: () => ShowTutorial(_usr, desk, navmng), actionOnCancel: () => ShowTutorial(_usr, desk, navmng), actionOn3: tt.iLevel > 0 ? () => navmng.NavigateTo("/member/desk", forceLoad: true) : () => CkDialog.ckDialog.CloseModal(3));
+        //NavigationManager.NavigateTo(NavigationManager.Uri, forceLoad: true);
+      } else if (tt.iLevel == TutorialController.iTtMainLevelPart2Start * 10 && _usr.club?.nextGame != null && _usr.club.nextGame.dt.Equals(CkAppShared.ckMng.dtDatum)) {
+        MainLayout.tutorial.Show(TutorialController.getTutorial(_usr, tt.iLevel, _usr.bScouting), usr: _usr, iLevel: tt.iLevel, actionOnOk: () => ShowTutorial(_usr, desk, navmng), actionOnCancel: () => ShowTutorial(_usr, desk, navmng), actionOn3: () => navmng.NavigateTo("/member/desk", forceLoad: true));
+      } else if (tt.iLevel == TutorialController.iTtMainLevelPart3Start * 10 && _usr.iResp > 0) {
+        TutorialController.TutorialReturn ttr = TutorialController.getTutorial(
+          _usr,
+          tt.iLevel,
+            /*
+            [
+            new Tt_highlight((iTtMainLevelPart2Start * 10) + 1, document.getElementById("navbarDropdownTeam")),
+            new Tt_highlight((iTtMainLevelPart2Start * 10) + 1, document.getElementById("aMenuTeamContracts"))
+          ]
+          */
+          _usr.bScouting
+        );
+
+        MainLayout.tutorial.Show(ttr, usr: _usr, iLevel: tt.iLevel, actionOnOk: () => ShowTutorial(_usr, desk, navmng), actionOnCancel: () => ShowTutorial(_usr, desk, navmng), actionOn3: () => navmng.NavigateTo("/member/desk", forceLoad: true));
+        //CkDialog.ckDialog.Show(ttr, usr: _usr, iLevel: tt.iLevel, actionOnOk: () => ShowTutorial(_usr, desk, navmng), actionOnCancel: () => ShowTutorial(_usr, desk, navmng), actionOn3: () => navmng.NavigateTo("/member/desk", forceLoad: true));
+      } else if (tt.iLevel == (TutorialController.iTtMainLevelEnd * 10) + 1) {
+        tt.iLevel = TutorialController.iTtMainLevelPart2Start * 10;
+        MainLayout.tutorial.Close();
+      } else if (tt.iLevel == (TutorialController.iTtMainLevelPart2End * 10) + 1) {
+        tt.iLevel = TutorialController.iTtMainLevelPart3Start * 10;
+        MainLayout.tutorial.Close();
+      } else if ((tt.iLevel > 0 && tt.iLevel < TutorialController.iTtMainLevelEnd * 10) || tt.iLevel > 1000) {
+        //getDialog(document.body, "Soll das Tutorial fortgesetzt werden?", "Tutorial nicht abgeschlossen", function() { navigateToSite(tt.iLevel); }, function() { setLevel(false, tt.iLevel); });
+        CkDialog.ckDialog.Show("Tutorial nicht abgeschlossen", "Soll das Tutorial fortgesetzt werden?", actionOnOk: () => navmng.NavigateTo(TutorialController.getNextPage(tt.iLevel, _usr), forceLoad: true));
+      }
+    }
+  }
+
+  protected async Task ShowTutorial()
+  {
+    if (_usr != null && desk != null) await Task.Run(() => ShowTutorial(_usr, desk, NavigationManager));
+  }
+
+  protected async Task GetNews(bool bShortDateFormat = false, bool bForce = false)
+  {
+    if (_usr == null) return;
+
+    List<DeskModel.DatatableNews> ltNewsTmp = CornerkickApp.Controllers.Member.DeskController.GetNews(_usr, bShortDateFormat: bShortDateFormat).ToList();
+
+    if (news != null) news.print(ltNewsTmp, bForce: bForce);
+  }
+
+  protected async Task GetNewspaper()
+  {
+    List<DeskModel.DatatableNews> ltNewspaper = CornerkickApp.Controllers.Member.DeskController.GetNewspaper(_usr).ToList();
+    if (moduleDesk != null && ltNewspaper != null) {
+      await moduleDesk.InvokeAsync<string>("setNewspaper", JsonSerializer.Serialize(ltNewspaper));
+    }
+  }
+
+  private async Task hideNewspaper()
+  {
+    if (moduleDesk != null) {
+      await moduleDesk.InvokeAsync<string>("hideNewspaper");
+    }
+  }
+
+  protected Task GetLastGames()
+  {
+    if (_usr == null) return Task.CompletedTask;
+
+    /*
+    List<CkAppShared.DataPointII>[]? ltLastGamesTmp = CornerkickApp.Controllers.Member.DeskController.GetLastGames(_usr);
+    ltLastGames = new List<DataPointII>[ltLastGamesTmp.Length];
+    int i = 0;
+    foreach (List<CkAppShared.DataPointII> ltlp in ltLastGamesTmp) {
+      foreach (CkAppShared.DataPointII dp in ltlp) {
+        //ltLastGames[i].Add(new DataPointII { x = dp.x.Value, y = dp.y.Value, z = dp.z });
+      }
+      i++;
+    }
+    */
+    ltLastGames = CornerkickApp.Controllers.Member.DeskController.GetLastGames(_usr);
+
+    return Task.CompletedTask;
+  }
+}

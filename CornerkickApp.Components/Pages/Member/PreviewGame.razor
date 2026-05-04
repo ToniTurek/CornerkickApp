@@ -1,0 +1,59 @@
+﻿@page "/member/previewgame"
+
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using CornerkickApp.Shared.Models
+@inject IJSRuntime JS
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+
+<PageTitle>Spielvorschau</PageTitle>
+
+<!DOCTYPE html>
+<html>
+<head>
+</head>
+
+<body>
+  <h3>Spielvorschau</h3>
+</body>
+</html>
+
+@code {
+#if !_WebApp
+  private CornerkickManager.User? _usr;
+#endif
+  private ContractsModel? model;
+  private IJSObjectReference? module;
+
+  protected override async Task OnInitializedAsync()
+  {
+    //await base.OnInitializedAsync();
+
+#if _WebApp
+  model = await Http.GetFromJsonAsync<ContractsModel>("member/Contracts/Model");
+#else
+    _usr = CkAppShared.ckMng.ltUser[CkAppShared.iUserActive];
+    model = CornerkickApp.Controllers.Member.ContractsController.Model(_usr);
+#endif
+    if (model != null) {
+      //await GetTableTeam();
+#if _WebApp
+  } else {
+  NavigationManager.NavigateTo("/authentication/register");
+#endif
+    }
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender) {
+      //await JS.InvokeAsync<IJSObjectReference>("import", "./_content/CornerkickApp.Components/js/Player.js");
+      //module = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/CornerkickApp.Components/Pages/Member/Team.razor.js");
+
+      if (module != null && model != null) {
+        //await module.InvokeAsync<string>("init", JsonSerializer.Serialize(teamData), JsonSerializer.Serialize(team.tutorial));
+      }
+    }
+  }
+}

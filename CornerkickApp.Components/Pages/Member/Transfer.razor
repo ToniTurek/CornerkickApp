@@ -1,0 +1,535 @@
+﻿@page "/member/transfer"
+
+@using CornerkickApp.Controllers.Member
+@using CornerkickApp.Components.Pages.Templates
+@using CornerkickApp.Components.Shared.Components
+@using CornerkickApp.Shared.Models
+
+@inject IJSRuntime JS
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject Controllers.Shared.MyAuthenticationStateProvider _auth
+
+<PageTitle>Transfermarkt</PageTitle>
+
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    div.row {
+      margin-right: 0;
+    }
+  </style>
+</head>
+
+<body>
+  @if (model != null) {
+    @if (model.bNation) {
+      <h3>Spielernominierungen</h3>
+    } else {
+      <h3>Transferliste</h3>
+    }
+    <div style="position: relative; width: 100%; max-width: 100vw">
+      <div style="position: relative; width: 100%; display: flex; flex-wrap: wrap">
+        <div class="flex-container" style="position: relative; width: fit-content; max-width: 100%; height: auto; display: flex; flex-wrap: wrap; flex-direction: column; margin-bottom: 10px; margin-right: 10px">
+          @if (!model.bNation) {
+            <div align="center" style="position: relative; width: fit-content; margin-bottom: 2%; white-space: nowrap; border: 1px solid grey; -webkit-border-radius: 10px; -moz-border-radius: 10px">
+              <Blazorise.RadioGroup TValue="int" Name="ListAllFav" CheckedValue="@iType" CheckedValueChanged="@OnChangeType" Style="font-size: 120%">
+                <Blazorise.Radio Value="0" Inline="true">Transferliste</Blazorise.Radio>
+                <Blazorise.Radio Value="1" Inline="true">Alle</Blazorise.Radio>
+                <Blazorise.Radio Value="2" Inline="true">Favoriten</Blazorise.Radio>
+              </Blazorise.RadioGroup>
+            </div>
+
+            <div align="center" style="position: relative; width: fit-content; margin-bottom: 2%; white-space: nowrap; border: 1px solid grey; -webkit-border-radius: 10px; -moz-border-radius: 10px">
+              <Blazorise.RadioGroup TValue="int" Name="ProfiJouth" CheckedValue="@(bJouth ? 1 : 0)" CheckedValueChanged="@OnChangeJouth" Style="font-size: 120%">
+                <Blazorise.Radio Value="0" Inline="true">Profis</Blazorise.Radio>
+                <Blazorise.Radio Value="1" Inline="true">Jugend</Blazorise.Radio>
+              </Blazorise.RadioGroup>
+            </div>
+          }
+        </div>
+
+        <Blazorise.Accordion>
+          <Blazorise.AccordionItem @bind-Visible="@accordionItemVisible" Style="background-color: transparent">
+            <Blazorise.AccordionHeader>
+              <Blazorise.Heading Size="Blazorise.HeadingSize.Is5">
+                <Blazorise.AccordionToggle Style="background-color: transparent">Filter</Blazorise.AccordionToggle>
+              </Blazorise.Heading>
+            </Blazorise.AccordionHeader>
+            <Blazorise.AccordionBody>
+              <div class="flex-container" style="position: relative; width: fit-content; max-width: 100%; height: auto; display: flex; flex-wrap: wrap; flex-direction: row; margin-bottom: 10px; margin-right: 10px">
+                <div style="position: relative; width: auto; margin-bottom: 10px; margin-right: 10px">
+                  <b class="left">Position:</b>
+                  <Blazorise.Select TValue="int" SelectedValue="@model.iFilterPos" SelectedValueChanged="@OnChangeFilterPos" Style="width: 120px">
+                    @foreach (LayoutModel.SelectListItem sli in model.sliFilterPos) {
+                      <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+                    }
+                  </Blazorise.Select>
+                </div>
+
+                <div style="position: relative; width: auto; margin-right: 10px; margin-bottom: 10px">
+                  <b class="left">Fähigkeit:</b>
+                  <Blazorise.Select TValue="int" SelectedValue="@model.iFilterFType" SelectedValueChanged="@OnChangeFilterFType" Style="width: 120px">
+                    @foreach (LayoutModel.SelectListItem sli in model.sliFilterFType) {
+                      <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+                    }
+                  </Blazorise.Select>
+
+                  <b class="left">Wert:</b>
+                  <Blazorise.Select TValue="int" SelectedValue="@model.iFilterF" SelectedValueChanged="@OnChangeFilterF" Style="width: 120px" Disabled="model.iFilterFType < 0">
+                    @foreach (LayoutModel.SelectListItem sli in model.sliFilterF) {
+                      <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+                    }
+                  </Blazorise.Select>
+                </div>
+
+                <div style="position: relative; width: auto; margin-right: 10px; margin-bottom: 10px">
+                  <b class="left">Land:</b>
+                  <Blazorise.Select TValue="int" SelectedValue="@model.iFilterNation" SelectedValueChanged="@OnChangeFilterNation" Style="width: 120px">
+                    @foreach (LayoutModel.SelectListItem sli in model.sliFilterNations) {
+                      <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+                    }
+                  </Blazorise.Select>
+                  @if (!model.bNation) {
+                    <b class="left">Verein:</b>
+                    <Blazorise.Select TValue="int" SelectedValue="@model.iFilterClub" SelectedValueChanged="@OnChangeFilterClub" Style="width: 120px" Disabled="model.iFilterNation < 0">
+                      @foreach (LayoutModel.SelectListItem sli in model.sliFilterClubs) {
+                        <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+                      }
+                    </Blazorise.Select>
+                  }
+                </div>
+              </div>
+
+              @if (!model.bNation) {
+                <div class="flex-container" id="divCb" style="position: relative; width: fit-content; display: flex; flex-direction: column; margin-top: 16px; margin-right: 10px; margin-bottom: 20px">
+                  <label style="left: 0px; width: auto; margin-left: 10px; white-space: nowrap">
+                    <input type="checkbox" @bind="bFilterFixedFee" @bind:after="getTransferlist">
+                    Fixe Ablöse
+                  </label>
+                  <label style="left: 0px; width: auto; margin-left: 10px; white-space: nowrap">
+                    <input type="checkbox" @bind="bFilterEndingContract" @bind:after="getTransferlist">
+                    Ausl. Vertrag
+                  </label>
+                </div>
+              }
+            </Blazorise.AccordionBody>
+          </Blazorise.AccordionItem>
+        </Blazorise.Accordion>
+      </div>
+
+      <div style="width: fit-content; max-width: 100%; overflow-x: auto; margin-bottom: 4px">
+        <DataGrid TItem="TransferModel.TransferItem"
+                  Data="@ltTransfer"
+                  Style="white-space: nowrap; margin: 0"
+                  PageSize="20"
+                  ShowPager
+                  Narrow
+                  RowStyling="OnRowStyling"
+                  Responsive
+                  Sortable
+                  SortMode="DataGridSortMode.Single"
+                  SelectedRowChanged="selectTi"
+                  RowClicked="RowClicked"
+                  DetailRowTrigger="@(e => DisplayDetailRow(e.Item) && e.Item.iPlayerId == selectedTrItem?.iPlayerId)">
+          <DataGridColumns>
+            <DataGridColumn TItem=TransferModel.TransferItem>
+              <DisplayTemplate>
+                @if (DisplayDetailRow(context)) {
+                  <Blazorise.Button>
+                    <Icon Name="@(rowsWithDetail.Contains(context.iPlayerId) ? Blazorise.IconName.ExpandLess : Blazorise.IconName.ExpandMore)" />
+                  </Blazorise.Button>
+                }
+              </DisplayTemplate>
+            </DataGridColumn>
+            <DataGridColumn Field="@nameof(TransferModel.TransferItem.iPlayerId)" Displayable="false" Sortable="false" />
+            <DataGridColumn Field="@nameof(TransferModel.TransferItem.iOffer)" Displayable="false" Sortable="false" />
+            <DataGridColumn Field="@nameof(TransferModel.TransferItem.bEndingContract)" Displayable="false" Sortable="false" />
+            <DataGridColumn Field="@nameof(TransferModel.TransferItem.iIx)" Caption="#" TextAlignment="Blazorise.TextAlignment.End" />
+            <DataGridColumn Field="@nameof(TransferModel.TransferItem.dt)" Caption="Datum" TextAlignment="Blazorise.TextAlignment.Center">
+              <DisplayTemplate>
+                @(context.dt.CompareTo(DateTime.MinValue) > 0 ? context.dt.ToString("d") : "-")
+              </DisplayTemplate>
+            </DataGridColumn>
+            <DataGridColumn Field="@nameof(TransferModel.TransferItem.sName)" Caption="Name" TextAlignment="Blazorise.TextAlignment.Center">
+              <DisplayTemplate>
+                <a href="/member/playerdetails/@context.iPlayerId" style="text-decoration: none">
+                  @((MarkupString)context.sName)
+                </a>
+              </DisplayTemplate>
+            </DataGridColumn>
+            <DataGridColumn Field="@nameof(TransferModel.TransferItem.sClubName)" Caption="Verein" TextAlignment="Blazorise.TextAlignment.Center"/>
+            <DataGridColumn Field="@nameof(TransferModel.TransferItem.sPos)" Caption="Pos." TextAlignment="Blazorise.TextAlignment.Center"/>
+            <DataGridColumn Field="@nameof(TransferModel.TransferItem.fStrength)" Caption="St." TextAlignment="Blazorise.TextAlignment.End">
+              <DisplayTemplate>
+                @(context.fStrength > 0f ? context.fStrength.ToString("0.0") : "?")
+              </DisplayTemplate>
+            </DataGridColumn>
+            <DataGridColumn Field="@nameof(TransferModel.TransferItem.fStrengthIdeal)" Caption="St. ber." DisplayFormat="{0:N1}" TextAlignment="Blazorise.TextAlignment.End">
+              <DisplayTemplate>
+                @(context.fStrengthIdeal > 0f ? context.fStrengthIdeal.ToString("0.0") : "?")
+              </DisplayTemplate>
+            </DataGridColumn>
+            <DataGridColumn Field="@nameof(TransferModel.TransferItem.fAge)" Caption="Alter" DisplayFormat="{0:N0}" TextAlignment="Blazorise.TextAlignment.Center" />
+            <DataGridColumn Field="@nameof(TransferModel.TransferItem.fTalentAve)" Caption="Tal." DisplayFormat="{0:N1}" TextAlignment="Blazorise.TextAlignment.Center" />
+            <DataGridColumn Field="@nameof(TransferModel.TransferItem.iValue)" Caption="Marktwert [€]" DisplayFormat="{0:N0}" TextAlignment="Blazorise.TextAlignment.End" />
+            <DataGridColumn Field="@nameof(TransferModel.TransferItem.iFixtransferfee)" Caption="Fixe Ablöse [€]" DisplayFormat="{0:N0}" TextAlignment="Blazorise.TextAlignment.End" />
+            <DataGridColumn Field="@nameof(TransferModel.TransferItem.sNat)" Caption="Nat." TextAlignment="Blazorise.TextAlignment.Center">
+              <DisplayTemplate>
+                @((MarkupString)Controllers.Tool.getNatIcon(context.sNat))
+              </DisplayTemplate>
+            </DataGridColumn>
+          </DataGridColumns>
+          <DetailRowTemplate>
+            <div style="margin-left: 2rem; background-color: white">
+              <div style="margin-left: 0.5rem">
+                <b><u>Angebote</u></b>
+              </div>
+              @{
+                var ltOffers = context.ltOffers;
+
+                <DataGrid TItem="TransferModel.TransferItem.Offer"
+                          Data="ltOffers"
+                          RowClicked="RowDetailClicked"
+                          RowStyling="OnDetailRowStyling"
+                          Sortable="false"
+                          ShowCaptions="false"
+                          SelectedRowChanged="selectOffer"
+                          Style="width: fit-content">
+                  @*
+                  <DataGridColumn Field="@nameof(TransferModel.TransferItem.Offer.iClubId)">
+                    <DisplayTemplate Context="subcontext">
+                      @((MarkupString)("<input type=\"radio\" name=\"offers\" value=\"" + subcontext.iClubId.ToString() + "\" />"))
+                    </DisplayTemplate>
+                  </DataGridColumn>
+                  *@
+                  <DataGridColumn
+                    Field="@nameof(TransferModel.TransferItem.Offer.iIx)"
+                    Caption="#"
+                    TextAlignment="Blazorise.TextAlignment.End"
+                    CellStyle="@((item) => {
+                            if (selectedOffer != null && selectedOffer.iClubId == item.iClubId) {
+                              return "background-color: lightblue !important";
+                            }
+                            return "";
+                          })" />
+                  <DataGridDateColumn Field="@nameof(TransferModel.TransferItem.Offer.dt)" Caption="Datum" DisplayFormat="{0:d}" />
+                  <DataGridColumn Field="@nameof(TransferModel.TransferItem.Offer.sClubName)" Caption="Verein" TextAlignment="Blazorise.TextAlignment.Center" />
+                  <DataGridNumericColumn Field="@nameof(TransferModel.TransferItem.Offer.iFee)" Caption="Ablöse" DisplayFormat="{0:N0}" />
+              <DataGridColumn Caption="€" TextAlignment="Blazorise.TextAlignment.Start" />
+            </DataGrid>
+              }
+            </div>
+          </DetailRowTemplate>
+          <EmptyTemplate>
+            <div class="box">
+              Keine Spieler ...
+            </div>
+          </EmptyTemplate>
+          <LoadingTemplate>
+            <div class="box">
+              <progress class="progress is-small is-primary" max="100" />
+            </div>
+          </LoadingTemplate>
+        </DataGrid>
+      </div>
+
+      <div style="display: flex; margin-bottom: 4px">
+        @if (selectedTrItem != null && selectedTrItem.iOffer != 2) {
+          <button type="submit" class="btn btn-primary" @onclick="NegotiatePlayerContract">@(selectedTrItem.iOffer == 0 ? "Spieler" + (selectedTrItem.bEndingContract ? " für nächste Saison" : "") + " verpflichten" : "Angebot ändern")</button>
+        } else if (selectedOffer != null) {
+          <button type="submit" class="btn btn-primary" @onclick="acceptOffer">Angebot annehmen</button>
+        }
+      </div>
+      <div style="display: flex; margin-bottom: 4px">
+        <button type="submit" id="bnCancelOffer" class="btn btn-outline-secondary" style="display: none">Angebot zurückziehen</button>
+        <button type="submit" id="bnAddToFavLst" class="btn btn-outline-secondary" style="display: none">Zu Favoritenliste hinzufügen</button>
+      </div>
+    </div>
+  }
+
+  <CornerkickApp.Components.Pages.Templates.PlayerContract @ref="contract"></CornerkickApp.Components.Pages.Templates.PlayerContract>
+
+  @if (selectedTrItem != null) {
+    <Blazorise.Modal @ref="modalFee">
+      <Blazorise.ModalContent Centered>
+        <Blazorise.ModalHeader Style="color: white; background-color: rgb(31, 158, 69)">
+          <Blazorise.ModalTitle>
+            Ablöseangebot für @selectedTrItem.sName
+          </Blazorise.ModalTitle>
+          <Blazorise.CloseButton />
+        </Blazorise.ModalHeader>
+        <Blazorise.ModalBody Style="overflow: auto">
+          <div style="position: relative; width: 100%; display: flex; margin-bottom: 10px" class="form-group">
+            <table style="position: relative; width: 100%; padding: 1rem">
+              <tr>
+                <td style="text-align: right">
+                  <b>Ablösesumme:</b>
+                </td>
+                <td>
+                  <RadzenNumeric TValue="int" Format="C0" Value="@iTransferFee" ValueChanged="OnChangeFee" Min="0" Step="@(Controllers.Tool.roundIntBy(iTransferFee, 1).ToString())" TextAlign="TextAlign.Right" Disabled="@(selectedTrItem.iFixtransferfee > 0)" />
+                </td>
+              </tr>
+              @if (_usr?.iResp >= CkAppShared.iUserRespSecretBalance) {
+                <tr style="background-color: black">
+                  <td style="text-align: right">
+                    <b style="color: white">Handgeld:</b>
+                  </td>
+                  <td>
+                    <RadzenNumeric TValue="int" Format="C0" Value="@iTransferFeeSecret" Min="0" Step="@(Controllers.Tool.roundIntBy(iTransferFeeSecret, 1).ToString())" TextAlign="TextAlign.Right" />
+                  </td>
+                </tr>
+              }
+            </table>
+          </div>
+        </Blazorise.ModalBody>
+        <Blazorise.ModalFooter Flex="Blazorise.Flex.JustifyContent.Between">
+          <Blazorise.Div>
+            <Blazorise.Button Color="Blazorise.Color.Secondary" Clicked="CancelOffer">abbrechen</Blazorise.Button>
+          </Blazorise.Div>
+          <Blazorise.Div>
+            <Blazorise.Button Color="Blazorise.Color.Primary" Clicked="SetOffer">Angebot abgeben</Blazorise.Button>
+          </Blazorise.Div>
+        </Blazorise.ModalFooter>
+      </Blazorise.ModalContent>
+    </Blazorise.Modal>
+  }
+</body>
+</html>
+
+@code {
+  private CornerkickManager.User? _usr;
+  private TransferModel? model;
+
+  List<TransferModel.TransferItem>? ltTransfer;
+  bool bJouth { get; set; }
+  int iType { get; set; }
+  bool bFilterFixedFee { get; set; }
+  bool bFilterEndingContract { get; set; }
+  bool accordionItemVisible = false;
+
+  private TransferModel.TransferItem? selectedTrItem = null;
+  private TransferModel.TransferItem.Offer? selectedOffer = null;
+  bool DisplayDetailRow(TransferModel.TransferItem ti) => /*ti.bOwnPlayer &&*/ ti.ltOffers != null && ti.ltOffers.Count > 0;
+  private HashSet<int> rowsWithDetail = [];
+
+  CornerkickApp.Components.Pages.Templates.PlayerContract? contract { get; set; }
+
+  private Blazorise.Modal? modalFee { get; set; }
+  private int iTransferFee { get; set; }
+  private int iTransferFeeSecret { get; set; }
+
+  protected override async Task OnInitializedAsync()
+  {
+    await base.OnInitializedAsync();
+
+#if _WebApp
+    //_usr = await Http.GetFromJsonAsync<CornerkickManager.User>("member/Member/ckUser");
+    _usr = Controllers.Member.MemberController.ckUser(await _auth.GetUserId());
+#else
+    _usr = CkAppShared.ckMng.ltUser[CkAppShared.iUserActive];
+#endif
+
+    model = CornerkickApp.Controllers.Member.TransferController.Get(_usr);
+    getTransferlist();
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender) {
+
+      await InvokeAsync(StateHasChanged);
+    }
+  }
+
+  private async Task OnChangeType(int j)
+  {
+    iType = j;
+    getTransferlist();
+  }
+
+  private async Task OnChangeJouth(int j)
+  {
+    bJouth = j > 0;
+    getTransferlist();
+  }
+
+  private async Task OnChangeFilterPos(int j)
+  {
+    model.iFilterPos = j;
+    getTransferlist();
+  }
+
+  private async Task OnChangeFilterFType(int j)
+  {
+    model.iFilterFType = j;
+    getTransferlist();
+  }
+
+  private async Task OnChangeFilterF(int j)
+  {
+    model.iFilterF = j;
+    getTransferlist();
+  }
+
+  private async Task OnChangeFilterNation(int j)
+  {
+    model.iFilterNation = j;
+
+    model.sliFilterClubs.Clear();
+
+    if (model.iFilterNation < 0) {
+      OnChangeFilterClub(model.iFilterNation);
+    } else {
+      if (!model.bNation) model.sliFilterClubs.Add(new CornerkickApp.Shared.Models.LayoutModel.SelectListItem { Text = "vereinslos", Value = "-1" });
+#if _WebApp
+      model.sliFilterNations.Add(new CornerkickApp.Shared.Models.LayoutModel.SelectListItem { Text = "Computer", Value = "0" });
+#endif
+      foreach (CornerkickManager.Club c in CkAppShared.ckMng.ltClubs) {
+        if (c.iLand == model.iFilterNation) {
+          model.sliFilterClubs.Add(new CornerkickApp.Shared.Models.LayoutModel.SelectListItem { Text = c.sName, Value = c.iId.ToString() });
+        }
+      }
+      CornerkickApp.Shared.Models.LayoutModel.SelectListItem? sliFirstClub = model.sliFilterClubs.Find(c => int.Parse(c.Value) >= 0);
+      if (sliFirstClub != null) model.iFilterClub = int.Parse(sliFirstClub.Value);
+
+      getTransferlist();
+    }
+  }
+
+  private async Task OnChangeFilterClub(int j)
+  {
+    model.iFilterClub = j;
+    getTransferlist();
+  }
+
+  private async Task update(int iBalanceStart, int iBalance, int iBalanceSecretStart, int iBalanceSecret)
+  {
+    if (model == null) return;
+
+    getTransferlist();
+    MainLayout.headline.Refresh(iBalanceStart, iBalance, iBalanceSecretStart, iBalanceSecret);
+  }
+
+  private async Task getTransferlist()
+  {
+    if (model == null) return;
+
+    ltTransfer = Controllers.Member.TransferController.GetTransferList(_usr, model.iFilterPos, model.iFilterFType, model.iFilterF, bJouth, iType, bFilterFixedFee, bFilterEndingContract, iClubId: model.iFilterClub);
+
+    await InvokeAsync(StateHasChanged);
+  }
+
+  private void OnRowStyling(TransferModel.TransferItem ti, DataGridRowStyling styling)
+  {
+    if (ti == null) return;
+    
+    if (ti.bOwnPlayer) styling.Style = "background-color: #D0FFD2";
+    if (ti.iOffer == 1) styling.Style = "background-color: #FFE6C5";
+
+    if (selectedTrItem != null && selectedTrItem.iPlayerId == ti.iPlayerId) {
+      styling.Style = "background-color: pink";
+    }
+  }
+
+  private async Task selectTi(TransferModel.TransferItem ti)
+  {
+    if (ti == null) return;
+
+    if (selectedTrItem != null && selectedTrItem.iPlayerId == ti.iPlayerId) {
+      selectedTrItem = null;
+      return;
+    }
+    selectedTrItem = ti;
+
+    getTransferlist();
+  }
+
+  void RowClicked(Blazorise.DataGrid.DataGridRowMouseEventArgs<TransferModel.TransferItem> clickedRow)
+  {
+    int id = clickedRow.Item.iPlayerId;
+    if (!rowsWithDetail.Add(id)) rowsWithDetail.Remove(id);
+    selectedOffer = null;
+    getTransferlist();
+  }
+
+  private void OnDetailRowStyling(TransferModel.TransferItem.Offer offer, DataGridRowStyling styling)
+  {
+    if (selectedOffer != null && selectedOffer.iClubId == offer.iClubId) {
+      styling.Style = "background-color: blue";
+    }
+  }
+
+  private async Task selectOffer(TransferModel.TransferItem.Offer offer)
+  {
+    if (selectedOffer != null && selectedOffer.iClubId == offer.iClubId) {
+      selectedOffer = null;
+      return;
+    }
+
+    selectedOffer = offer;
+  }
+
+  void RowDetailClicked(Blazorise.DataGrid.DataGridRowMouseEventArgs<TransferModel.TransferItem.Offer> clickedRow)
+  {
+    int id = clickedRow.Item.iClubId;
+    if (!rowsWithDetail.Add(id)) rowsWithDetail.Remove(id);
+  }
+
+  private async Task acceptOffer()
+  {
+    if (selectedTrItem == null) return;
+    if (selectedOffer == null) return;
+
+    CornerkickManager.Club? clb = Controllers.Member.MemberController.ckClub(_usr);
+    if (clb == null) return;
+    int iBalanceStart = clb.iBalance;
+    int iBalanceSecretStart = clb.iBalanceSecret;
+
+    string? sRet = CornerkickApp.Controllers.Member.TransferController.AcceptOffer(selectedTrItem.iPlayerId, selectedOffer.iClubId);
+    if (!string.IsNullOrEmpty(sRet)) CkDialog.ckDialog.Show("Transfer", sRet, sButtonCancelText2: "", actionOnOk: () => update(iBalanceStart, clb.iBalance, iBalanceSecretStart, clb.iBalanceSecret));
+  }
+
+  public async Task NegotiatePlayerContract()
+  {
+    if (contract == null) return;
+    if (selectedTrItem == null) return;
+
+    contract.Negotiate(selectedTrItem.iPlayerId, actionOnOk: () => modalFee.Show());
+
+    // Initialize transfer fee by player's value
+    iTransferFee = selectedTrItem.iFixtransferfee > 0 ? selectedTrItem.iFixtransferfee : Controllers.Tool.ceilInt(selectedTrItem.iValue, 1);
+  }
+
+  private Task OnChangeFee(int iFee)
+  {
+    iTransferFee = iFee;
+    return Task.CompletedTask;
+  }
+
+  // iTypeOfClose: 0 - ok, 1 - cancel
+  private Task SetOffer()
+  {
+    if (modalFee == null) return Task.CompletedTask;
+    if (selectedTrItem == null) return Task.CompletedTask;
+
+    string? sRet = Controllers.Member.TransferController.MakeOffer(_usr, selectedTrItem.iPlayerId, iTransferFee, iTransferFeeSecret);
+    if (!string.IsNullOrEmpty(sRet)) CkDialog.ckDialog.Show("Transfer", sRet, sButtonCancelText2: "");
+
+    selectedTrItem = null;
+
+    getTransferlist();
+
+    StateHasChanged();
+
+    return modalFee.Hide();
+  }
+
+  // iTypeOfClose: 0 - ok, 1 - cancel
+  private Task CancelOffer()
+  {
+    if (modalFee == null) return Task.CompletedTask;
+    return modalFee.Hide();
+  }
+}

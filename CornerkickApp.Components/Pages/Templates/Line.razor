@@ -1,0 +1,29 @@
+﻿@using CornerkickApp.Shared.Models
+
+<div style="position: absolute; left: @iX0.ToString("0px"); top: @iY0.ToString("0px"); width: @length.ToString("0px"); height: 0; border-width: 1px; border-style: solid; border-color: @line.sColor; transform: rotate(@(angle.ToString("0deg"))); transform-origin: 0% 0%; box-shadow: 0px 0px 2px 2px rgba(0, 0, 0, .1); -webkit-transform: rotate(@(angle.ToString("0deg"))); -webkit-transform-origin: 0% 0%; -webkit-box-shadow: 0px 0px 2px 2px rgba(0, 0, 0, .1)"></div>
+
+@code {
+  [Parameter] public ViewGameModel.drawLine line { get; set; }
+  [Parameter] public int Width { get; set; }
+  [Parameter] public int Height { get; set; }
+
+  double angle;
+  double length;
+  int iX0;
+  int iX1;
+  int iY0;
+  int iY1;
+
+  protected override async Task OnInitializedAsync()
+  {
+    iX0 = (int)(line.x0 * Width);
+    iX1 = (int)(line.x1 * Width);
+    iY0 = (int)(line.y0 * Height);
+    iY1 = (int)(line.y1 * Height);
+
+    if (iX1 != iX0) angle = -Math.Atan((iY0 - iY1) / (double)(iX1 - iX0)) * (180.0 / Math.PI);
+    if (iX1 < iX0) angle += 180.0;
+
+    length = Math.Sqrt((iX0 - iX1) * (iX0 - iX1) + (iY0 - iY1) * (iY0 - iY1));
+  }
+}

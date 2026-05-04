@@ -1,0 +1,207 @@
+﻿@using CornerkickApp.Shared.Models
+
+@inject IJSRuntime JS
+
+<div style="position: relative; width: 100%">
+  <div style="display: flex; justify-content: space-between">
+    <div style="position: relative; margin-bottom: 0.5rem">
+      <h3><span id="h3CurrentStatus" style="white-space: nowrap">Aktuelle Lage</span></h3>
+
+      <text>Wetter:</text>
+      <img src=@(CkAppShared.sContentDir + "/Icons/weather/" + _iWeather.ToString() + ".png") alt="Wetter" style="position: relative; top: 0px; left: 10px; width: 20px" title=@sWeatherTitles[_iWeather]>
+      <p></p>
+      @if (!_bNation) {
+        <p><a href="member/cup/@CkAppShared.iCupIdLeague/@_iLand/@_iDiv" style="text-decoration: none">Liga: </a><span>@_sPlaceLeague</span></p>
+        <p><a href="member/cup/@CkAppShared.iCupIdNatCup/@_iLand/-1" style="text-decoration: none">Pokal: </a><span>@_sNatRoundCup</span></p>
+        if (!string.IsNullOrEmpty(_sIntCupRound)) {
+          <p><a href="member/cup/@CkAppShared.iCupIdInt/@_iIntCupId2/-1" style="text-decoration: none">@_sIntCupName: </a><span>@_sIntCupRound</span></p>
+        }
+      } else {
+        if (!string.IsNullOrEmpty(_sIntCupRound)) {
+          <p><span><a href="/member/CupWc" style="text-decoration: none">@_sIntCupName: </a>@_sIntCupRound</span></p>
+        }
+      }
+      <p><span><a href="/member/team" class="scroll-anchor" id="aDeskStrength" style="text-decoration: none">@_sStrength</a></span></p>
+      @*<p><span><a href="/member/training" id="aDeskCFM" style="text-decoration: none">@_sCFM</a></span></p>*@
+      <table>
+        @for (int i = 0; i < _fCFM.Length; i++) {
+          <tr>
+            <td align="right"><a href="/member/training">@_sCFM_names[i]</a></td>
+            <td align="right"><a href="/member/training">@(_fCFM[i] > 0.0 ? _fCFM[i].ToString("0.0%") : "?")</a></td>
+            @if (_fCFM_LastWeek[i] > 0.0) {
+              double fDiff = Math.Round(_fCFM[i] - _fCFM_LastWeek[i], 3);
+              <td align="right"><a href="/member/training" title="Vergleich zur Vorwoche (@_dt_LastWeek[i].ToShortDateString() @_dt_LastWeek[i].ToShortTimeString() Uhr)">(<span style="color: @(fDiff > 0.0 ? "green" : fDiff < 0.0 ? "red" : "black")">@fDiff.ToString("+0.0%;-0.0%;0.0%")</span>)</a></td>
+            }
+          </tr>
+        }
+      </table>
+    </div>
+
+    <div class="cfmchartcontainer">
+      <RadzenChart @ref="teamTrainingChart">
+        @{
+          if (ltTeamData != null) {
+            string[] sFillColors = new string[] { "red", "#00BFFF", "gold" };
+            foreach (List<CkAppShared.DataPointTD>[] ltdp0 in ltTeamData) {
+              if (ltdp0 == null) continue;
+
+              int i = 0;
+              foreach (List<CkAppShared.DataPointTD> ltlg in ltdp0) {
+                if (ltlg != null && ltlg.Count > 0) {
+                  string sFillCl = sFillColors[i++];
+                  <RadzenLineSeries Data="@ltlg" CategoryProperty="X" ValueProperty="Y" Stroke="@sFillCl" StrokeWidth="1">
+                    <TooltipTemplate Context="data">
+                      @if (data.X.HasValue && data.Y.HasValue) {
+                        <u>@(data.X.Value.ToString("dd.MM HH:mm"))</u><br />@(String.Format("{0:P2}", data.Y))
+                      }
+                      @if (!string.IsNullOrEmpty(data.Z)) {
+                        @((MarkupString)(" - " + data.Z))
+                      }
+                    </TooltipTemplate>
+                    <ChildContent>
+                      <RadzenMarkers MarkerType="MarkerType.Circle" Size="6" Fill="@sFillCl" StrokeWidth="0" />
+                    </ChildContent>
+                  </RadzenLineSeries>
+                }
+              }
+            }
+          }
+        }
+        <RadzenCategoryAxis Visible="true" Formatter="@FormatAsDay" Step="TimeSpan.FromDays(1)">
+          <RadzenGridLines Visible="true" Stroke="#ccc" LineType="Radzen.Blazor.LineType.Dashed" />
+        </RadzenCategoryAxis>
+        <RadzenValueAxis FormatString="{0:P0}" Step="0.05">
+          <RadzenGridLines Visible="true" StrokeWidth="2" />
+        </RadzenValueAxis>
+        <RadzenLegend Visible="false" />
+      </RadzenChart>
+    </div>
+  </div>
+</div>
+
+<h3>Nächstes Spiel</h3>
+<p>
+  @*
+  <a href="member/previewgame?id=0" style="text-decoration:none; font-weight: @(desk.sNextGameInfo.Contains("Jetzt - ") ? "bold" : "normal")">@desk.sNextGameInfo</a>
+  *@
+  <span style="color: #0366d6; font-weight: @(_sNextGameInfo.Contains("Jetzt - ") ? "bold" : "normal"); cursor: pointer" @onclick="showPreviewGame">@_sNextGameInfo</span>
+</p>
+
+@code {
+  CornerkickManager.User? _usr { get; set; } = null;
+
+  int _iWeather { get; set; } = 0;
+  bool _bNation { get; set; } = false;
+  int _iLand { get; set; } = -1;
+  int _iDiv { get; set; } = -1;
+  int _iIntCupId2 { get; set; } = -1;
+  string _sPlaceLeague { get; set; } = string.Empty;
+  string _sNatRoundCup { get; set; } = string.Empty;
+  string _sIntCupRound { get; set; } = string.Empty;
+  string _sIntCupName  { get; set; } = string.Empty;
+
+  string[] _sCFM_names { get; set; } = new string[3] { "Kondition:", "Frische:", "Moral:" };
+  double[] _fCFM          = new double[3] { -1f, -1f, -1f };
+  double[] _fCFM_LastWeek = new double[3] { -1f, -1f, -1f };
+  DateTime[] _dt_LastWeek = new DateTime[3] { DateTime.MinValue, DateTime.MinValue, DateTime.MinValue };
+  string _sStrength { get; set; } = string.Empty;
+  string _sNextGameInfo { get; set; } = string.Empty;
+
+  string[] sWeatherTitles = new string[4] { "Sonnig", "Bewölkt", "Regen", "Schnee" };
+
+  public static RadzenChart? teamTrainingChart { get; set; }
+  public static List<CkAppShared.DataPointTD>[][]? ltTeamData;
+
+  public async Task updateAsync(CornerkickManager.User? usr, CornerkickApp.Shared.Models.DeskModel desk, bool bMobile = false)
+  {
+    _usr = usr;
+
+    DeskStatusModel deskStatus = Controllers.Member.DeskController.GetDeskStatus(usr);
+
+    _sPlaceLeague = desk.iPlaceLeague[0].ToString() + ". Platz";
+    _sNatRoundCup = desk.sNatCupRound;
+    _sIntCupRound = desk.sIntCupRound;
+    _sIntCupName  = desk.sIntCupName;
+
+    _iLand = desk.iLand;
+    _iDiv = desk.iDiv;
+    _iIntCupId2 = desk.iIntCupId2;
+
+    await GetTeamDevelopmentData(usr);
+
+    if (ltTeamData != null && ltTeamData.Length > 0 && ltTeamData[0] != null && ltTeamData[0].Length > 0) {
+      for (int i = 0; i < _fCFM_LastWeek.Length; i++) {
+        if (ltTeamData[0][i] != null && ltTeamData[0][i].Count > 0) {
+          CkAppShared.DataPointTD? dp_Now = ltTeamData[0][i][0];
+          if (dp_Now != null && dp_Now.Y.HasValue) _fCFM[i] = dp_Now.Y.Value;
+
+          CkAppShared.DataPointTD? dp_LastWeek = ltTeamData[0][i].FindLast(d => d.X.HasValue && d.X.Value >= CkAppShared.ckMng.dtDatum.AddDays(-7));
+          if (dp_LastWeek != null && dp_LastWeek.Y.HasValue && dp_LastWeek.X.HasValue && dp_LastWeek.X.Value < CkAppShared.ckMng.dtDatum.AddDays(-6)) {
+            _fCFM_LastWeek[i] = dp_LastWeek.Y.Value;
+            if (dp_LastWeek.X.HasValue) _dt_LastWeek[i] = dp_LastWeek.X.Value;
+          }
+        }
+      }
+    }
+
+    if (bMobile) {
+      _sPlaceLeague += " (" + desk.iPlaceLeague[1].ToString() + " / " + desk.iPlaceLeague[2].ToString() + ")";
+      _sStrength = "Stärke (11): ";
+      _sCFM_names = [ "K:", "F:", "M:" ];
+    } else {
+      _sPlaceLeague += " nach " + desk.iPlaceLeague[1].ToString() + " von " + desk.iPlaceLeague[2].ToString() + " Spielen";
+      _sStrength = "Durchschnittsstärke (Startelf): ";
+    }
+
+    if (deskStatus?.fStrength != null) _sStrength += (deskStatus.fStrength[0] > 0f ? deskStatus.fStrength[0].ToString("0.00") : "?") + (deskStatus.fStrength[1] > 0f ? deskStatus.fStrength[1].ToString(" (0.00)") : " (?)");
+
+    if (deskStatus != null) _sNextGameInfo = deskStatus.sNextGameInfo;
+
+    await InvokeAsync(StateHasChanged);
+  }
+
+  public static Task GetTeamDevelopmentData(CornerkickManager.User? usr)
+  {
+    if (usr == null) return Task.CompletedTask;
+
+    /*
+    if (teamTrainingChart != null) {
+      ltTeamData = CornerkickApp.Controllers.Member.MemberController.GetTeamDevelopmentData(usr);
+      teamTrainingChart.Reload();
+      }
+    */
+    ltTeamData = CornerkickApp.Controllers.Member.MemberController.GetTeamDevelopmentData(usr);
+
+    return Task.CompletedTask;
+  }
+
+  async Task showPreviewGame()
+  {
+    PreviewGameModel.GameInfo? gi = Controllers.Member.MemberController.getGameInfo(_usr);
+    if (gi != null && !string.IsNullOrEmpty(gi.sClubNameH) && !string.IsNullOrEmpty(gi.sClubNameA)) await MainLayout.showPreviewGame(JS, gi, false);
+    /*
+    await JS.InvokeVoidAsync("showGameIni", elref, JsonSerializer.Serialize(cr.gameInfo), false, null, JsonSerializer.Serialize(ltPlayerGameIni));
+    if (MainLayout.modalGameIni != null) await MainLayout.modalGameIni.Show();
+    */
+  }
+
+  string FormatAsDay(object value)
+  {
+    if (value != null) {
+      //return Convert.ToDateTime(value).ToString("dd.MM");
+      if (DateTime.TryParse(value.ToString(), out DateTime dt)) return dt.ToString("ddd");
+      if (int.TryParse(value.ToString(), out int i)) return i.ToString();
+    }
+
+    return string.Empty;
+  }
+
+  string FormatAsDate(object value)
+  {
+    if (value != null) {
+      return Convert.ToDateTime(value).ToString("dd.MM");
+    }
+
+    return string.Empty;
+  }
+}

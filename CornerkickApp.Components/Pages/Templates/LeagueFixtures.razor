@@ -1,0 +1,49 @@
+﻿@using CornerkickApp.Shared.Models
+
+<div style="width: 100%; overflow: auto">
+  <table id="tableTeams" border="0" cellpadding="2" style="width: fit-content">
+    <thead>
+      <tr>
+        <th colspan="1">Anstoß</th>
+        <th style="text-align:right">Heim</th>
+        <th style="text-align:center">&nbsp;</th>
+        <th style="text-align:left">Auswärts</th>
+        <th style="text-align:center">Erg.</th>
+      </tr>
+    </thead>
+    <tbody>
+      @if (ltGameInfos != null && ltGameInfos.Count > 0) {
+        @foreach (LeagueModel.GameInfo gi in ltGameInfos) {
+          <tr style="font-weight: @(gi.bBold ? "bold" : "regular")">
+            <td style="white-space: nowrap">@gi.sDt</td>
+            <td style="white-space: nowrap" align="right">
+              @if (gi.iIdH < 0) {
+                @gi.sNameH
+              } else {
+                <a style="text-decoration:none" href="/member/club/@gi.iIdH" target="">@gi.sNameH</a>
+              }
+            </td>
+            <td style="white-space: nowrap" align="center">&nbsp;-&nbsp;</td>
+            <td style="white-space: nowrap" align="left">
+              @if (gi.iIdA < 0) {
+                @gi.sNameA
+              } else {
+                <a style="text-decoration:none" href="/member/club/@gi.iIdA" target="">@gi.sNameA</a>
+              }
+            </td>
+            <td style="white-space: nowrap" align="center">@((MarkupString)gi.sResult)</td>
+          </tr>
+        }
+      } else {
+        <tr>
+          <td colspan="5">keine Begegnungen / noch unbekannt</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
+
+@code {
+  [Parameter]
+  public List<LeagueModel.GameInfo>? ltGameInfos { get; set; }
+}

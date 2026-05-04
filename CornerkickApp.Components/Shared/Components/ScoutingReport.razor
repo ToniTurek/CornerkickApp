@@ -1,0 +1,184 @@
+﻿@using CornerkickApp.Shared.Models
+
+<Blazorise.Modal @ref="modalSkillDetails">
+  <Blazorise.ModalContent Centered Size="Blazorise.ModalSize.ExtraLarge">
+    <Blazorise.ModalHeader>
+      <Blazorise.ModalTitle>Scouting-Bericht für: @sPlName</Blazorise.ModalTitle>
+      <Blazorise.CloseButton />
+    </Blazorise.ModalHeader>
+    <Blazorise.ModalBody>
+      @if (_ltScData != null) {
+        <div style="position: relative; width: 100%; height: auto; overflow: auto">
+          <ul>
+            <li><b>Beob. Fähigkeit: </b>@sSkillName</li>
+            <li><b>Anzahl Beobachtungen: </b>@_ltScData.Count.ToString()</li>
+            <li><b>Durchschnittswert: </b>@fScSkillAve.ToString("0.00")</li>
+          </ul>
+        </div>
+        <div style="position: relative; width: 100%; height: auto; overflow: auto">
+          <table class="table table-bordered" cellpadding="4">
+            <tbody>
+              <tr>
+                <td style="text-align: right; font-weight: bold;">Datum:</td>
+                @foreach (PlayerModel.ScoutingDataPlus sd in _ltScData) {
+                  <td style="text-align: center; font-size: 90%;"><p style="margin: 0px;">@sd.dt.ToShortDateString()</p><p style="margin: 0px;">@sd.dt.ToShortTimeString()</p></td>
+                }
+              </tr>
+              <tr>
+                <td style="text-align: right; font-weight: bold;">Scout:</td>
+                @foreach (PlayerModel.ScoutingDataPlus sd in _ltScData) {
+                  <td align="center" style="font-size: 90%;"><div>@sd.sScoutName</div></td>
+                }
+              </tr>
+              <tr>
+                <td style="text-align: right; font-weight: bold;">Wert:</td>
+                @foreach (PlayerModel.ScoutingDataPlus sd in _ltScData) {
+                  <td style="font-size: 130%;">
+                    <div style="position: relative; text-align: center; display: flex; justify-content: center; align-items: center;">
+                      <div style="position: relative; width: 30px; height: 30px; color: black; background-color: white; border: 2px solid @(Controllers.Member.PlayerController.getColorFromValue(-1, sd.iSkill)); border-radius: 50%; display: flex; justify-content: center; align-items: center; box-shadow: rgb(105, 105, 105) 2px 2px;" title="@sd.iSkill.ToString()">@sd.iSkill</div>
+                    </div>
+                  </td>
+                }
+              </tr>
+              <tr>
+                <td></td>
+                @foreach (PlayerModel.ScoutingDataPlus sd in _ltScData) {
+                  <td style="text-align: center;">
+                    <button title="Daten löschen" disabled="@bRemoveScoutingDataButtonDisabled" @onclick="@(() => removeScoutingData(sd.iScoutId, sd.iSkillIx, sd.iSkill, sd.dt))"><i class="fa fa-trash" style="color: red;"></i></button>
+                  </td>
+                }
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div id="divChartContainer" style="position: relative; width: 100%; height: 300px;">
+          <RadzenChart Style="height:100%">
+            <RadzenLineSeries Data="@ltScDataDayAve" CategoryProperty="dt" ValueProperty="fSkillAve" Stroke="red" StrokeWidth="1">
+              <TooltipTemplate Context="data">
+                @((MarkupString)(data.dt.ToShortDateString() + ":<br />" + data.fSkillAve.ToString("0.00")))
+              </TooltipTemplate>
+              <ChildContent>
+                <RadzenMarkers MarkerType="MarkerType.Circle" Size="6" Fill="red" StrokeWidth="0" />
+              </ChildContent>
+            </RadzenLineSeries>
+            <RadzenLineSeries Data="@_ltScData" CategoryProperty="dt" ValueProperty="iSkill" Stroke="blue" StrokeWidth="0">
+              <TooltipTemplate Context="data">
+                @((MarkupString)(data.dt.ToShortDateString() + ":<br />" + data.iSkill.ToString()))
+              </TooltipTemplate>
+              <ChildContent>
+                <RadzenMarkers MarkerType="MarkerType.Circle" Size="4" Fill="blue" StrokeWidth="0" />
+              </ChildContent>
+            </RadzenLineSeries>
+            <RadzenCategoryAxis Visible="true">
+              <RadzenGridLines Visible="true" Stroke="#ccc" LineType="Radzen.Blazor.LineType.Dashed" />
+            </RadzenCategoryAxis>
+            <RadzenValueAxis Step="1">
+              <RadzenGridLines Visible="true" Stroke="#ccc" LineType="Radzen.Blazor.LineType.Dashed" />
+            </RadzenValueAxis>
+            <RadzenLegend Visible="false" />
+          </RadzenChart>
+        </div>
+      }
+    </Blazorise.ModalBody>
+  </Blazorise.ModalContent>
+</Blazorise.Modal>
+
+@code {
+  public int iPlayerId;
+  public int iScSkillCount;
+  public List<PlayerModel.ScoutingDataPlus>? _ltScData;
+  public CornerkickManager.Main.Staff? _staff;
+  public CornerkickManager.Player? _pl;
+
+  public Blazorise.Modal? modalSkillDetails;
+  bool bRemoveScoutingDataButtonDisabled = false;
+  float fScSkillAve;
+  string sPlName = "";
+  string sSkillName = "";
+  Action? _action;
+
+  public class ScoutingDataAve
+  {
+    public DateTime dt { get; set; }
+    public float fSkillAve { get; set; }
+  }
+  List<ScoutingDataAve>? ltScDataDayAve;
+
+  public async Task Show(CornerkickManager.Player? pl, CornerkickManager.Main.Staff? staff, int iSkillIx, Action? action = null)
+  {
+    if (modalSkillDetails == null) return;
+    if (pl == null) return;
+
+    _pl = pl;
+    _staff = staff;
+    _action = action;
+
+    sPlName = _pl.plGame.sName;
+
+    if (CornerkickManager.Names.sSkills != null && iSkillIx >= 0 && iSkillIx < CornerkickManager.Names.sSkills.Length) {
+      sSkillName = CornerkickManager.Names.sSkills[iSkillIx];
+    }
+
+    PlayerModel.ScoutingDataPlus[]? arScData = Controllers.Member.PlayerController.getScoutingData(_staff, _pl, iSkillIx);
+    if (arScData != null) _ltScData = arScData.ToList();
+    //await updateSkills(iPlayerId);
+    fScSkillAve = Controllers.Member.PlayerController.getScoutedSkillAve(_staff, _pl, iSkillIx);
+
+    ltScDataDayAve = get_data_points_day_ave(_ltScData);
+
+    modalSkillDetails.Show();
+  }
+
+  private async Task removeScoutingData(int iScoutId, int iSkillIx, int iSkill, DateTime dt)
+  {
+    bRemoveScoutingDataButtonDisabled = true;
+    await InvokeAsync(StateHasChanged);
+
+    PlayerModel.ScoutingDataPlus[]? arScData = await Controllers.Member.PlayerController.removeScoutingData(_staff, iScoutId, _pl, iSkillIx, iSkill, dt);
+    if (arScData != null) _ltScData = arScData.ToList();
+    //updateSkills(iId);
+    fScSkillAve = Controllers.Member.PlayerController.getScoutedSkillAve(_staff, _pl, iSkillIx);
+    ltScDataDayAve = get_data_points_day_ave(_ltScData);
+
+    iScSkillCount--;
+    //await InvokeAsync(StateHasChanged);
+
+    if (_action != null) _action();
+
+    bRemoveScoutingDataButtonDisabled = false;
+    InvokeAsync(StateHasChanged);
+  }
+
+  private static List<ScoutingDataAve> get_data_points_day_ave(List<PlayerModel.ScoutingDataPlus>? ltScData2)
+  {
+    List<ScoutingDataAve> ltScDataDayAve2 = new List<ScoutingDataAve>();
+    if (ltScData2 == null) return ltScDataDayAve2;
+
+    List<PlayerModel.ScoutingDataPlus> ltScData2Copy = new List<PlayerModel.ScoutingDataPlus>(ltScData2);
+    for (int i = 0; i < ltScData2Copy.Count; i++) {
+      long date_ave = ltScData2Copy[i].dt.Ticks;
+      float skill_ave = ltScData2Copy[i].iSkill;
+
+      int k = 1;
+      for (int j = i + 1; j < ltScData2Copy.Count; j++) {
+        if (ltScData2Copy[i].dt.Date.Equals(ltScData2Copy[j].dt.Date)) {
+          date_ave += ltScData2Copy[j].dt.Ticks;
+          skill_ave += ltScData2Copy[j].iSkill;
+          k += 1;
+
+          ltScData2Copy.RemoveAt(j);
+          j -= 1;
+        }
+      }
+
+      if (k > 1) {
+        date_ave /= k;
+        skill_ave /= k;
+      }
+
+      ltScDataDayAve2.Add(new ScoutingDataAve() { dt = new DateTime(date_ave), fSkillAve = skill_ave });
+    }
+
+    return ltScDataDayAve2;
+  }
+}

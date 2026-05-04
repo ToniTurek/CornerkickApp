@@ -1,0 +1,1227 @@
+﻿@using System.Text.Json
+@using System.Text.Json.Serialization
+@using CornerkickApp.Shared.Models
+@using CornerkickApp.Controllers.Member
+@using CornerkickApp.Components.Shared.Components
+@using Radzen.Blazor
+
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@inject HttpClient Http
+@inject Radzen.DialogService dialogService
+@inject Controllers.App.TriggerService _triggerSerivce
+@inject Controllers.Shared.MyAuthenticationStateProvider _auth
+
+@inherits LayoutComponentBase
+
+<head>
+  <style>
+    div.top-row > a {
+      color: white !important;
+    }
+
+    div.top-row > button {
+      color: white !important;
+    }
+
+    .club-border-colors {
+      border-left-color: @sCl1;
+      border-bottom-color: @sCl2;
+      border-right-color: @sCl3;
+    }
+  </style>
+</head>
+
+<div class="page">
+  <div class="sidebar">
+    <div class="top-row navbar navbar-dark">
+      <div class="container-fluid">
+        @{
+          string sHome = bIsLoggedIn ? "/member/desk" : "";
+        }
+        <a class="navbar-brand" href="@sHome" style="text-decoration: none;">
+          <img src="@CkAppShared.sContentDir/Images/logo_64.png" alt="logo" style="width: 40px">
+          Cornerkick
+        </a>
+      </div>
+    </div>
+    <div class="sidebar-img">
+      <img src="@CkAppShared.sContentDir/Images/CornerFlag.png" alt="logo" style="position: absolute; bottom: 0px; width: 100%">
+
+      @if (bIsLoggedIn) {
+        <div id="divSidebarLeft" style="position: absolute; width: 120px; height: 600px; top: 100px; left: 0px">
+          @*
+          <iframe src="https://rcm-eu.amazon-adsystem.com/e/cm?o=3&p=11&l=ur1&category=amazongeneric&banner=04XC64PQF8225B91CZG2&f=ifr&linkID=69ad9bc9b4c6d65ef48410b92f70dd1c&t=cornerkick08-21&tracking_id=cornerkick08-21" width="120" height="600" scrolling="no" border="0" marginwidth="0" style="border:none;" frameborder="0" sandbox="allow-scripts allow-same-origin allow-popups allow-top-navigation-by-user-activation"></iframe>
+          *@
+        </div>
+      }
+    </div>
+  </div>
+
+  <main>
+    <div class="top-row px-4" style="background-color: @(bLiveGame ? "yellow" : "rgb(" + CkAppShared.sClCkRgb + ")")">
+      <div class="user-stars-mobile">
+        @if (bLiveGame) {
+          <a @onclick="checkNextStepAndContinue" style="cursor: pointer; display: table-cell; width: fit-content; font-weight:bold; color:red; z-Index: 9">@sLiveGameInfo</a>
+        } else {
+          <Stars_horizontal @ref="stars"></Stars_horizontal>
+        }
+      </div>
+      <div style="display: flex; flex-direction: row; align-items: center; flex-wrap: nowrap; margin-right: 0">
+        @if (iGamesTotal < 1) {
+          <NavMenu @ref=navMenu bLiveGame="bLiveGame" />
+        }
+        <div class="user-stars-wide">
+          @if (bLiveGame) {
+            <a @onclick="checkNextStepAndContinue" style="cursor: pointer; display: table-cell; width: fit-content; font-size: 120%; font-weight:bold; color:red; z-Index: 9">@sLiveGameInfo</a>
+          } else {
+            <Stars_horizontal @ref="stars"></Stars_horizontal>
+          }
+        </div>
+      </div>
+
+      <div class="top-row px-2 auth nav-item-action" style="background-color: @(bLiveGame ? "yellow" : "rgb(" + CkAppShared.sClCkRgb + ")")">
+        @if (CkAppShared.bWebApp) {
+          <LoginDisplay />
+        } else {
+          if (CkAppShared.ckMng?.ltUser?.Count > 0) {
+            if (iGamesTotal > 0) {
+              <div style="width: 160px; display: flex; flex-direction: column; align-items: center; justify-content: center">
+                <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center">
+                  <Blazorise.Progress Value="@iGamesDone" Max="@iGamesTotal" Animated Striped Color="Blazorise.Color.Warning" Style="width: 100%" />
+                  <span style="position: absolute">@((iGamesDone / (float)iGamesTotal).ToString("0.0%"))</span>
+                </div>
+                <span style="color: white">
+                  @sGameInfo
+                </span>
+              </div>
+            } else {
+              <a class="nav-link" id="aContinue" @onclick="checkNextStepAndContinue" style="cursor: pointer; display: table-cell; width: fit-content; @(bLiveGame ? "color: red !important" : "")">
+                @if (bOnViewGamePage) {
+                  <i class="fa fa-caret-left"></i>
+                }
+                <span class="mobile-hide" id="aContinueText" style="margin-left: 4px; margin-right: 4px">@sNextText</span>
+                @if (!bOnViewGamePage) {
+                  <i class="@sIconClass"></i>
+                }
+              </a>
+            }
+          } else {
+            <a href="/privacy" class="nav-link" style="cursor: pointer; display: table-cell; width: fit-content">Impressum</a>
+          }
+        }
+      </div>
+    </div>
+
+    @if (_usr != null) {
+      <div class="p-0" style="position: sticky; top: 3.5rem; z-index: 8">
+        @{
+          <div class="d-flex justify-content-between" id="headline_container" style="position: relative; width: 100%; height: 1.6rem; background-color: white; border-width: 2px; border-style: none solid solid solid; border-color: rgb(@CkAppShared.sClCkRgb)">
+            <CornerkickApp.Components.Shared.Components.Headline.LoggedIn @ref="headline"></CornerkickApp.Components.Shared.Components.Headline.LoggedIn>
+          </div>
+
+          @* Live game link *@
+          @*
+          if (!string.IsNullOrEmpty(sLiveGameInfo) && !bOnViewGamePage) {
+            <div style="position: relative; width: 100%; margin-top: 2px; height: 24px; text-align: center">
+              <a href="/member/viewgame/x" style="font-weight:bold; color:red; z-Index: 9">@sLiveGameInfo</a>
+            </div>
+          }
+          *@
+
+#if _WebApp
+          if (CkAppShared.settings.bMaintenance || !CkAppShared.settings.bLoginPossible) {
+            string sMsg = "ACHTUNG! ";
+            if (CkAppShared.settings.bMaintenance) { sMsg += "PROGRAMM INSTABIL."; } else if (!CkAppShared.settings.bLoginPossible) { sMsg += "DEMNÄCHST FINDET EIN UPDATE STATT."; }
+            sMsg += " BITTE LOGGEN SIE SICH AUS!";
+            <div class="" style="position: relative; width: 100%; margin-top: 6px; margin-bottom: 6px; height: auto; text-align: center; background-color: yellow; border: 2px solid red">
+              <strong style="font-size: 24px; color: red">@sMsg</strong>
+            </div>
+          }
+#endif
+        }
+      </div>
+    }
+
+    <div class="@sArticleClass"></div>
+    <article class="content">
+      @Body
+    </article>
+
+    <Tutorial @ref="tutorial"></Tutorial>
+    <CkDialog></CkDialog>
+    <CkProgressBar @ref="ckProgressBar"></CkProgressBar>
+    <ScoutingReport @ref="ckScoutingReport"></ScoutingReport>
+    @if (CkAppShared.ckMng?.ltUser != null && CkAppShared.ckMng.ltUser.Count > 1 && _usr != null) {
+      <div style="position: fixed; right: 4px; bottom: 2px">@_usr.sFirstname @_usr.sSurname</div>
+    }
+
+    @if (!CkAppShared.bWebApp) {
+      <Blazorise.Modal @ref="modalGameIni">
+        <Blazorise.ModalContent Centered Size="Blazorise.ModalSize.ExtraLarge">
+          <Blazorise.ModalHeader>
+            <Blazorise.ModalTitle>Spielvorschau</Blazorise.ModalTitle>
+            <Blazorise.CloseButton />
+          </Blazorise.ModalHeader>
+          <Blazorise.ModalBody>
+            @if (giPreviewGame != null) {
+              <div style="position: relative; width: 100%; max-width: 1000px; height: auto;">
+                <div style="position: absolute; top: 0px; left: 0px; text-align: left; width: 15%;">
+                  @*
+                  @if (giPreviewGame.bCupEmblem != null && giPreviewGame.bCupEmblem.Length > 0) {
+                    <img style="width: 100%; object-fit: contain" src="data:image/*;base64,@Convert.ToBase64String(giPreviewGame.bCupEmblem)" onerror="this.onerror=null;this.src='@sErrorImg'" />
+                  } else {
+                    <img style="width: 100%; object-fit: contain" src="@sErrorImg" />
+                  }
+                  *@
+                  @((MarkupString)giPreviewGame.sCupEmblem)
+                </div>
+                <div style="position: relative; text-align: center; width: 100%; z-index: 2">
+                  <p style="margin: 0px; font-size: 80%;">@giPreviewGame.sGameDate</p>
+                  @{
+                    string sCupName = giPreviewGame.sCupName;
+                    if (giPreviewGame.iMatchday >= 0) sCupName += " - " + (giPreviewGame.iMatchday + 1).ToString() + ". Spieltag";
+                  }
+                  <p style="font-size: 140%; margin: 0px;">@sCupName</p>
+                  @if (_usr?.club?.nextGame != null && _usr.club.nextGame.team[0].iTeamId == _usr.club.iId && _usr.iResp >= CkAppShared.iUserRespFinance && !bGameToStart) {
+                    <div style="display: flex; justify-content: center; margin-bottom: 1rem">
+                      <Blazorise.Select TValue="int" SelectedValue="iSelectedStadium" SelectedValueChanged="@SetStadium" Style="width: fit-content; max-width: 310px">
+                        <Blazorise.SelectItem Value="-1">@CkAppShared.stadiumDefaultTrainingCourt.sName (@CkAppShared.stadiumDefaultTrainingCourt.getSeats().ToString("N0") Pl.)</Blazorise.SelectItem>
+                        @if (_usr.club.stadium.getSeats() > 0) {
+                          <Blazorise.SelectItem Value="0">@_usr.club.stadium.sName (@_usr.club.stadium.getSeats().ToString("N0"))</Blazorise.SelectItem>
+                        }
+                        <Blazorise.SelectItem Value="1">@(CkAppShared.stadiumDefaultSmall.sName) (@(CkAppShared.stadiumDefaultSmall.getSeats().ToString("N0")) Pl., @((CkAppShared.iCostRentStadiumDefaultSmall / 1000).ToString())k€/Spiel)</Blazorise.SelectItem>
+                        <Blazorise.SelectItem Value="2">@(CkAppShared.stadiumDefaultBig  .sName) (@(CkAppShared.stadiumDefaultBig  .getSeats().ToString("N0")) Pl., @((CkAppShared.iCostRentStadiumDefaultBig   / 1000).ToString())k€/Spiel)</Blazorise.SelectItem>
+                      </Blazorise.Select>
+                    </div>
+                  } else {
+                    <p style="margin: 0px; font-size: 80%;">@giPreviewGame.sStadium</p>
+                  }
+                </div>
+                <div class="flex-container" style="display: flex; flex-direction: row; width: 100%;">
+                  <div style="width: 50%; text-align: center;">
+                    <div style="display: inline-block; width: 20%;">
+                      @((MarkupString)giPreviewGame.sClubEmblemH)
+                    </div>
+                  </div>
+                  <div style="width: 50%; text-align: center;">
+                    <div style="display: inline-block; width: 20%;">
+                      @((MarkupString)giPreviewGame.sClubEmblemA)
+                    </div>
+                  </div>
+                </div>
+                <div class="flex-container" style="display: flex; flex-direction: row; width: 100%;">
+                  <div style="width: 50%; text-align: center;">
+                    <p style="font-size: 130%; font-family: Tahoma; margin: 0px;">@giPreviewGame.sClubNameH</p>
+                    <p style="font-size: 70%; font-family: Tahoma;">@giPreviewGame.sClubPlaceH</p>
+                  </div>
+                  <div style="width: 50%; text-align: center;">
+                    <p style="font-size: 130%; font-family: Tahoma; margin: 0px;">@giPreviewGame.sClubNameA</p>
+                    <p style="font-size: 70%; font-family: Tahoma;">@giPreviewGame.sClubPlaceA</p>
+                  </div>
+                </div>
+              </div>
+            }
+            <div @ref=elref></div>
+          </Blazorise.ModalBody>
+          <Blazorise.ModalFooter>
+            <div style="width: 100%; display: flex; align-items: center; justify-content: space-between">
+              <div title="Schiedsrichter" style="width: fit-content; border: 1px solid gray; border-radius: 4px; padding: 4px">
+                @if (giPreviewGame?.referee != null) {
+                  <div style="display: flex; flex-direction: column; align-items: center">
+                    <label>
+                      <img width="20" src="@CkAppShared.sContentDir/Icons/whistle.png" style="position: relative; top: -6px; margin: 0px;">
+                      <u style="margin-left: 4px">@giPreviewGame.referee.sName</u>
+                    </label>
+                    <div style="display: flex; flex-direction: row">
+                      <table>
+                        <tr>
+                          <td align="right">Qualität:</td>
+                          <td align="right">@giPreviewGame.referee.fQuality.ToString("0.0%")</td>
+                        </tr>
+                        <tr>
+                          <td align="right">Härte:</td>
+                          <td align="right">@giPreviewGame.referee.fStrict.ToString("0.0%")</td>
+                        </tr>
+                        <tr>
+                          <td align="right">Neutralität:</td>
+                          <td align="center">
+                            @{
+                              string sRefereeNeutral = "smiley" + (int)(Math.Min(giPreviewGame.fRefereeCorrupt, 0.4f) * 10) + ".png";
+                            }
+                            <img width="22" src="@CkAppShared.sContentDir/Icons/smileys/@sRefereeNeutral" style="position: relative; margin: 0px;">
+                          </td>
+                        </tr>
+                      </table>
+                      @if (!bGameToStart && _usr?.iResp >= CkAppShared.iUserRespSecretBalance) {
+                        <div style="margin-left: 1rem">
+                          <div style="display: flex; align-items: center">
+                            <input name="iptCorruptReferee" type="number" class="form-control" min="0" autocomplete="off" style="width: 120px; text-align: right" @bind="iCorruptReferee" />
+                            €
+                          </div>
+                          <button class="form-control" @onclick="CorruptReferee">Schiri bestechen</button>
+                        </div>
+                      }
+                    </div>
+                  </div>
+                } else {
+                  <label>
+                    <img width="20" src="@CkAppShared.sContentDir/Icons/whistle.png" style="position: relative; top: -6px; margin: 0px;">
+                    Noch nicht zugewiesen
+                  </label>
+                }
+              </div>
+              @if (bGameToStart) {
+                <Blazorise.Button Color="Blazorise.Color.Primary" Clicked="@kickOff">
+                  <img src="@CornerkickApp.Shared.Models.CkAppShared.sContentDir/Icons/whistle-32-white.png" />
+                  Anstoß!
+                </Blazorise.Button>
+              }
+            </div>
+          </Blazorise.ModalFooter>
+        </Blazorise.ModalContent>
+      </Blazorise.Modal>
+
+      <Blazorise.Toaster Placement="Blazorise.ToasterPlacement.Bottom">
+        <Blazorise.Toast @ref="ckToast" @bind-Visible="@toastVisible" AutohideDelay="2000">
+          <Blazorise.ToastHeader>
+            <Blazorise.Strong Margin="Blazorise.Margin.IsAuto.FromEnd">Cornerkick</Blazorise.Strong>
+          </Blazorise.ToastHeader>
+          <Blazorise.ToastBody>
+            @((MarkupString)toastMessage)
+          </Blazorise.ToastBody>
+        </Blazorise.Toast>
+      </Blazorise.Toaster>
+    }
+
+    @*<RadzenComponents @rendermode="RenderMode.InteractiveAuto" />*@
+    <RadzenComponents />
+    <RadzenDialog />
+  </main>
+
+  <script src="./_content/CornerkickApp.Components/js/site.js"></script>
+</div>
+
+@code {
+  private bool bLiveGame = false;
+
+  public static NavMenu? navMenu { get; set; }
+
+  public static CkProgressBar? ckProgressBar;
+  public static ScoutingReport? ckScoutingReport;
+  public static Blazorise.Modal? modalGameIni;
+  private int iCorruptReferee = 0;
+  //private float fCorruptReferee = 0f;
+
+  static bool bGameToStart = true;
+  int iSelectedStadium;
+
+  static PreviewGameModel.GameInfo? giPreviewGame { get; set; }
+  static ElementReference elref;
+
+  public static Blazorise.Toast? ckToast;
+  private bool toastVisible = false;
+  public static string toastMessage = "";
+
+  Stars_horizontal? stars;
+
+  int iGamesDone { get; set; }
+  int iGamesFailed { get; set; }
+  int iGamesTotal { get; set; }
+  string sGameInfo { get; set; } = "";
+  Progress<int[]>? progressIndicator { get; set; }
+
+  bool bIsLoggedIn { get; set; }
+  string sHeadline { get; set; } = "";
+  string sLiveGameInfo { get; set; } = "";
+  private CornerkickManager.User? _usr;
+  string sBorderStyle { get; set; } = "";
+  string sArticleClass { get; set; } = "";
+  string sCl1 { get; set; } = "";
+  string sCl2 { get; set; } = "";
+  string sCl3 { get; set; } = "";
+
+  public static CornerkickApp.Components.Shared.Components.Headline.LoggedIn? headline { get; set; }
+  //private CornerkickApp.Components.Pages.Member.Desk? desk { get; set; }
+  public static Tutorial? tutorial { get; set; }
+
+  private string sNextText = "weiter";
+  private string sIconClass = "fa fa-play";
+#if !_WebApp
+  int iCalSpeed = 10;
+  private bool bMultiUser = false;
+  private static bool bCalendarRunning = false;
+#endif
+  public static bool bOnViewGamePage = false;
+
+#if DEBUG
+  string sDocDir { get; set; } = "";
+#endif
+
+  /*
+  private string _userId;
+  //private IEnumerable<System.Security.Claims.Claim> _claims = Enumerable.Empty<System.Security.Claims.Claim>();
+
+  protected override async Task OnParametersSetAsync()
+  {
+    await GetClaimsPrincipalData();
+    await base.OnParametersSetAsync();
+    }
+  private async Task GetClaimsPrincipalData()
+  {
+    var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+    var user = authState.User;
+
+    if (user.Identity.IsAuthenticated) {
+      //_authMessage = $"{user.Identity.Name} is authenticated.";
+      //_claims = user.Claims;
+      //_userId = $"User Id: {user.FindFirst(c => c.Type == "sub")?.Value}";
+      }
+    }
+  */
+
+  protected override async Task OnInitializedAsync()
+  {
+#if _WebApp
+  var identity = await _auth.GetIdentity();
+  bIsLoggedIn = identity != null && identity.IsAuthenticated;
+
+  //_usr = Controllers.Member.MemberController.ckUser(await _auth.GetUserId());
+  _usr = Controllers.Member.MemberController.ckUser(_auth.GetUserId().Result);
+  /*
+  //var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+  var identity = await MyAuthenticationStateProvider.GetIdentity();
+
+  if (identity != null) {
+  //var user = authState.User;
+
+  bIsLoggedIn = identity.IsAuthenticated;
+  if (bIsLoggedIn) {
+  UserModel? model = await Http.GetFromJsonAsync<UserModel>("member/User/Get");
+  if (model != null) _usr = model.usr;
+  }
+
+  //sHeadline = await InvokeAsync<Shared.>();
+  }
+  */
+#else
+    bIsLoggedIn = CkAppShared.ckMng.ltUser.Count > 0;
+    if (bIsLoggedIn && CkAppShared.iUserActive < CkAppShared.ckMng.ltUser.Count) {
+      _usr = CkAppShared.ckMng.ltUser[CkAppShared.iUserActive];
+      bMultiUser = CkAppShared.ckMng?.ltUser?.Count > 1;
+
+      /*
+      // Set borders in club colors
+      if (_usr?.club != null) {
+        // Set border colors
+        sCl1 = Controllers.Tool.convertToRgb(_usr.club.cl1[0]);
+        sCl2 = Controllers.Tool.convertToRgb(_usr.club.cl1[1]);
+        sCl3 = Controllers.Tool.convertToRgb(_usr.club.cl1[2]);
+        sArticleClass = "club-borders club-border-colors";
+        //sBorderStyle = $"border-left: 2px solid {sCl1}; border-bottom: 2px solid {sCl2}; border-right: 2px solid {sCl3}; border-radius: 4px";
+        }
+      */
+    }
+
+    if (bMultiUser) iCalSpeed = 0;
+
+    await setNextButton();
+#endif
+
+    if (_usr != null) {
+#if _WebApp
+      //sLiveGameInfo = await Http.GetStringAsync("/Member/GetLayoutData");
+#endif
+    }
+
+    // Subscribe to the event
+    Navigation.LocationChanged += LocationChanged;
+
+    if (_usr != null) {
+      setLiveGame();
+
+      if (stars != null) stars.updateStars(_usr);
+
+      // Set stadium index
+      if (_usr.lti != null && _usr.lti.Count > UserOptionsModel.iUserOptionsIxStadium) iSelectedStadium = _usr.lti[UserOptionsModel.iUserOptionsIxStadium];
+      SetStadium(iSelectedStadium);
+    }
+
+#if DEBUG
+    sDocDir = Controllers.App.getDocumentsDir;
+#endif
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender) {
+      await JS.InvokeAsync<IJSObjectReference>("import", "./_content/CornerkickApp.Components/js/draw.js");
+      await JS.InvokeAsync<IJSObjectReference>("import", "./_content/CornerkickApp.Components/js/Formation.js");
+    }
+  }
+
+  void setLiveGame()
+  {
+    if (_usr == null) {
+      bLiveGame = false;
+      return;
+    }
+
+    bLiveGame = CornerkickApp.Controllers.Member.MemberController.checkUserGame2(_usr);
+
+    if (bLiveGame && !bOnViewGamePage) {
+      CornerkickManager.Club? clbH = CkAppShared.ckMng.ltClubs.Find(c => c.iId == _usr.game.data.team[0].iTeamId);
+      if (clbH == null) return;
+      CornerkickManager.Club? clbA = CkAppShared.ckMng.ltClubs.Find(c => c.iId == _usr.game.data.team[1].iTeamId);
+      if (clbA == null) return;
+
+      string sClubNameH = string.IsNullOrEmpty(clbH.sNameShort) ? clbH.sName.Substring(0, 5) : clbH.sNameShort;
+      string sClubNameA = string.IsNullOrEmpty(clbA.sNameShort) ? clbA.sName.Substring(0, 5) : clbA.sNameShort;
+
+      sLiveGameInfo = CornerkickManager.UI.getMinuteString(_usr.game.tsMinute, false) + ": " +
+                      sClubNameH + " vs. " + sClubNameA + " - " +
+                      _usr.game.data.team[0].iGoals.ToString() + ":" + _usr.game.data.team[1].iGoals.ToString();
+    } else {
+      sLiveGameInfo = "";
+    }
+  }
+
+  void LocationChanged(object sender, LocationChangedEventArgs e)
+  {
+    string navigationMethod = e.IsNavigationIntercepted ? "HTML" : "code";
+    System.Diagnostics.Debug.WriteLine($"Notified of navigation via {navigationMethod} to {e.Location}");
+
+#if !_WebApp
+    Pages.Member.ViewGame.bInterruptLiveGame = true;
+    bool bOnViewGamePageTmp = bOnViewGamePage;
+    bOnViewGamePage = e.Location.Contains("/member/viewgame");
+    if (bOnViewGamePageTmp != bOnViewGamePage) setNextButton();
+
+    if (navMenu != null) navMenu.setSaveButtonVisibility();
+#endif
+
+    if (navMenu != null) navMenu.close();
+    if (tutorial != null) tutorial.Close();
+  }
+
+  public static async Task showPreviewGame(IJSRuntime JS, PreviewGameModel.GameInfo? gi, bool bButtonKickoff, TeamModel.Player[][]? ltPlayerGameIni = null)
+  {
+    if (gi == null) return;
+
+    bGameToStart = bButtonKickoff;
+    giPreviewGame = gi;
+
+    await JS.InvokeVoidAsync("showGameIni", elref, JsonSerializer.Serialize(gi), false, null, JsonSerializer.Serialize(ltPlayerGameIni));
+    if (modalGameIni != null) await modalGameIni.Show();
+  }
+
+#if _WebApp
+  private async Task checkNextStepAndContinue()
+  {
+    Navigation.NavigateTo("member/viewgame/x");
+  }
+
+  private async Task kickOff()
+  {
+  }
+#else
+  private async Task checkNextStepAndContinue()
+  {
+    if (navMenu != null) navMenu.close();
+
+    // Get calendar speed setting
+    if (_usr != null && _usr.lti.Count > UserOptionsModel.iUserOptionsIxCalSpeed) iCalSpeed = _usr.lti[UserOptionsModel.iUserOptionsIxCalSpeed];
+
+    if (_usr?.ltNews != null) {
+      for (int iN = 0; iN < _usr.ltNews.Count; iN++) {
+        CornerkickManager.Main.News n = _usr.ltNews[iN];
+        n.bRead  = true;
+        n.bRead2 = true;
+        _usr.ltNews[iN] = n;
+      }
+    }
+    try {
+      await checkNextStepAndContinueWork();
+    } catch (Exception ex) {
+      string sError = "<u>Source:</u><br />" + ex.Source + "<br /><u>Message:</u><br />" + ex.Message + "<br /><u>StackTrace:</u><br />" + ex.StackTrace;
+      if (ex.InnerException != null) sError += "<br /><br /><u>InnerException:</u><br />" + ex.InnerException.StackTrace;
+
+      await CkDialog.ckDialog.Show(
+        "Error in next",
+        sError,
+        sButtonCancelText2: ""
+      );
+    }
+  }
+
+  public static void StopCalendar()
+  {
+    bCalendarRunning = false;
+  }
+
+  private async Task checkNextStepAndContinueWork()
+  {
+    if (_usr == null) return;
+
+    if (bOnViewGamePage) {
+      bOnViewGamePage = false;
+      await setNextButton();
+
+      Navigation.NavigateTo("/member/desk");
+      return;
+    }
+
+    bool[] bUserGame = CornerkickApp.Controllers.Member.MemberController.CheckUserGame(_usr);
+
+    progressIndicator = new Progress<int[]>(ReportProgress);
+
+    if (bUserGame[0]) {  // User game running
+      bLiveGame = true;
+      bOnViewGamePage = true;
+      await setNextButton();
+
+      Navigation.NavigateTo("/member/viewgame/x");
+    } else {
+      bCalendarRunning = !bCalendarRunning;
+      await setNextButton();
+      await InvokeAsync(StateHasChanged);
+
+      if (bUserGame[1]) {  // User game to start
+        continueCalendar(false, true, progress: progressIndicator);
+      } else {
+        if (bMultiUser) {
+          List<CornerkickManager.Main.IgnoreNextWarning> ltWarnIgnore = getIgnoreWarningList(_usr);
+          List<CornerkickManager.Main.CalendarReturn> ltCr = CornerkickManager.Main.checkCalendarStart(_usr, CkAppShared.ckMng.dtDatum, CkAppShared.ckMng.dtSeasonStart, CkAppShared.ckMng.dtSeasonEnd, ltWarnIgnore: ltWarnIgnore);
+          if (ltCr.Count > 0) {
+            CkAppShared.CalendarReturn? crCheck = new CkAppShared.CalendarReturn() {
+              ltRet = ltCr
+            };
+            await handleWarnings(true, crCheck);
+            return;
+          }
+        }
+
+        await checkNextStep();
+      }
+    }
+  }
+
+  void ReportProgress(int[] value)
+  {
+    iGamesDone = value[0];
+    iGamesFailed = value[1];
+    iGamesTotal = value[2];
+
+    CornerkickManager.Cup? cup = CkAppShared.ckMng.ltCups.Find(c => c.iId == value[3] && c.iId2 == value[4] && c.iId3 == value[5]);
+    if (cup != null) sGameInfo = cup.sName;
+
+    // If all games are done or failed, reset the counters
+    if (iGamesDone + iGamesFailed >= iGamesTotal) {
+      iGamesDone = 0;
+      iGamesFailed = 0;
+      iGamesTotal = 0;
+      sGameInfo = "";
+    }
+
+    //Update the UI to reflect the progress value that is passed back.
+    StateHasChanged();
+    //await InvokeAsync(StateHasChanged);
+  }
+
+  private async Task checkNextStep() {
+    bool bStartCalendar = CornerkickApp.Controllers.Member.MemberController.CheckNextUser(true);
+
+    if (bStartCalendar) {
+      continueCalendar(false, true, progress: progressIndicator);
+    } else {
+      bCalendarRunning = false;
+
+      string uri = string.IsNullOrEmpty(CkAppShared.ckMng.ltUser[CkAppShared.iUserActive].sPw) ? "member/desk" : "userpassword";
+      Navigation.NavigateTo(uri, true);
+    }
+  }
+
+  private async Task update(bool bUpdateDesk = false, bool bForce = false)
+  {
+    if (headline != null) await headline.Refresh();
+
+    //if (bUpdateDesk) await _triggerSerivce.TriggerMethodAsync(bForce);
+    if (bUpdateDesk) await _triggerSerivce.TriggerMethodAsync();
+
+    // Update the UI to reflect the progress value that is passed back.
+    await InvokeAsync(StateHasChanged);
+    //StateHasChanged();
+  }
+
+  private static List<CornerkickManager.Main.IgnoreNextWarning> getIgnoreWarningList()
+  {
+    List<CornerkickManager.Main.IgnoreNextWarning> ltIgnWarn = new List<CornerkickManager.Main.IgnoreNextWarning>();
+    foreach (CornerkickManager.User u in CkAppShared.ckMng.ltUser) ltIgnWarn.AddRange(getIgnoreWarningList(u));
+    return ltIgnWarn;
+  }
+  private static List<CornerkickManager.Main.IgnoreNextWarning> getIgnoreWarningList(CornerkickManager.User usr)
+  {
+    List<CornerkickManager.Main.IgnoreNextWarning> ltIgnWarn = new List<CornerkickManager.Main.IgnoreNextWarning>() {
+      new CornerkickManager.Main.IgnoreNextWarning(CornerkickManager.Main.CalendarReturn.SeasonStart,        usr),
+      new CornerkickManager.Main.IgnoreNextWarning(CornerkickManager.Main.CalendarReturn.SponsorNotFinished, usr)
+    };
+
+    int iUserRespLvl = usr.iResp;
+
+    if (iUserRespLvl < CkAppShared.iUserRespStaff)   ltIgnWarn.Add(new CornerkickManager.Main.IgnoreNextWarning(CornerkickManager.Main.CalendarReturn.StaffNotFinished,   usr)); // Staff not finished (begin of season)
+    if (iUserRespLvl < CkAppShared.iUserRespFinance) ltIgnWarn.Add(new CornerkickManager.Main.IgnoreNextWarning(CornerkickManager.Main.CalendarReturn.FinanceNotFinished, usr)); // Finance calculation not finished (begin of season)
+
+    return ltIgnWarn;
+  }
+
+  private static void filterCalendarWarnings(CkAppShared.CalendarReturn cr, CornerkickManager.User usr)
+  {
+    cr.ltRet.Remove(CornerkickManager.Main.CalendarReturn.SeasonStart);        // Start of season
+    cr.ltRet.Remove(CornerkickManager.Main.CalendarReturn.SponsorNotFinished); // Sponsor not selected
+
+    int iUserRespLvl = usr.iResp;
+
+    if (iUserRespLvl < CkAppShared.iUserRespStaff)   cr.ltRet.Remove(CornerkickManager.Main.CalendarReturn.StaffNotFinished);   // Staff not finished (begin of season)
+    if (iUserRespLvl < CkAppShared.iUserRespFinance) cr.ltRet.Remove(CornerkickManager.Main.CalendarReturn.FinanceNotFinished); // Finance calculation not finished (begin of season)
+  }
+
+  private async Task continueCalendar(bool bForce, bool bUserClick, IProgress<int[]>? progress = null)
+  {
+    if (_usr == null) return;
+
+    //int nWarn = 0;
+
+    if (bForce) bCalendarRunning = true;
+
+    List<CornerkickManager.Main.IgnoreNextWarning> ltWarnIgnore = getIgnoreWarningList();
+
+    while (bCalendarRunning) {
+      // Get update frequency
+      byte iGetDetails = 0; // Get details every step
+      if      (iCalSpeed ==  0) iGetDetails = 9; // Do not get details
+      else if (iCalSpeed ==  1) iGetDetails = 1; // Get details at midnight
+      else if (iCalSpeed <  11) iGetDetails = 2; // Get details each 2h
+
+      List<CkAppShared.CalendarReturn> ltCr = CornerkickApp.Controllers.Member.MemberController.SetCalenderNext(bForce, ltWarnIgnore: ltWarnIgnore, progress: progress, iGetDetails: iGetDetails);
+
+      // Do promotion
+      if (CkAppShared.ckMng.dtDatum.TimeOfDay.Equals(new TimeSpan(08, 00, 00))) { //  8:00 Uhr
+        if (CkAppShared.ckMng.dtDatum.DayOfWeek == DayOfWeek.Monday) { // If monday
+          if (doPromotion()) break;
+        }
+      }
+
+      // Check portrait of new players
+      if (CkAppShared.ckMng.dtDatum.TimeOfDay.Equals(new TimeSpan(13, 15, 00))) { //  13:15 Uhr (after new jouth player)
+        foreach (CornerkickManager.Player p in CkAppShared.ckMng.ltPlayer) {
+          if (CornerkickApp.Controllers.Member.PlayerController.getPlayerPortraitId(p) == 0) {
+            p.clSkin = Controllers.Member.PlayerController.getSkinFromId((byte)CkAppShared.random.Next(byte.MaxValue));
+          }
+        }
+      }
+
+      bool bUpdate = false;
+
+      if (ltCr != null) {
+        //nWarn = cr.ltRet.Count;
+        //filterCalendarWarnings(cr, _usr);
+
+        foreach (CkAppShared.CalendarReturn cr in ltCr) {
+          bUpdate = bUpdate || cr.bWithDetails;
+
+          if (cr.ltRet.Contains(CornerkickManager.Main.CalendarReturn.SeasonStart) && doPromotion()) break;
+
+          if (cr.ltRet.Count > 0) {
+            bCalendarRunning = false;
+            CkAppShared.iUserActive = CkAppShared.ckMng.ltUser.IndexOf(cr.user);
+            _usr = cr.user;
+            await update(bUpdateDesk: true, bForce: true);
+            await handleWarnings(bUserClick, cr);
+            break;
+            //} else if (nWarn > 0) { // If warnings were > 0 before but 0 after filtering, force next step
+            //  CornerkickApp.Controllers.Member.MemberController.SetCalenderNext(_usr, true);
+          }
+          //}
+        }
+      }
+
+      bUserClick = false;
+      bForce = false;
+
+      if (bUpdate) await update(bUpdateDesk: bUpdate);
+
+      // Wait
+      if (iCalSpeed > 1) {
+        Task tkDelay = Task.Delay(iCalSpeed);
+        await tkDelay.ConfigureAwait(false);
+        tkDelay.Dispose();
+      }
+    }
+
+    iGamesDone = 0;
+    iGamesFailed = 0;
+    iGamesTotal = 0;
+
+    bCalendarRunning = false;
+
+    await setNextButton();
+    //await InvokeAsync(StateHasChanged);
+  }
+
+  private async Task wait(int iDuration)
+  {
+    if (iDuration <= 0) return;
+
+    Task tkDelay = Task.Delay(iDuration);
+    await tkDelay.ConfigureAwait(false);
+    tkDelay.Dispose();
+  }
+
+  private async Task setNextButton()
+  {
+    if (bOnViewGamePage) {
+      sNextText = "zum Schreibtisch";
+    } else {
+      bool[] bUserGame = CornerkickApp.Controllers.Member.MemberController.CheckUserGame(_usr);
+
+      if (bUserGame[0]) {
+        sNextText = "zurück zum Spiel";
+        sIconClass = "fa fa-futbol";
+      } else if (bUserGame[1]) {
+        sNextText = "zum Spiel";
+        sIconClass = "fa fa-futbol";
+      } else {
+        if (bCalendarRunning) {
+          sNextText = iCalSpeed > 0 ? "stop" : "warten";
+          sIconClass = iCalSpeed > 0 ? "fa fa-stop" : "fa fa-hourglass-end";
+        } else {
+          if (checkReadyForCalendarRunning()) sNextText = "weiter";
+          else                                sNextText = "nächster";
+          sIconClass = "fa fa-play";
+        }
+      }
+    }
+
+    setLiveGame();
+
+    // This is not allowed here
+    await InvokeAsync(StateHasChanged);
+    //StateHasChanged();
+  }
+
+  private async Task handleWarnings(bool bUserClick, CkAppShared.CalendarReturn cr)
+  {
+    if (_usr == null) return;
+
+    // If this function was executed by user click (no repetition call) --> show dialogs
+    if (bUserClick) {
+      // Do the game independent of warnings
+      if (cr.ltRet.Contains(CornerkickManager.Main.CalendarReturn.UserGameToStart)) {
+        TeamModel.Player[][]? ltPlayerGameIni = CornerkickApp.Controllers.Member.MemberController.getGamePreviewPlayer(_usr);
+
+        // Set stadium
+        SetStadium(iSelectedStadium);
+
+        if (cr.gameInfo != null) {
+          cr.gameInfo.sStadium = CornerkickApp.Controllers.Member.MemberController.getStadiumInfo(_usr.club.nextGame.stadium);
+          await showPreviewGame(JS, cr.gameInfo, true, ltPlayerGameIni: ltPlayerGameIni);
+        }
+
+        return;
+      }
+
+      // Handle warnings
+      for (int i = cr.ltRet.Count - 1; i >= 0; i--) {
+        CornerkickManager.Main.CalendarReturn iRet = cr.ltRet[i];
+
+        if (iRet == CornerkickManager.Main.CalendarReturn.Sat1530) {
+          await CkDialog.ckDialog.Show(
+            "Neue Woche",
+            "Neue Woche starten?",
+            sButtonOkText2: "weiter",
+            actionOnOk: () => rmWarningAndContinueCalendar(iRet, cr)
+          );
+
+          return;
+        } else if (iRet == CornerkickManager.Main.CalendarReturn.StaffNotFinished) {
+          await CkDialog.ckDialog.Show(
+            "Personal einstellen",
+            "Sie haben noch offene Personalstellen. Trotzdem fortfahren?",
+            sButtonOkText2: "weiter",
+            actionOnOk: () => rmWarningAndContinueCalendar(iRet, cr)
+          );
+
+          return;
+        } else if (iRet == CornerkickManager.Main.CalendarReturn.FinanceNotFinished) {
+          await CkDialog.ckDialog.Show(
+            "Finanzplanung",
+            "Sie haben Ihre Finanzplanung noch nicht abgeschlossen. Trotzdem fortfahren?",
+            sButtonOkText2: "weiter",
+            actionOnOk: () => rmWarningAndContinueCalendar(iRet, cr)
+          );
+
+          return;
+        } else if (iRet == CornerkickManager.Main.CalendarReturn.TrainingNotSet) { // No training set
+          await CkDialog.ckDialog.Show(
+            "Training planen?",
+            "Sie haben für die nächste Woche noch kein Training angesetzt. Trotzdem fortfahren?",
+            sButtonOkText2: "weiter",
+            actionOnOk: () => rmWarningAndContinueCalendar(iRet, cr)
+          );
+
+          return;
+        } else if (iRet == CornerkickManager.Main.CalendarReturn.SeasonEnd) { // Start new season
+          CornerkickManager.Cup? l = CkAppShared.ckMng.ltCups.Find(c => c.iId == CkAppShared.iCupIdLeague && c.iId2 == _usr.club.iLand && c.iId3 == _usr.club.iDivision);
+
+          string sEndOfSeasonMessage = _usr.sFirstname + " " + _usr.sSurname + ", dies ist das Ende Ihrer <b>" + CkAppShared.ckMng.iSeason.ToString() + ".</b> Saison.";
+          if (l != null) {
+            sEndOfSeasonMessage += "<br><br>Sie haben mit Ihrem Verein <b>" + _usr.club.sName +
+                                   "</b> die " + l.sName + " auf dem <b>" + l.getPlace(_usr.club, CkAppShared.ckMng.dtDatum).ToString() + ". Platz</b> abgeschlossen.";
+          }
+          sEndOfSeasonMessage += "<br>";
+          foreach (CornerkickManager.Cup? c in CkAppShared.ckMng.ltCups.FindAll(c => c.iId == CkAppShared.iCupIdNatCup && c.iId2 == _usr.club.iLand)) {
+            if (c == null) continue;
+            int iPlace = c.getPlace(_usr.club, CkAppShared.ckMng.dtDatum);
+            if (iPlace > 0) sEndOfSeasonMessage += "<br>Im " + c.sName + " haben Sie den <b>" + iPlace.ToString() + ". Platz</b> belegt.";
+          }
+
+          CornerkickManager.Finance.Budget budgetAct = CkAppShared.ckMng.ui.getActualBudget(_usr.club);
+          long iInTotal  = CornerkickManager.Finance.getBudgetInTotal(budgetAct);
+          long iPayTotal = CornerkickManager.Finance.getBudgetPayTotal(budgetAct);
+          string sWinLoose = iInTotal > iPayTotal ? "Gewinn" : "Verlust";
+          sEndOfSeasonMessage += "<br><br>Ihr Verein hat in dieser Saison insgesamt einen Attraktivitätsfaktor von <b>" + _usr.club.getAttractionFactor(CkAppShared.ckMng.iSeason, CkAppShared.ckMng.ltCups, CkAppShared.ckMng.dtDatum).ToString("0.0") + "</b> erzielt, " +
+          "und dabei einen <b>" + sWinLoose + "</b> von <b style=\"color: " + (iPayTotal > iInTotal ? "red" : "green") + "\">" + (iInTotal - iPayTotal).ToString("N0") + "€</b> erwirtschaftet.";
+          sEndOfSeasonMessage += "<br><br>";
+
+          // End of trial version after 3 seasons
+          if (CkAppShared.ckMng.iSeason > 3) {
+            sEndOfSeasonMessage += "Dies ist das Ende des Spiels. Um eine Vollversion zu erhalten, wenden Sie sich bitte an:<br><br>mail@cornerkick-manager.de";
+
+            await CkDialog.ckDialog.Show(
+              "Saisonende",
+              sEndOfSeasonMessage,
+              sButtonOkText2: ""
+            );
+
+            return;
+          }
+
+          sEndOfSeasonMessage += "Möchten Sie jetzt die nächste Saison starten?";
+
+          await CkDialog.ckDialog.Show(
+            "Saisonende",
+            sEndOfSeasonMessage,
+            sButtonOkText2: String.Format("Zur {0}. Saison", CkAppShared.ckMng.iSeason + 1),
+            actionOnOk: () => StartNewSeason(iRet, cr)
+          );
+
+          return;
+        } else {
+          CornerkickManager.Main.CalendarReturn jRet = iRet;
+
+          /*
+          getDialog(
+          document.body,
+          "Return: " + iRet.ToString(),
+          "?",
+          function () {
+            int index = ltRetTmp.indexOf(jRet);
+            if (index > -1) {
+              ltRetTmp.splice(index, 1);
+              }
+
+            if (ltRetTmp.Count == 0) {
+              continueCalendar(true, false);
+              }
+            }
+        );
+      */
+        }
+  }
+
+    if (cr.ltRet.Count == 0) {
+      if (checkReadyForCalendarRunning()) continueCalendar(true, false, progress: progressIndicator);
+      else                                checkNextStep();
+      }
+    } else { // If no user click (but returnObj.ltRet.length > 0)
+      if (bMultiUser) {
+  //window.location.reload(true);
+      } else {
+  //updateAtMidnight(cr.iBalance, cr.iBalanceSecret);
+  await update(true);
+
+  for (var i = cr.ltRet.Count - 1; i >= 0; i--) {
+    CornerkickManager.Main.CalendarReturn ckMngCr = cr.ltRet[i];
+    if (ckMngCr == CornerkickManager.Main.CalendarReturn.UserGame) { // User game
+      sNextText = "zum Spiel";
+    } else if (ckMngCr == CornerkickManager.Main.CalendarReturn.SeasonEnd) { // New season
+      //window.location.reload(true);
+    }
+  }
+      }
+    }
+  }
+
+  private bool checkReadyForCalendarRunning()
+  {
+    if (CkAppShared.iUserActive + 1 < CkAppShared.ckMng.ltUser.Count) return false;
+    return true;
+  }
+
+  private async Task rmWarningAndContinueCalendar(CornerkickManager.Main.CalendarReturn ckMngCr, CkAppShared.CalendarReturn cr)
+  {
+    await CkDialog.ckDialog.CloseModal();
+
+    cr.ltRet.Remove(ckMngCr);
+
+    handleWarnings(true, cr).Wait();
+  }
+
+  private async Task kickOff()
+  {
+    await JS.InvokeVoidAsync("stopGameIni");
+    if (modalGameIni != null) await modalGameIni.Hide();
+
+    bOnViewGamePage = true;
+    await setNextButton();
+
+    if (navMenu != null) {
+      navMenu.saveButtonHidden = true;
+      navMenu.saveAsButtonHidden = true;
+    }
+
+    if (_usr?.club?.nextGame != null && _usr.club.nextGame.team[0].iTeamId == _usr.club.iId) {
+      // Pay stadium rent
+      if      (iSelectedStadium == 1) CornerkickManager.Finance.doTransaction(_usr.club, CkAppShared.ckMng.dtDatum, -CkAppShared.iCostRentStadiumDefaultSmall, CornerkickManager.Finance.iTransferralTypePayStadium, sSubject: "Stadionmiete");
+      else if (iSelectedStadium == 2) CornerkickManager.Finance.doTransaction(_usr.club, CkAppShared.ckMng.dtDatum, -CkAppShared.iCostRentStadiumDefaultBig,   CornerkickManager.Finance.iTransferralTypePayStadium, sSubject: "Stadionmiete");
+    }
+
+    bLiveGame = true;
+
+    // Change to live-game
+    Navigation.NavigateTo("/member/viewgame/x");
+  }
+
+  private async Task StartNewSeason(CornerkickManager.Main.CalendarReturn ckMngCr, CkAppShared.CalendarReturn cr)
+  {
+    if (_usr == null) return;
+
+    CornerkickManager.Club? clb = Controllers.Member.MemberController.ckClub(_usr);
+
+    int iBalanceStart = 0;
+    int iBalanceSecretStart = 0;
+    if (clb != null) {
+      iBalanceStart = clb.iBalance;
+      iBalanceSecretStart = clb.iBalanceSecret;
+    }
+
+    await rmWarningAndContinueCalendar(ckMngCr, cr);
+
+    if (clb != null && MainLayout.headline != null) MainLayout.headline.Refresh(iBalanceStart: iBalanceStart, iBalance: clb.iBalance, iBalanceSecretStart: iBalanceSecretStart, clb.iBalanceSecret);
+
+    doPromotion();
+  }
+#endif
+
+  private bool doPromotion()
+  {
+    List<CornerkickManager.User> ltUserPromoted = new List<CornerkickManager.User>();
+    foreach (CornerkickManager.User usr in CkAppShared.ckMng.ltUser) {
+      if (doPromotion(usr, CkAppShared.ckMng.iSeason, CkAppShared.ckMng.dtDatum, ltCups: CkAppShared.ckMng.ltCups)) ltUserPromoted.Add(usr);
+    }
+
+#if !_WebApp
+    if (ltUserPromoted.Count > 0) {
+      //Navigation.NavigateTo("/member/desk");
+      string sText = "";
+      foreach (CornerkickManager.Main.News news in ltUserPromoted[0].ltNews) {
+        if (news.iType == CornerkickManager.Main.iNewsTypeUserPromotion) {
+          sText = news.sText;
+          foreach (string sRespLvlName in CornerkickManager.Names.sUserRespLvlNames) {
+            if (sText.Contains(sRespLvlName)) {
+              sText = sText.Replace(sRespLvlName, "<b>" + sRespLvlName + "</b>");
+              break;
+            }
+          }
+          break;
+        }
+      }
+
+      if (navMenu != null) navMenu.refresh();
+
+      if (stars != null) stars.updateStarsFlicker(ltUserPromoted[0].iResp);
+
+      showPromotionInfo(sText, ltUserPromoted[0].iResp);
+    }
+#endif
+
+    return ltUserPromoted.Count > 0;
+  }
+  private bool doPromotion(CornerkickManager.User usr, int iSeason, DateTime dt, List<CornerkickManager.Cup>? ltCups = null)
+  {
+    if (usr == null) return false;
+    if (usr.iResp >= CornerkickManager.Names.sUserRespLvlNames.Length - 1) return false;
+
+    bool bUserPromoted = false;
+
+    if (usr.iResp == 0) {
+      if ((dt - usr.dtClubStart).TotalDays > 40.0 + (40.0 / (usr.club.getAttractionFactor(iSeason, ltCups: ltCups, dtNow: dt) * 0.01))) {
+        usr.iResp++;
+        usr.fSkillPointsFree += (float)usr.iResp;
+        bUserPromoted = true;
+      }
+    } else if (usr.iResp == 1) {
+      if ((dt - usr.dtClubStart).TotalDays > 120.0 + (200.0 / (usr.club.getAttractionFactor(iSeason, ltCups: ltCups, dtNow: dt) * 0.01))) {
+        usr.iResp++;
+        usr.fSkillPointsFree += (float)usr.iResp;
+        bUserPromoted = true;
+      }
+    } else if (usr.iResp > 1) {
+      if (iSeason == usr.iResp) {
+        usr.iResp++;
+        usr.fSkillPointsFree += (float)usr.iResp;
+        bUserPromoted = true;
+      }
+    }
+
+    if (bUserPromoted) {
+      CkAppShared.ckMng.sendNews(usr, CornerkickManager.Main.iNewsTypeUserPromotion, sReplace: CornerkickManager.Names.sUserRespLvlNames[usr.iResp]);
+
+      if (usr.iResp == CkAppShared.iUserRespFinance) {
+        // Add 5 mio. sponsor bonus for finance plan
+        CornerkickManager.Finance.doTransaction(usr.club, CkAppShared.ckMng.dtDatum, 5000000, CornerkickManager.Finance.iTransferralTypeInSponsorBonusYear);
+
+        // Set club balance to ~10 mio. €
+        usr.club.iBalance = 9900000 + CkAppShared.random.Next(1000000);
+      }
+      if (usr.iResp == CkAppShared.iUserRespSponsors) {
+        usr.club.ltSponsorOffers.Add(Controllers.App.createDefaultSponsor(CkAppShared.ckMng.ltUser[CkAppShared.iUserActive].iLevel, true, 1));
+      }
+    }
+
+    return bUserPromoted;
+  }
+
+  public static void showPromotionInfo(string sPromNews, byte iRespLvl, Action? actOnOk = null)
+  {
+    string sText = sPromNews;
+
+    sText += " Deine Verantwortungsbereiche haben sich erweitert.<br /><br />Zu deinen neuen Aufgaben gehören jetzt u.A.:<br /><ul>";
+    if (iRespLvl == 1) {
+      sText += "<li>Das Vorgeben des <a href=\"member/training#teamlist\">individuellen Trainings</a> deiner Spieler</li>";
+      sText += "<li>Das Verhandeln von <a href=\"member/contracts\">Spielerverträgen</a> (Blitzverhandlung)</li>";
+      sText += "<li>Das Hochziehen von <a href=\"member/jouth\">Jugendspielern</a></li>";
+      sText += "</ul>";
+    } else if (iRespLvl == 2) {
+      sText += "<li>Das exakte Verhandeln deiner Spielerverträge</li>";
+      sText += "<li>Das Einstellen deines <a href=\"member/staff\">Personals</a></li>";
+      sText += "<li>Die oberen Punkte unter Berücksichtigung der Vereinsfinanzen</li>";
+      sText += "<li>Zugang zur <a href=\"member/statisticplayer\">Statistikabteilung</a></li>";
+      sText += "</ul>";
+    } else if (iRespLvl == 3) {
+      sText += "<li>Das Auswählen von <a href=\"member/sponsors\">Sponsoren</a></li>";
+      sText += "<li>Das Aufstellen eines <a href=\"member/finance\">Finanzplans</a></li>";
+      sText += "<li>Das Festlegen der <a href=\"member/finance\">Eintrittspreise</a> für deine Heimspiele</li>";
+      sText += "<li>Das Scouting externer Spieler</li>";
+      sText += "<li>Die <a href=\"member/transfer\">Transfers</a> neuer Spieler</li>";
+      sText += "</ul>";
+    } else if (iRespLvl == 4) {
+      sText += "<li>Die Erweiterung deines <a href=\"member/stadium\">Stadions</a></li>";
+      sText += "<li>Der Erwerb und Ausbau der <a href=\"member/buildings\">Vereinsgebäude</a></li>";
+      sText += "<li>Den Ein- und Verkauf von <a href=\"member/merchandising\">Merchandisingartikeln</a></li>";
+      sText += "</ul>";
+    }
+
+    sText += "<br />Du kannst dieses Fenster über den Link unter <i>Nachrichten</i> erneut öffnen.";
+
+    CkDialog.ckDialog.Show("Beförderung!", sText, sButtonCancelText2: "", actionOnOk: actOnOk);
+  }
+
+  private void SetStadium(int i)
+  {
+    iSelectedStadium = i;
+
+    if (_usr == null) return;
+
+    if (_usr.lti == null) _usr.lti = new List<int>();
+    while (_usr.lti.Count <= UserOptionsModel.iUserOptionsIxStadium) _usr.lti.Add(0);
+
+    _usr.lti[UserOptionsModel.iUserOptionsIxStadium] = iSelectedStadium;
+
+    if (_usr?.club?.nextGame != null && _usr.club.nextGame.team[0].iTeamId == _usr.club.iId) {
+      // Set stadium for next game
+      if      (iSelectedStadium ==  0) _usr.club.nextGame.stadium = _usr.club.stadium;
+      else if (iSelectedStadium ==  1) _usr.club.nextGame.stadium = CkAppShared.stadiumDefaultSmall        .Clone();
+      else if (iSelectedStadium ==  2) _usr.club.nextGame.stadium = CkAppShared.stadiumDefaultBig          .Clone();
+      else if (iSelectedStadium == -1) _usr.club.nextGame.stadium = CkAppShared.stadiumDefaultTrainingCourt.Clone();
+    }
+  }
+
+  public async Task CorruptReferee()
+  {
+    if (iCorruptReferee < 1) return;
+    if (_usr?.club?.nextGame == null) return;
+
+    CornerkickManager.Club clb = _usr.club;
+    if (clb.iBalanceSecret < iCorruptReferee && ckToast != null) {
+      toastMessage = "Leider haben Sie nicht mehr genug Kleingeld in der schwarzen Kasse...";
+      await ckToast.Show();
+      return;
+    }
+
+    int iBalanceStart = clb.iBalance;
+    int iBalanceSecretStart = clb.iBalanceSecret;
+
+    for (byte iHA = 0; iHA < 2; iHA++) {
+      if (clb.iId == clb.nextGame.team[iHA].iTeamId) {
+        clb.nextGame.team[iHA].fRefereeCorrupt += (float)(iCorruptReferee / 1E6); // 1% corruption per 10.000€
+        clb.nextGame.team[iHA].fRefereeCorrupt = Math.Min(clb.nextGame.team[iHA].fRefereeCorrupt, 0.5f); // Max 50% corruption with 500.000€
+        //fCorruptFactor = clb.nextGame.team[iHA].fRefereeCorrupt;
+        clb.iBalanceSecret -= iCorruptReferee;
+        if (giPreviewGame != null) giPreviewGame.fRefereeCorrupt = clb.nextGame.getRefereeCorrupt();
+        break;
+      }
+    }
+
+    //modalGameIni.Show();
+    if (MainLayout.headline != null) MainLayout.headline.Refresh(iBalanceStart: iBalanceStart, iBalance: clb.iBalance, iBalanceSecretStart: iBalanceSecretStart, clb.iBalanceSecret);
+
+    iCorruptReferee = 0;
+
+    if (ckToast != null) {
+      toastMessage = "Der Schiedsrichter steckt das Geld ein und zieht pfeifend von dannen...";
+      await ckToast.Show();
+    }
+  }
+
+  public class BrowserService
+  {
+    private readonly IJSRuntime _js;
+
+    public BrowserService(IJSRuntime js)
+    {
+      _js = js;
+    }
+
+    public async Task<BrowserDimension> GetDimensions()
+    {
+      try {
+        return await _js.InvokeAsync<BrowserDimension>("getDimensions");
+      } catch {
+        return new BrowserDimension();
+      }
+    }
+
+    public async Task<BrowserDimension> GetObjectDimensions()
+    {
+      return await _js.InvokeAsync<BrowserDimension>("getDimensions");
+    }
+  }
+
+  public class BrowserDimension
+  {
+    public int Width { get; set; }
+    public int Height { get; set; }
+  }
+
+}

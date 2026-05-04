@@ -1,0 +1,33 @@
+﻿#divPlActiveDetails {
+  position: absolute;
+  top: 0px;
+  left: 106%;
+  height: 100%;
+  margin-left: 6px;
+  display: block;
+}
+
+.changelabel {
+  position: absolute;
+  color: black;
+  font-weight: bold;
+  /*
+  background-color: white;
+  border: 2px solid black;
+  border-radius: 6px;
+  padding-left: 4px;
+  padding-right: 4px;
+  */
+  text-align: center;
+  white-space: nowrap;
+}
+
+@media (max-width: 640.98px) {
+  #divPlActiveDetails {
+    display: none;
+  }
+
+  .changelabel {
+    font-size: small;
+  }
+}

@@ -1,0 +1,212 @@
+﻿@page "/member/merchandising"
+
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using CornerkickApp.Shared.Models
+@using CornerkickApp.Components.Shared.Components
+
+@inject IJSRuntime JS
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject Controllers.Shared.MyAuthenticationStateProvider _auth
+
+<PageTitle>Merchandising</PageTitle>
+
+<!DOCTYPE html>
+<html>
+<head>
+</head>
+
+<body>
+  @if (model != null) {
+    <div style="position: relative; margin-bottom: 40px">
+      <h3>Vermarkter</h3>
+
+      <table id="tableMarketer" style="position: relative; font-size: 16px" cellpadding="6" border="1">
+        <tbody>
+          <tr>
+            @{
+              if (model.marketer == null) {
+                <td><b>@CkAppShared.ckMng.ltMerchandisingMarketer[0].sName</b></td>
+                <td>Angebot: @(model.iMarketerMoney.ToString("N0")) €</td>
+                <td><button class="btn btn-primary" id="bnMarketer" style="width: 100px" @onclick=TakeMarketer>annehmen</button></td>
+              } else {
+                <td><b>@model.marketer.marketer.sName</b></td>
+                <td>Bezahlt: @(model.iMarketerMoney.ToString("N0")) €</td>
+              }
+            }
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    if (model.marketer != null) {
+      bEditable = false;
+      <p><b>Sie das Merchandising einem Vermarkter überlassen</b></p>
+    }
+    if (!model.bFanshopsAvailable) {
+      bEditable = false;
+      <p><b>Sie benötigen mindestens einen <a href="/member/buildings">Fanshop</a> um Ihr Merchandising selbst zu vermarkten</b></p>
+    }
+
+    <div class="@(bEditable ? "" : "disabled")" style="position: relative">
+      @if (model.sctSeason.Count > 1) {
+        <label style="display: ruby">
+          <span>Jahr:</span>
+          <Blazorise.Select SelectedValue="@model.iSeason" SelectedValueChanged="(i) => SetYear(i)" TValue="int" Style="width: fit-content">
+            @foreach (LayoutModel.SelectListItem sli in model.sctSeason) {
+              <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+            }
+          </Blazorise.Select>
+        </label>
+      }
+
+      <h3>Artikel</h3>
+      <div style="width: 100%; overflow: auto">
+        <div style="position: relative; width: fit-content">
+          <DataGrid @ref="dgItems"
+                    TItem="MerchandisingModel.DatatableMerchandising"
+                    Data="@ltItems"
+                    Style="white-space:nowrap"
+                    PageSize="100"
+                    Narrow
+                    Responsive
+                    ShowHeaderGroupCaptions
+                    Sortable
+                    SortMode="DataGridSortMode.Single">
+            <DataGridColumns>
+              <DataGridColumn Field="@nameof(MerchandisingModel.DatatableMerchandising.iIx)" Sortable="false" Displayable="false" />
+              <DataGridColumn Field="@nameof(MerchandisingModel.DatatableMerchandising.iId)" Sortable="false" Displayable="false" />
+              <DataGridColumn Field="@nameof(MerchandisingModel.DatatableMerchandising.sName)" Caption="Artikel" HeaderGroupCaption="" TextAlignment="Blazorise.TextAlignment.Center" />
+              <DataGridColumn Field="@nameof(MerchandisingModel.DatatableMerchandising.iPresent)" Caption="Lager" HeaderGroupCaption="Bestand" TextAlignment="Blazorise.TextAlignment.End" />
+              <DataGridColumn Field="@nameof(MerchandisingModel.DatatableMerchandising.iValuePresent)" Caption="Wert [€]" HeaderGroupCaption="Bestand" TextAlignment="Blazorise.TextAlignment.End" />
+              <DataGridColumn Field="@nameof(MerchandisingModel.DatatableMerchandising.fPricePresentBuyAve)" Caption="Ø-Preis" HeaderGroupCaption="Bestand" TextAlignment="Blazorise.TextAlignment.End" />
+              <DataGridColumn Field="@nameof(MerchandisingModel.DatatableMerchandising.sPriceBasic)" Caption="Grundpreis" HeaderGroupCaption="Einkauf" TextAlignment="Blazorise.TextAlignment.End" />
+              <DataGridNumericColumn Field="@nameof(MerchandisingModel.DatatableMerchandising.iAmountBuy)" Caption="Menge" HeaderGroupCaption="Einkauf">
+                <DisplayTemplate>
+                  <Blazorise.NumericPicker TValue="int" Min="0" Step="10" GroupSeparator="," ModifyValueOnWheel WheelOn="Blazorise.NumericWheelOn.Hover" Style="width: 100px" TextAlignment="Blazorise.TextAlignment.Start" @bind-Value="@context.iAmountBuy" />
+                </DisplayTemplate>
+              </DataGridNumericColumn>
+              <DataGridColumn Field="@nameof(MerchandisingModel.DatatableMerchandising.fPriceBuy)" Caption="Preis/Stück" HeaderGroupCaption="Einkauf" TextAlignment="Blazorise.TextAlignment.End" />
+              <DataGridColumn Field="@nameof(MerchandisingModel.DatatableMerchandising.fPriceBuyTotal)" Caption="Gesamtpreis" HeaderGroupCaption="Einkauf" TextAlignment="Blazorise.TextAlignment.End" />
+              <DataGridColumn Field="@nameof(MerchandisingModel.DatatableMerchandising.iId)" Caption="" HeaderGroupCaption="Einkauf" TextAlignment="Blazorise.TextAlignment.Center">
+                <DisplayTemplate>
+                  <button class="btn btn-primary" disabled>kaufen</button>
+                </DisplayTemplate>
+              </DataGridColumn>
+              <DataGridNumericColumn Field="@nameof(MerchandisingModel.DatatableMerchandising.fPriceSell)" Caption="Verkaufspreis" HeaderGroupCaption="Verkauf">
+                <DisplayTemplate>
+                  <Blazorise.NumericPicker TValue="float" Min="0" ModifyValueOnWheel WheelOn="Blazorise.NumericWheelOn.Hover" CurrencySymbol=" €" CurrencySymbolPlacement="Blazorise.CurrencySymbolPlacement.Suffix" Style="width: 86px" TextAlignment="Blazorise.TextAlignment.End" @bind-Value="@context.fPriceSell" />
+                </DisplayTemplate>
+              </DataGridNumericColumn>
+              <DataGridColumn Field="@nameof(MerchandisingModel.DatatableMerchandising.iSold)" Caption="verkauft" HeaderGroupCaption="Verkauf" TextAlignment="Blazorise.TextAlignment.End" />
+              <DataGridColumn Field="@nameof(MerchandisingModel.DatatableMerchandising.iItemIncome)" Caption="Einnahmen [€]" HeaderGroupCaption="Verkauf" TextAlignment="Blazorise.TextAlignment.End" />
+              <DataGridColumn Field="@nameof(MerchandisingModel.DatatableMerchandising.iWinLoose)" Caption="G/V [€]" HeaderGroupCaption="Verkauf" TextAlignment="Blazorise.TextAlignment.End" />
+              <DataGridColumn Field="@nameof(MerchandisingModel.DatatableMerchandising.sPriceSellAve)" Caption="Ø-Preis" HeaderGroupCaption="Verkauf" TextAlignment="Blazorise.TextAlignment.End" />
+            </DataGridColumns>
+            <HeaderGroupCaptionTemplate>
+              @if (context.HeaderGroupCaption == "Bestand") {
+                <div style="text-align: center; background-color: orange; font-size: 125%">
+                  Bestand
+                </div>
+              } else if (context.HeaderGroupCaption == "Einkauf") {
+                <div style="text-align: center; background-color: lightgreen; font-size: 125%">
+                  Einkauf
+                </div>
+              } else if (context.HeaderGroupCaption == "Verkauf") {
+                <div style="text-align: center; background-color: lightblue; font-size: 125%">
+                  Verkauf
+                </div>
+              }
+            </HeaderGroupCaptionTemplate>
+            <EmptyTemplate>
+              <div class="box">
+                Keine Artikel ...
+              </div>
+            </EmptyTemplate>
+            <LoadingTemplate>
+              <div class="box">
+                <progress class="progress is-small is-primary" max="100" />
+              </div>
+            </LoadingTemplate>
+          </DataGrid>
+        </div>
+      </div>
+    </div>
+  }
+</body>
+</html>
+
+@code {
+  private CornerkickManager.User? _usr;
+  private IJSObjectReference? module;
+  private MerchandisingModel? model;
+
+  List<MerchandisingModel.DatatableMerchandising> ltItems { get; set; } = new List<MerchandisingModel.DatatableMerchandising>();
+  bool bEditable = true;
+
+  private DataGrid<MerchandisingModel.DatatableMerchandising>? dgItems;
+
+  protected override async Task OnInitializedAsync()
+  {
+    //await base.OnInitializedAsync();
+
+#if _WebApp
+    //_usr = await Http.GetFromJsonAsync<CornerkickManager.User>("member/Member/ckUser");
+    _usr = Controllers.Member.MemberController.ckUser(await _auth.GetUserId());
+
+    if (_usr == null) {
+      NavigationManager.NavigateTo("/authentication/register");
+      return;
+    }
+#else
+    _usr = CkAppShared.ckMng.ltUser[CkAppShared.iUserActive];
+#endif
+
+    model = CornerkickApp.Controllers.Member.MerchandisingController.Model(_usr);
+
+    if (model != null) {
+      GetItems();
+    }
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender) {
+    }
+  }
+  
+  private async Task TakeMarketer()
+  {
+    if (model == null) return;
+
+    CornerkickManager.Club? clb = Controllers.Member.MemberController.ckClub(_usr);
+    if (clb == null) return;
+    int iBalanceStart = clb.iBalance;
+
+    bool bOk = Controllers.Member.MerchandisingController.TakeMarketer(_usr);
+
+    if (bOk) {
+      await JS.InvokeAsync<string>("PlaySound", "cash");
+      MainLayout.headline.Refresh(clb, iBalanceStart: iBalanceStart);
+
+      model = CornerkickApp.Controllers.Member.MerchandisingController.Model(_usr);
+      InvokeAsync(StateHasChanged);
+    }
+  }
+
+  private async Task SetYear(int jY)
+  {
+    if (model == null) return;
+
+    model.iSeason = jY;
+
+    GetItems();
+  }
+
+  private async Task GetItems()
+  {
+    ltItems = Controllers.Member.MerchandisingController.GetItems(_usr, model.iSeason);
+  }
+
+}

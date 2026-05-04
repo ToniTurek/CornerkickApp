@@ -1,0 +1,137 @@
+﻿@using CornerkickApp.Shared.Services
+@using CornerkickApp.Components.Shared.Components
+@inject Controllers.Shared.MyAuthenticationStateProvider _auth
+@inject Controllers.AmazonS3FileTransfer as3
+@inject IAmazonS3Service AmazonS3Service
+
+<div style="margin-top: 60px; border: 0px solid black"></div>
+<h4>Online Spielstand</h4>
+<hr />
+@if (bShowContent) {
+  <AuthorizeView>
+    <Authorized>
+      <div style="display: flex; justify-content: space-between">
+        <span style="margin: 0">Eingeloggt als: <b>@context.User.Identity?.Name</b></span>
+        <Logout />
+      </div>
+      @if (bLoading) {
+        <p style="margin-top: 1rem">Daten werden geladen ...</p>
+      } else {
+        <div class="p-3 form-group" style="margin-bottom: 6px">
+          <div class="btn-group btn-group-vertical" role="group" data-bs-toggle="buttons">
+            <ListCkFiles @ref=lcf ltFilesCk=ltFilesCkOnline action="selectGame"></ListCkFiles>
+          </div>
+        </div>
+
+        <button class="btn btn-primary" style="width: 100%; font-size: 120%; background-color: orchid; border-color:blueviolet" disabled="@string.IsNullOrEmpty(sCkKeySelected)" @onclick="load">
+          <Blazorise.Icon Name="Blazorise.IconName.FileDownload" />
+          herunterladen
+        </button>
+      }
+    </Authorized>
+    <Authorizing>
+        Authorizing...
+    </Authorizing>
+    <NotAuthorized>
+      <h5>Einloggen um Funktion zu nutzen</h5>
+      <Login />
+      <div style="height: 300px"></div>
+    </NotAuthorized>
+  </AuthorizeView>
+}
+
+@code {
+  [Parameter]
+  public Action<string> action { get; set; }
+
+  List<string[]> ltFilesCkOnline;
+  private string? sCkKeySelected { get; set; } // Online game
+  bool bShowContent = false;
+  bool bLoading = true;
+  ListCkFiles? lcf { get; set; }
+
+  protected override async Task OnInitializedAsync()
+  {
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender) {
+      show();
+      bShowContent = true;
+      await InvokeAsync(StateHasChanged);
+    }
+  }
+
+  private void selectGame(string? sFileCk)
+  {
+    sCkKeySelected = sFileCk;
+    StateHasChanged();
+  }
+
+  public async Task show()
+  {
+    if (!_auth.IsAuthenticated()) return;
+
+    ltFilesCkOnline = await Services.StartGameService.GetFilesInCloudAsync(_auth, await AmazonS3Service.GetAmazonS3CredentialsAsync());
+
+    bLoading = false;
+
+    await InvokeAsync(StateHasChanged);
+  }
+
+  public async Task load()
+  {
+    if (string.IsNullOrEmpty(sCkKeySelected)) return;
+    if (!_auth.IsAuthenticated()) return;
+
+    // Check if save directory already exists
+    string sDirSave = Path.Combine(CornerkickApp.Controllers.App.getDocumentsDir, "save");
+    if (!Directory.Exists(sDirSave)) Directory.CreateDirectory(sDirSave);
+
+    /*
+    // Check if save directory already exists
+    string sDirSaveOnline = Path.Combine(sDirSave, ".online");
+    if (!Directory.Exists(sDirSaveOnline)) Directory.CreateDirectory(sDirSaveOnline);
+    */
+
+    if (File.Exists(Path.Combine(sDirSave, Path.GetFileName(sCkKeySelected)))) {
+      await CkDialog.ckDialog.Show(
+        "Warnung",
+        "Spielstand <b>" + Path.GetFileNameWithoutExtension(sCkKeySelected) + "</b> existiert bereits. Vorhandenen Spielstand überschreiben?",
+        //sButtonCancelText2: "",
+        actionOnOk: () => loadWork()
+      );
+    } else {
+      await loadWork();
+    }
+  }
+
+  private async Task loadWork()
+  {
+    if (string.IsNullOrEmpty(sCkKeySelected)) return;
+    if (!_auth.IsAuthenticated()) return;
+
+    // Check if save directory already exists
+    string sDirSave = Path.Combine(CornerkickApp.Controllers.App.getDocumentsDir, "save");
+    if (!Directory.Exists(sDirSave)) Directory.CreateDirectory(sDirSave);
+
+    /*
+    // Check if save directory already exists
+    string sDirSaveOnline = Path.Combine(sDirSave, ".online");
+    if (!Directory.Exists(sDirSaveOnline)) Directory.CreateDirectory(sDirSaveOnline);
+    */
+
+    string sErr = as3.downloadFile(sCkKeySelected, sDirSave);
+
+    if (string.IsNullOrEmpty(sErr)) {
+      //action(Path.Combine(sDirSave, Path.GetFileName(sCkKeySelected)));
+      action(Path.Combine(sDirSave, Path.GetFileName(sCkKeySelected)));
+      sCkKeySelected = "";
+      if (lcf != null) lcf.update(sCkKeySelected);
+      await InvokeAsync(StateHasChanged);
+    } else {
+      await CkDialog.ckDialog.Show("ERROR", sErr, sButtonCancelText2: "");
+    }
+  }
+}

@@ -1,0 +1,13 @@
+﻿@page "/"
+@inject NavigationManager NavigationManager
+
+@*
+<CornerkickApp.Maui.Test.RadzenSchedulerTest AdditionalSourceCodePages=@(new [] { "Appointment.cs", "AddAppointmentPage.razor", "EditAppointmentPage.razor" })></CornerkickApp.Maui.Test.RadzenSchedulerTest>
+*@
+
+@code {
+	protected override void OnInitialized()
+	{
+		NavigationManager.NavigateTo("/home");
+	}
+}

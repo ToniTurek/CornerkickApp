@@ -1,0 +1,414 @@
+﻿@using CornerkickApp.Shared.Models
+
+@if (fElapsedTime > 0.0 && AppConstants.IS_DEBUG) {
+  <div>
+    Elapsed time: @(fElapsedTime.ToString("0.000")) s
+  </div>
+}
+<div class="@sClass" style="position: relative; width: 100%">
+  @*
+            Virtualize
+            VirtualizeOptions="@(new() { DataGridHeight = "800px"})"
+            PageSize="@(nPlStart + nPlRes + 1)"
+  *@
+  <DataGrid @ref="teamtable"
+            TItem="TeamModel.TableTeam"
+            Data="@ltTableTeam"
+            SelectionMode="Blazorise.DataGrid.DataGridSelectionMode.Multiple"
+            Style="white-space:nowrap"
+            PageSize="@nPageSize"
+            ShowPager
+            CommandMode="DataGridCommandMode.ButtonRow"
+            Narrow
+            RowStyling="@OnRowStyling"
+            Sortable
+            SortMode="DataGridSortMode.Single"
+            Responsive
+            RowSelectable=@((x) => !(x.Item.bSubstituted || x.Item.bAtNationalTeam/* || x.Item.iSuspended > 0*/ || toBeSubstituted(x.Item.iIndex - 1)))
+            SelectedRowsChanged="@switchPlayer">
+    <ChildContent>
+      <DataGridColumn Field="@nameof(TeamModel.TableTeam.iIndex)"
+                      Caption="#"
+                      TextAlignment="Blazorise.TextAlignment.Center"
+                      CellStyle="@((item) => {
+                        string sRet = "";
+                        if (item.bSubstituted || item.bAtNationalTeam || toBeSubstituted(item.iIndex - 1)) {
+                          sRet = "color: rgb(180,180,180);";
+                        } else {
+                          if (item.iSuspended < 0) {         // Player has yellow card -->
+                            sRet = "color: rgb(220,140,0);"; // --> text color yellow
+                          } else if (item.iSuspended > 0) {  // Player has red card -->
+                            sRet = "color: white;";          // --> text color white
+                          }
+                        }
+                        if (item.iSuspended > 0) {
+                          sRet += "background-color: red !important";
+                        } else if (item.iIndex < nPlStart + 1) {
+                          sRet += "background-color: rgb(210,230,188) !important";
+                        } else if (item.iIndex < nPlStart + nPlRes + 1) {
+                          sRet += "background-color: rgb(192,204,224) !important";
+                        } else {
+                          sRet += "background-color: rgb(225,225,225) !important";
+                        }
+                        return sRet;
+                      })" />
+      <DataGridColumn Field="@nameof(TeamModel.TableTeam.iId)" Sortable="false" Displayable="false" />
+      <DataGridColumn Field="" Sortable="false" Displayable="false" />
+      <DataGridColumn Field="@nameof(TeamModel.TableTeam.iNr)" Caption="Nr" TextAlignment="Blazorise.TextAlignment.Center" />
+      <DataGridColumn Field="@nameof(TeamModel.TableTeam.sName)" Caption="Name" TextAlignment="Blazorise.TextAlignment.Center">
+        <DisplayTemplate>
+          <a href="/member/playerdetails/@context.iId" class="@(context.bSubstituted ? "substituted" : "")" style="text-decoration: none">
+            @((MarkupString)context.sName)
+          </a>
+        </DisplayTemplate>
+      </DataGridColumn>
+      <DataGridColumn Field="@nameof(TeamModel.TableTeam.sPosition)" Caption="Pos." TextAlignment="Blazorise.TextAlignment.Center" />
+      <DataGridColumn Field="@nameof(TeamModel.TableTeam.sHp)" Caption="HP" TextAlignment="Blazorise.TextAlignment.Center" />
+      <DataGridColumn Field="@nameof(TeamModel.TableTeam.fSkill)" Caption="Stärke" TextAlignment="Blazorise.TextAlignment.Center" CellStyle="@((item) => {
+                                    if (selected_player != null && selected_player.iId != item.iId) {
+                                      if (selected_player.iIndex <= nPlStart) return "color: #ce00ff ";
+                                      if (item           .iIndex <= nPlStart) return "color: blue ";
+                                    }
+                                    return "";
+                                  })">
+        <DisplayTemplate>
+          @((MarkupString)(context.fSkill > 0 ? context.fSkill.ToString("0.0") : "?"))
+        </DisplayTemplate>
+      </DataGridColumn>
+      <DataGridColumn Field="@nameof(TeamModel.TableTeam.fCondi)" Caption="Kond." TextAlignment="Blazorise.TextAlignment.End">
+        <DisplayTemplate>
+          <span style="color: @CornerkickApp.Controllers.Member.PlayerController.getColorFromValue(0, context.fCondi)">
+            @((context.fCondi * 100f).ToString("0.0"))
+          </span>
+        </DisplayTemplate>
+      </DataGridColumn>
+      <DataGridColumn Field="@nameof(TeamModel.TableTeam.fFresh)" Caption="Frische" TextAlignment="Blazorise.TextAlignment.End">
+        <DisplayTemplate>
+          <span style="color: @CornerkickApp.Controllers.Member.PlayerController.getColorFromValue(1, context.fFresh)">
+            @((context.fFresh * 100f).ToString("0.0"))
+          </span>
+        </DisplayTemplate>
+      </DataGridColumn>
+      <DataGridColumn Field="@nameof(TeamModel.TableTeam.fMoral)" Caption="Moral" TextAlignment="Blazorise.TextAlignment.End">
+        <DisplayTemplate>
+          <span style="color: @CornerkickApp.Controllers.Member.PlayerController.getColorFromValue(2, context.fMoral)">
+            @((context.fMoral * 100f).ToString("0.0"))
+          </span>
+        </DisplayTemplate>
+      </DataGridColumn>
+      <DataGridColumn Field="@nameof(TeamModel.TableTeam.fExperience)" Caption="Spielpr." TextAlignment="Blazorise.TextAlignment.End">
+        <DisplayTemplate>
+          @((context.fExperience * 100f).ToString("0.0"))
+        </DisplayTemplate>
+      </DataGridColumn>
+      <DataGridColumn Field="@nameof(TeamModel.TableTeam.sForm)" Caption="Form" TextAlignment="Blazorise.TextAlignment.Center">
+        <DisplayTemplate>
+          @((MarkupString)Controllers.Tool.getFormIcon(context.sForm))
+        </DisplayTemplate>
+      </DataGridColumn>
+      <DataGridColumn Field="@nameof(TeamModel.TableTeam.fLeader)" Caption="FP" TextAlignment="Blazorise.TextAlignment.End">
+        <DisplayTemplate>
+          @((context.fLeader * 100f).ToString("0.0"))
+        </DisplayTemplate>
+      </DataGridColumn>
+      <DataGridColumn Field="@nameof(TeamModel.TableTeam.fAge)" Caption="Alter" TextAlignment="Blazorise.TextAlignment.Center">
+        <CaptionTemplate>
+          <Blazorise.Tooltip Text="Hello tooltip">
+            @context.Caption
+          </Blazorise.Tooltip>
+        </CaptionTemplate>
+        <DisplayTemplate>
+          @(context.fAge.ToString("0"))
+        </DisplayTemplate>
+      </DataGridColumn>
+      @if (DuringGame) {
+        <DataGridColumn Field="@nameof(TeamModel.TableTeam.fGrade)" Caption="Note" TextAlignment="Blazorise.TextAlignment.Center">
+          <DisplayTemplate>
+            @(context.fGrade > 0f ? context.fGrade.ToString("0.0") : "-")
+          </DisplayTemplate>
+        </DataGridColumn>
+      } else {
+        <DataGridColumn Field="@nameof(TeamModel.TableTeam.fTalent)" Caption="Tal." DisplayFormat="{0:N1}" TextAlignment="Blazorise.TextAlignment.End" />
+        <DataGridColumn Field="@nameof(TeamModel.TableTeam.fSkillIdeal)" Caption="St. ber." DisplayFormat="{0:N1}" TextAlignment="Blazorise.TextAlignment.End" />
+      }
+      <DataGridColumn Field="@nameof(TeamModel.TableTeam.sCaptain)" Caption="C" TextAlignment="Blazorise.TextAlignment.Center" />
+      <DataGridColumn Field="@nameof(TeamModel.TableTeam.sNat)" Caption="Nat." TextAlignment="Blazorise.TextAlignment.Center">
+        <DisplayTemplate>
+          @((MarkupString)Controllers.Tool.getNatIcon(context.sNat))
+        </DisplayTemplate>
+      </DataGridColumn>
+    </ChildContent>
+    <FirstPageButtonTemplate>
+      <i class="fa fa-step-backward"></i>
+    </FirstPageButtonTemplate>
+    <LastPageButtonTemplate>
+      <i class="fa fa-step-forward"></i>
+    </LastPageButtonTemplate>
+    <TotalItemsTemplate></TotalItemsTemplate>
+    <TotalItemsShortTemplate></TotalItemsShortTemplate>
+    <ItemsPerPageTemplate></ItemsPerPageTemplate>
+    <ButtonRowTemplate>
+      <button style="height: 100%; border: none" @onclick="switchMobile"><Blazorise.Icon Name="@(_bMobile ? Blazorise.IconName.AngleDown : Blazorise.IconName.AngleUp)"></Blazorise.Icon></button>
+    </ButtonRowTemplate>
+    <EmptyTemplate>
+      <div class="box">
+        Keine Spieler ...
+      </div>
+    </EmptyTemplate>
+    <LoadingTemplate>
+      Aufstellung wird geladen ...
+    </LoadingTemplate>
+  </DataGrid>
+  @if (selected_player != null && _bMobile) {
+    <div class="selected_player_row" @onclick="clearSelectedPlayer">
+      <table>
+        <TeamTableRow Player="selected_player" nPlStart=nPlStart nPlRes="nPlRes"></TeamTableRow>
+      </table>
+    </div>
+  }
+</div>
+
+@code {
+  [Parameter]
+  public List<TeamModel.TableTeam>? ltTableTeam { get; set; }
+
+  [Parameter]
+  public CornerkickManager.User? User { get; set; }
+
+  [Parameter]
+  public byte nPlStart { get; set; }
+
+  [Parameter]
+  public byte nPlRes { get; set; }
+
+  [Parameter]
+  public bool DuringGame { get; set; }
+
+  [Parameter]
+  public Action<int>? actRefresh { get; set; }
+
+  [Parameter]
+  public Action<List<TeamModel.TableTeam>> actSwitch { get; set; } = (ltPlayer) => nullAction(ltPlayer);
+
+  public List<int[]>? ltiSubstitution { get; set; }
+
+  protected Blazorise.DataGrid.DataGrid<TeamModel.TableTeam>? teamtable;
+  private TeamModel.TableTeam? selected_player;
+  private string sClass = "";
+  int nPageSize = 100;
+  bool _bMobile;
+  bool _bMobileSet;
+
+  System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
+  double fElapsedTime = 0.0;
+
+  public static class AppConstants
+  {
+#if DEBUG
+    public const bool IS_DEBUG = true;
+#else
+    public const bool IS_DEBUG = false;
+#endif
+  }
+
+  private static Task nullAction(List<TeamModel.TableTeam> ltPlayer)
+  {
+    return Task.CompletedTask;
+  }
+
+  protected override async Task OnInitializedAsync()
+  {
+    await base.OnInitializedAsync();
+#if DEBUG
+    sw.Start();
+#endif
+  }
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender) {
+    }
+
+#if DEBUG
+    bool bRefresh = sw.IsRunning;
+    sw.Stop();
+    fElapsedTime = sw.ElapsedMilliseconds / 1000.0;
+    if (bRefresh) InvokeAsync(StateHasChanged);
+#endif
+  }
+
+  private async Task switchPlayer(List<TeamModel.TableTeam> ltPlayer)
+  {
+    int iSelPlIx = 0;
+
+    if (ltPlayer.Count == 1) {
+      if (ltPlayer[0].bSubstituted) {
+        ltPlayer.Clear();
+        return;
+      }
+
+      selected_player = ltPlayer[0];
+      //setMoveArrowPos();
+
+      iSelPlIx = ltPlayer[0].iIndex;
+
+      /*
+      if (iFormationOption == 0 && team != null && User != null) {
+        //teamData = CornerkickApp.Controllers.Member.TeamController.getTeamData(_usr, team, team.iFormation - 1, iSP: ltPlayer[0].iIndex - 1);
+        await GetTableTeam(iSelPl: ltPlayer[0].iIndex);
+        //await InvokeAsync(StateHasChanged);
+      }
+      */
+    } else if (ltPlayer.Count == 2 && ltPlayer[0].iId != ltPlayer[1].iId) {
+      if (ltPlayer[1].bSubstituted) {
+        ltPlayer.RemoveAt(1);
+        return;
+      }
+
+      actSwitch(ltPlayer);
+
+      ltPlayer.Clear();
+      selected_player = null;
+      await InvokeAsync(StateHasChanged);
+    } else {
+      selected_player = null;
+      ltPlayer.Clear();
+    }
+
+    //ltTableTeam = (await CornerkickApp.Controllers.Member.TeamController.getTableTeam(User, 0, iSelectedPlayer: iSelPlIx)).ToList();
+    //await disable();
+    if (actRefresh != null) actRefresh(iSelPlIx);
+    //List<TeamModel.TableTeam>? _ltTableTeam = (await CornerkickApp.Controllers.Member.TeamController.getTableTeam(User, 0, iSelectedPlayer: iSelPlIx)).ToList();
+    //update(_ltTableTeam, selected_player);
+  }
+
+  /*
+  private void OnCellStyling(TeamModel.TableTeam pl, DataGridColumn<TeamModel.TableTeam> col, DataGridCellStyling styling)
+  {
+    if (!col.Caption.Equals("#")) return;
+
+    if (pl.iIndex < 12) {
+      styling.Style = "background-color: rgb(210,230,188)";
+    } else if (pl.iIndex < 19) {
+      styling.Style = "background-color: rgb(192,204,224)";
+    }
+    if (pl.bSubstituted) styling.Style = "color: rgb(180,180,180)";
+  }
+  */
+
+  private void OnRowStyling(TeamModel.TableTeam pl, DataGridRowStyling styling)
+  {
+    if (selected_player != null && selected_player.iIndex == pl.iIndex) {
+      styling.Style = "background-color: pink";
+    } else {
+      if (pl.iIndex < nPlStart + 1) {
+        if (pl.iIndex % 2 == 0) {
+          styling.Style = "background-color: rgb(235,255,235)";
+        } else {
+          styling.Style = "background-color: rgb(245,255,245)";
+        }
+      } else if (pl.iIndex < nPlStart + nPlRes + 1) {
+        if (pl.iIndex % 2 == 0) {
+          styling.Style = "background-color: rgb(230,240,255)";
+        } else {
+          styling.Style = "background-color: rgb(240,250,255)";
+        }
+      } else {
+        if (pl.iIndex % 2 == 0) {
+          styling.Style = "background-color: rgb(240,240,240)";
+        } else {
+          styling.Style = "background-color: white";
+        }
+      }
+    }
+
+    if (pl.bSubstituted) { // Player is substituted -->
+      styling.Style += "; color: rgb(180,180,180)"; // --> text color grey
+    } else if (pl.bAtNationalTeam) { // Player is at national team -->
+      styling.Style += "; color: rgb(180,180,180)"; // --> text color grey
+    } else if (toBeSubstituted(pl.iIndex - 1)) { // Player is to be substituted -->
+      styling.Style += "; color: rgb(180,180,180)"; // --> text color grey
+    } else {
+      if (pl.iSuspended < 0) { // Player has yellow card -->
+        styling.Style += "; color: rgb(220,140,0)"; // --> text color yellow
+      } else if (pl.iSuspended > 0) { // Player has red card -->
+        styling.Style += "; color: rgb(255,0,0)"; // --> text color red
+      }
+    }
+  }
+
+  public async Task disable()
+  {
+    sClass = "disabled";
+    await InvokeAsync(StateHasChanged);
+    await InvokeAsync(StateHasChanged);
+  }
+  private async Task refresh(DataGridReadDataEventArgs<TeamModel.TableTeam> e)
+  {
+    //sClass = "disabled";
+    //await InvokeAsync(StateHasChanged);
+    //sClass = "";
+    //await Task.Delay(10);
+    await InvokeAsync(StateHasChanged);
+  }
+  public async Task update(List<TeamModel.TableTeam>? _ltTableTeam, int iSelPlIx = 0, bool bMobile = false)
+  {
+    selected_player = ltTableTeam != null ? ltTableTeam.Find(p => p.iIndex == iSelPlIx) : null;
+    await update(_ltTableTeam, selected_player, bMobile: bMobile);
+  }
+  private async Task update(List<TeamModel.TableTeam>? _ltTableTeam, TeamModel.TableTeam? _selected_player, bool bMobile = false)
+  {
+#if DEBUG
+    sw.Restart();
+#endif
+    if (!_bMobileSet) await setMobile(bMobile);
+    ltTableTeam = _ltTableTeam;
+    selected_player = _selected_player;
+    sClass = "";
+    await InvokeAsync(StateHasChanged);
+  }
+  public async Task clearSelectedPlayer()
+  {
+    selected_player = null;
+    if (teamtable != null) teamtable.SelectedRows.Clear();
+    if (actRefresh != null) actRefresh(0);
+  }
+
+  private async Task switchMobile()
+  {
+    _bMobileSet = true;
+    _bMobile = !_bMobile;
+    setMobile(_bMobile);
+    //await InvokeAsync(StateHasChanged);
+  }
+
+  private async Task setMobile(bool bMobile)
+  {
+    _bMobile = bMobile;
+    nPageSize = bMobile ? nPlStart : 100;
+    //await InvokeAsync(StateHasChanged);
+  }
+
+  private bool toBeSubstituted(int iIndex)
+  {
+    if (User == null) return false;
+    if (User.game == null) return false;
+
+    CornerkickManager.Club? clb = Controllers.Member.MemberController.ckClub(User);
+    if (clb == null) return false;
+
+    bool bOnSubList = false;
+    byte iHA = 0;
+    if (clb.iId == User.game.data.team[1].iTeamId) iHA = 1;
+    if (User.game.ltSubstitutions[iHA] != null) {
+      foreach (byte[] iSub in User.game.ltSubstitutions[iHA]) {
+        if (iSub[0] == iIndex || iSub[1] == iIndex) {
+          bOnSubList = true;
+          break;
+        }
+      }
+    }
+
+    return bOnSubList || ltiSubstitution?.Find(s => s[0] == iIndex || s[1] == iIndex) != null;
+  }
+
+}

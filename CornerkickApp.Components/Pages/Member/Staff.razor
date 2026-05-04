@@ -1,0 +1,619 @@
+﻿@page "/member/staff/{tab:int?}"
+
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using CornerkickApp.Shared.Models
+@using CornerkickApp.Components.Pages.Templates
+@using CornerkickApp.Components.Shared.Components
+
+@inject IJSRuntime JS
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject Controllers.Shared.MyAuthenticationStateProvider _auth
+
+<PageTitle>Personal</PageTitle>
+
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    select.form-select {
+      max-width: 240px;
+      margin-right: 1rem;
+    }
+  </style>
+</head>
+
+<body>
+  @if (model != null) {
+    <Blazorise.Tabs SelectedTab="@sTabs[iSelectedTab]" SelectedTabChanged="@OnSelectedTabChanged">
+      <Items>
+        <Blazorise.Tab Style="@CkAppShared.sCssStyleClubColors" Name="tabStaff">Trainerstab</Blazorise.Tab>
+        <Blazorise.Tab Style="@CkAppShared.sCssStyleClubColors" Name="tabScouts" hidden="@(iRespLvl < CkAppShared.iUserRespStaffScouts)"><img src="@CkAppShared.sContentDir/Icons/menu/binoculars.svg" height="16" width="16" /> Scoutingabteilung</Blazorise.Tab>
+        <Blazorise.Tab Style="@CkAppShared.sCssStyleClubColors" Name="tabMeds"><img src="@CkAppShared.sContentDir/Icons/ambulance.png" height="16" width="16" /> Medizinische Abteilung</Blazorise.Tab>
+      </Items>
+      <Content>
+        <Blazorise.TabPanel Name="tabStaff">
+          <div id="tabs-1" style="margin-top: 10px; overflow: auto">
+            <table class="table table-bordered" cellpadding="4" style="width: auto; font-size: 120%; vertical-align: middle">
+              @{
+                int iS = 0;
+              }
+              <tr>
+                <td>Co-Trainer:</td>
+                <td>
+                  <div class="staff_lvl_container">
+                    @if (bStaffEditable) {
+                      int jS = iS;
+                      <Blazorise.Select SelectedValue="@iStaff[jS]" SelectedValueChanged="(i) => updateStaff(jS, i)" TValue="int">
+                        @foreach (LayoutModel.SelectListItem sli in model.ltDdlPersonalCoachCo) {
+                          <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+                        }
+                      </Blazorise.Select>
+                    }
+                    <div class="star_container">
+                      @rfStars[iS]
+
+                      @{
+                        int jjS = iS;
+                        <div style="position: absolute; left: 0; bottom: 0; height: 12px">
+                          @for (int i = 0; i < iStaff[jjS] - 2; i++) {
+                            <img src="@CornerkickApp.Shared.Models.CkAppShared.sContentDir/Icons/sub.png" height="12" width="12" title="@(iStaff[jjS] - 2)x Auto-Auswechslung" style="margin-right: 2px" />
+                          }
+                        </div>
+                      }
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  @if (bStaffEditable) {
+                    int jS = iS;
+                    <button type="button" class="btn btn-light bnHireStaff" title="einstellen" @onclick="() => hireStaff(jS)" disabled="@bStaffBtnsDisabled[iS]">
+                      <img src="@CornerkickApp.Shared.Models.CkAppShared.sContentDir/Icons/plus.png" height="26" width="26" />
+                    </button>
+                  }
+                </td>
+
+                @{
+                  iS++;
+                }
+              </tr>
+              <tr>
+                <td>Konditions&shy;trainer:</td>
+                <td>
+                  <div class="staff_lvl_container">
+                    @if (bStaffEditable) {
+                      int jS = iS;
+                      <Blazorise.Select SelectedValue="@iStaff[jS]" SelectedValueChanged="(i) => updateStaff(jS, i)" TValue="int">
+                        @foreach (LayoutModel.SelectListItem sli in model.ltDdlPersonalCoachCondi) {
+                          <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+                        }
+                      </Blazorise.Select>
+                    }
+                    <div class="star_container">
+                      @rfStars[iS]
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  @if (bStaffEditable) {
+                    int jS = iS;
+                    <button type="button" class="btn btn-light bnHireStaff" title="einstellen" @onclick="() => hireStaff(jS)" disabled="@bStaffBtnsDisabled[iS]">
+                      <img src="@CornerkickApp.Shared.Models.CkAppShared.sContentDir/Icons/plus.png" height="26" width="26" />
+                    </button>
+                  }
+                </td>
+
+                @{
+                  iS++;
+                }
+              </tr>
+              <tr>
+                <td>Masseur:</td>
+                <td>
+                  <div class="staff_lvl_container">
+                    @if (bStaffEditable) {
+                      int jS = iS;
+                      <Blazorise.Select SelectedValue="@iStaff[jS]" SelectedValueChanged="(i) => updateStaff(jS, i)" TValue="int">
+                        @foreach (LayoutModel.SelectListItem sli in model.ltDdlPersonalMasseur) {
+                          <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+                        }
+                      </Blazorise.Select>
+                    }
+                    <div class="star_container">
+                      @rfStars[iS]
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  @if (bStaffEditable) {
+                    int jS = iS;
+                    <button type="button" class="btn btn-light bnHireStaff" title="einstellen" @onclick="() => hireStaff(jS)" disabled="@bStaffBtnsDisabled[iS]">
+                      <img src="@CornerkickApp.Shared.Models.CkAppShared.sContentDir/Icons/plus.png" height="26" width="26" />
+                    </button>
+                  }
+                </td>
+
+                @{
+                  iS++;
+                }
+              </tr>
+              <tr>
+                <td>Mental&shy;trainer:</td>
+                <td>
+                  <div class="staff_lvl_container">
+                    @if (bStaffEditable) {
+                      int jS = iS;
+                      <Blazorise.Select SelectedValue="@iStaff[jS]" SelectedValueChanged="(i) => updateStaff(jS, i)" TValue="int">
+                        @foreach (LayoutModel.SelectListItem sli in model.ltDdlPersonalMental) {
+                          <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+                        }
+                      </Blazorise.Select>
+                    }
+                    <div class="star_container">
+                      @rfStars[iS]
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  @if (bStaffEditable) {
+                    int jS = iS;
+                    <button type="button" class="btn btn-light bnHireStaff" title="einstellen" @onclick="() => hireStaff(jS)" disabled="@bStaffBtnsDisabled[iS]">
+                      <img src="@CornerkickApp.Shared.Models.CkAppShared.sContentDir/Icons/plus.png" height="26" width="26" />
+                    </button>
+                  }
+                </td>
+
+                @{
+                  iS++;
+                }
+              </tr>
+              <tr>
+                <td>Jugend&shy;trainer:</td>
+                <td>
+                  <div class="staff_lvl_container">
+                    @if (bStaffEditable) {
+                      int jS = iS;
+                      <Blazorise.Select SelectedValue="@iStaff[jS]" SelectedValueChanged="(i) => updateStaff(jS, i)" TValue="int">
+                        @foreach (LayoutModel.SelectListItem sli in model.ltDdlPersonalJouthCoach) {
+                          <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+                        }
+                      </Blazorise.Select>
+                    }
+                    <div class="star_container">
+                      @rfStars[iS]
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  @if (bStaffEditable) {
+                    int jS = iS;
+                    <button type="button" class="btn btn-light bnHireStaff" title="einstellen" @onclick="() => hireStaff(jS)" disabled="@bStaffBtnsDisabled[iS]">
+                      <img src="@CornerkickApp.Shared.Models.CkAppShared.sContentDir/Icons/plus.png" height="26" width="26" />
+                    </button>
+                  }
+                </td>
+
+                @{
+                  iS++;
+                }
+              </tr>
+              <tr>
+                <td>Jugend&shy;scouting:</td>
+                <td>
+                  <div class="staff_lvl_container">
+                    @if (bStaffEditable) {
+                      int jS = iS;
+                      <Blazorise.Select SelectedValue="@iStaff[jS]" SelectedValueChanged="(i) => updateStaff(jS, i)" TValue="int">
+                        @foreach (LayoutModel.SelectListItem sli in model.ltDdlPersonalJouthScouting) {
+                          <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+                        }
+                      </Blazorise.Select>
+                    }
+                    <div class="star_container">
+                      @rfStars[iS]
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  @if (bStaffEditable) {
+                    int jS = iS;
+                    <button type="button" class="btn btn-light bnHireStaff" title="einstellen" @onclick="() => hireStaff(jS)" disabled="@bStaffBtnsDisabled[iS]">
+                      <img src="@CornerkickApp.Shared.Models.CkAppShared.sContentDir/Icons/plus.png" height="26" width="26" />
+                    </button>
+                  }
+                </td>
+
+                @{
+                  iS++;
+                }
+              </tr>
+              <tr>
+                <td>Spiel&shy;beobachter:</td>
+                <td>
+                  <div class="staff_lvl_container">
+                    @if (bStaffEditable) {
+                      int jS = iS;
+                      <Blazorise.Select SelectedValue="@iStaff[jS]" SelectedValueChanged="(i) => updateStaff(jS, i)" TValue="int">
+                        @foreach (LayoutModel.SelectListItem sli in model.ltDdlPersonalKibitzer) {
+                          <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+                        }
+                      </Blazorise.Select>
+                    }
+                    <div class="star_container">
+                      @rfStars[iS]
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  @if (bStaffEditable) {
+                    int jS = iS;
+                    <button type="button" class="btn btn-light bnHireStaff" title="einstellen" @onclick="() => hireStaff(jS)" disabled="@bStaffBtnsDisabled[iS]">
+                      <img src="@CornerkickApp.Shared.Models.CkAppShared.sContentDir/Icons/plus.png" height="26" width="26" />
+                    </button>
+                  }
+                </td>
+
+                @{ iS++; }
+              </tr>
+            </table>
+          </div>
+        </Blazorise.TabPanel>
+        <Blazorise.TabPanel Name="tabScouts" Style="padding: 1em; padding-left: 1.4em; background-color: rgb(239, 248, 254)">
+          <h4 style="margin-bottom: -10px"><u>Eingestellte Scouts</u></h4>
+          <div id="divScClub" style="display: flex; flex-wrap: wrap; justify-content: left; margin-bottom: 1rem">
+            @if (ltScoutsClub.Count > 0) {
+              @foreach (CornerkickManager.Main.Staff.Scout sc in ltScoutsClub) {
+                <StaffBusinessCardScout Scout="sc" User="_usr" Action="() => HireFireScout(sc.iId, false)" Editable="@(iRespLvl >= CkAppShared.iUserRespStaff)"></StaffBusinessCardScout>
+              }
+            } else {
+              <span style="margin-top: 20px">Noch keine Scouts eingestellt</span>
+            }
+          </div>
+          <h4 style="margin-bottom: -10px"><u>Verfügbare Scouts</u></h4>
+          <div id="divScFree" style="display: flex; flex-wrap: wrap; justify-content: left">
+            @if (ltScoutsFree.Count > 0) {
+              @foreach (CornerkickManager.Main.Staff.Scout sc in ltScoutsFree) {
+                <StaffBusinessCardScout Scout="sc" User="_usr" Action="() => HireFireScout(sc.iId, true)" Editable="@(iRespLvl >= CkAppShared.iUserRespStaff)" Free></StaffBusinessCardScout>
+              }
+            } else {
+              <span style="margin-top: 20px">Keine Scouts verfügbar</span>
+            }
+          </div>
+        </Blazorise.TabPanel>
+        <Blazorise.TabPanel Name="tabMeds" Style="padding: 1em; padding-left: 1.4em; background-color: rgb(255, 240, 240)">
+          <h4 style="margin-bottom: -10px"><u>Eingestellte Ärzte</u></h4>
+          <div id="divDrClub" style="display: flex; flex-wrap: wrap; justify-content: left">
+            @if (ltDoctorClub.Count > 0) {
+              foreach (CornerkickManager.Main.Staff.Doctor dr in ltDoctorClub) {
+                if (dr.iId >= 0) {
+                  <StaffBusinessCard Doc="@dr" User="_usr" Action="() => HireFireDr(dr.iId, false)" Editable="@(iRespLvl >= CkAppShared.iUserRespStaff)"></StaffBusinessCard>
+                }
+              }
+            } else {
+              <span style="margin-top: 20px">Noch keine Ärzte eingestellt</span>
+            }
+          </div>
+
+          <h4 style="margin-top: 20px"><u>Verletzte Spieler:</u></h4>
+          <div style="max-width: 100%; width: fit-content; overflow: auto">
+            <DataGrid TItem="StaffModel.TableItemInjuredPlayer"
+                      Data="@ltPlInjured"
+                      Style="white-space:nowrap"
+                      PageSize="100"
+                      Narrow
+                      Striped
+                      Sortable
+                      RowSelectable="@((x) => false)"
+                      SortMode="DataGridSortMode.Single">
+              <ChildContent>
+                <DataGridColumn Field="@nameof(StaffModel.TableItemInjuredPlayer.iIx)" Sortable="false">
+                  <DisplayTemplate>
+                    <img src="@(CkAppShared.sContentDir + "/Icons/ambulance" + (context.fInjuryRest < 14f ? "2" : "") + ".png")" title="ambulance" style="width: 16px" />
+                  </DisplayTemplate>
+                </DataGridColumn>
+                <DataGridColumn Field="@nameof(StaffModel.TableItemInjuredPlayer.iPlId)" Sortable="false" Displayable="false" />
+                <DataGridColumn Field="@nameof(StaffModel.TableItemInjuredPlayer.sPlName)" Caption="Name" TextAlignment="Blazorise.TextAlignment.Center">
+                  <DisplayTemplate>
+                    <a href="/member/playerdetails/@context.iPlId">
+                      @((MarkupString)context.sPlName)
+                    </a>
+                  </DisplayTemplate>
+                </DataGridColumn>
+                <DataGridColumn Field="@nameof(StaffModel.TableItemInjuredPlayer.sInjuryName)" Caption="Verletzung" TextAlignment="Blazorise.TextAlignment.Center" />
+                <DataGridColumn Field="@nameof(StaffModel.TableItemInjuredPlayer.fInjuryRest)" Caption="Verletzungsdauer" TextAlignment="Blazorise.TextAlignment.Center">
+                  <DisplayTemplate>
+                    <div style="position: relative; display: flex; align-items: center; justify-content: center; height: 100%">
+                      <Blazorise.Progress Value="@((int)(context.fInjuryProgress * 100))" Animated Striped Color="Blazorise.Color.Success" Style="width: 100%; height: 24px; background-color: white" />
+                      <span style="position: absolute; color: lightgray">@(context.fInjuryRest.ToString("0") + "d (" + context.fInjuryProgress.ToString("0.0%") + ")")</span>
+                    </div>
+                  </DisplayTemplate>
+                </DataGridColumn>
+                <DataGridColumn Field="@nameof(StaffModel.TableItemInjuredPlayer.drFree)" Caption="Beh. Arzt" TextAlignment="Blazorise.TextAlignment.Center">
+                  <DisplayTemplate>
+                    <Blazorise.Select SelectedValue="@context.iDrId" SelectedValueChanged="@((i) => SetPlayerDr(context.iPlId, i))" TValue="int" Style="width: 200px" Disabled="@(_usr == null || _usr.iResp < CkAppShared.iUserRespStaff)">
+                      <Blazorise.SelectItem Value="-9">kein</Blazorise.SelectItem>
+                      @foreach (StaffModel.TableItemInjuredPlayer.DrFree dr in context.drFree) {
+                        <Blazorise.SelectItem Value="@dr.iId">@dr.sName</Blazorise.SelectItem>
+                      }
+                    </Blazorise.Select>
+                  </DisplayTemplate>
+                </DataGridColumn>
+              </ChildContent>
+              <EmptyTemplate>
+                <div class="box">
+                  Aktuell keine verletzten Spieler
+                </div>
+              </EmptyTemplate>
+              <LoadingTemplate>
+                <div class="box">
+                  <progress class="progress is-small is-primary" max="100" />
+                </div>
+              </LoadingTemplate>
+            </DataGrid>
+          </div>
+
+          @if (_usr != null && _usr.iResp >= CkAppShared.iUserRespStaff) {
+            <h4 style="margin-bottom: -10px; margin-top: 20px"><u>Verfügbare Ärzte</u></h4>
+            <div id="divDrFree" style="display: flex; flex-wrap: wrap; justify-content: left">
+              @if (ltDoctorFree.Count > 0) {
+                foreach (CornerkickManager.Main.Staff.Doctor dr in ltDoctorFree) {
+                  if (dr.iId >= 0) {
+                    <StaffBusinessCard Doc="@dr" User="_usr" Free Action="() => HireFireDr(dr.iId, true)" Editable="@(iRespLvl >= CkAppShared.iUserRespStaff)"></StaffBusinessCard>
+                  }
+                }
+              } else {
+                <span style="margin-top: 20px">Keine Ärzte verfügbar</span>
+              }
+            </div>
+          }
+        </Blazorise.TabPanel>
+      </Content>
+    </Blazorise.Tabs>
+
+    @if (iRespLvl >= CkAppShared.iUserRespFinance) {
+      <p style="margin-top: 10px; font-size: 120%">@sCostTotal</p>
+    }
+  }
+</body>
+</html>
+
+@code {
+  [Parameter] public int? tab { get; set; } = 0;
+
+  private CornerkickManager.User? _usr;
+  private StaffModel? model;
+  private IJSObjectReference? module;
+
+  int iSelectedTab = 0;
+  string[] sTabs = ["tabStaff", "tabScouts", "tabMeds"];
+  private RenderFragment[] rfStars = new RenderFragment[7];
+  private byte[] iStaff = new byte[7];
+  private bool bStaffEditable;
+  private bool[] bStaffBtnsDisabled = new bool[7];
+  int iRespLvl { get; set; }
+  string sCostTotal = "";
+
+  List<CornerkickManager.Main.Staff.Doctor> ltDoctorClub { get; set; } = new List<CornerkickManager.Main.Staff.Doctor>();
+  List<CornerkickManager.Main.Staff.Doctor> ltDoctorFree { get; set; } = new List<CornerkickManager.Main.Staff.Doctor>();
+  List<StaffModel.TableItemInjuredPlayer> ltPlInjured { get; set; } = new List<StaffModel.TableItemInjuredPlayer>();
+
+  List<CornerkickManager.Main.Staff.Scout> ltScoutsClub { get; set; } = new List<CornerkickManager.Main.Staff.Scout>();
+  List<CornerkickManager.Main.Staff.Scout> ltScoutsFree { get; set; } = new List<CornerkickManager.Main.Staff.Scout>();
+
+  protected override async Task OnInitializedAsync()
+  {
+    //await base.OnInitializedAsync();
+
+#if _WebApp
+    //_usr = await Http.GetFromJsonAsync<CornerkickManager.User>("member/Member/ckUser");
+    _usr = Controllers.Member.MemberController.ckUser(await _auth.GetUserId());
+
+    if (_usr == null) {
+      NavigationManager.NavigateTo("/authentication/register");
+      return;
+    }
+#else
+    _usr = CkAppShared.ckMng.ltUser[CkAppShared.iUserActive];
+#endif
+
+    if (tab.HasValue) iSelectedTab = Math.Min(Math.Max(tab.Value, 0), sTabs.Length - 1);
+
+    model = CornerkickApp.Controllers.Member.StaffController.Model(_usr);
+
+    iStaff[0] = model.staff.iCoTrainer;
+    iStaff[1] = model.staff.iCondiTrainer;
+    iStaff[2] = model.staff.iPhysio;
+    iStaff[3] = model.staff.iMentalTrainer;
+    iStaff[4] = model.staff.iJouthTrainer;
+    iStaff[5] = model.staff.iJouthScouting;
+    iStaff[6] = model.staff.iKibitzer;
+
+    if (model != null && _usr != null) {
+      //iRespLvl = _usr.getResposibleLevel(CkAppShared.ckMng.dtDatum);
+      iRespLvl = _usr.iResp;
+      bStaffEditable = iRespLvl >= CkAppShared.iUserRespStaff;
+
+      await updateStaff();
+
+      ltPlInjured = Controllers.Member.StaffController.GetInjuredPlayer(_usr);
+#if _WebApp
+    } else {
+      NavigationManager.NavigateTo("/authentication/register");
+#endif
+    }
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender) {
+    }
+  }
+
+  private Task OnSelectedTabChanged(string name)
+  {
+    //selectedTab = name;
+    iSelectedTab = Array.IndexOf(sTabs, name);
+
+    //ShowTutorial(1);
+
+    return Task.CompletedTask;
+  }
+
+  private Task plotStaffStars()
+  {
+    if (model == null) return Task.CompletedTask;
+
+    rfStars[0] = Controllers.Tool.createStars(iStaff[0], iStarsMax: model.ltDdlPersonalCoachCo      .Count - 1, iStarSizePx: 24, bRound: false);
+    rfStars[1] = Controllers.Tool.createStars(iStaff[1], iStarsMax: model.ltDdlPersonalCoachCondi   .Count - 1, iStarSizePx: 24, bRound: false);
+    rfStars[2] = Controllers.Tool.createStars(iStaff[2], iStarsMax: model.ltDdlPersonalMasseur      .Count - 1, iStarSizePx: 24, bRound: false);
+    rfStars[3] = Controllers.Tool.createStars(iStaff[3], iStarsMax: model.ltDdlPersonalMental       .Count - 1, iStarSizePx: 24, bRound: false);
+    rfStars[4] = Controllers.Tool.createStars(iStaff[4], iStarsMax: model.ltDdlPersonalJouthCoach   .Count - 1, iStarSizePx: 24, bRound: false);
+    rfStars[5] = Controllers.Tool.createStars(iStaff[5], iStarsMax: model.ltDdlPersonalJouthScouting.Count - 1, iStarSizePx: 24, bRound: false);
+    rfStars[6] = Controllers.Tool.createStars(iStaff[6], iStarsMax: model.ltDdlPersonalKibitzer     .Count - 1, iStarSizePx: 24, bRound: false);
+
+    return Task.CompletedTask;
+  }
+
+  private Task setBtns()
+  {
+    if (model == null) return Task.CompletedTask;
+    if (iRespLvl < CkAppShared.iUserRespStaff) return Task.CompletedTask;
+
+    bStaffBtnsDisabled[0] = model.staff.iCoTrainer     == iStaff[0];
+    bStaffBtnsDisabled[1] = model.staff.iCondiTrainer  == iStaff[1];
+    bStaffBtnsDisabled[2] = model.staff.iPhysio        == iStaff[2];
+    bStaffBtnsDisabled[3] = model.staff.iMentalTrainer == iStaff[3];
+    bStaffBtnsDisabled[4] = model.staff.iJouthTrainer  == iStaff[4];
+    bStaffBtnsDisabled[5] = model.staff.iJouthScouting == iStaff[5];
+    bStaffBtnsDisabled[6] = model.staff.iKibitzer      == iStaff[6];
+
+    return Task.CompletedTask;
+  }
+
+  private Task updateStaff()
+  {
+    return updateStaff(-1, -1);
+  }
+  private Task updateStaff(int jStaff, int jSelectedOption)
+  {
+    if (model == null) return Task.CompletedTask;
+    if (_usr == null) return Task.CompletedTask;
+
+    ltDoctorClub = Controllers.Member.StaffController.GetDrClub(_usr);
+    ltDoctorFree = Controllers.Member.StaffController.GetDrFree(_usr);
+
+    ltScoutsClub = Controllers.Member.StaffController.GetScoutsClub(_usr);
+    ltScoutsFree = Controllers.Member.StaffController.GetScoutsFree(_usr);
+
+    if      (jStaff == 0) iStaff[0] = (byte)jSelectedOption;
+    else if (jStaff == 1) iStaff[1] = (byte)jSelectedOption;
+    else if (jStaff == 2) iStaff[2] = (byte)jSelectedOption;
+    else if (jStaff == 3) iStaff[3] = (byte)jSelectedOption;
+    else if (jStaff == 4) iStaff[4] = (byte)jSelectedOption;
+    else if (jStaff == 5) iStaff[5] = (byte)jSelectedOption;
+    else if (jStaff == 6) iStaff[6] = (byte)jSelectedOption;
+
+    plotStaffStars();
+    setBtns();
+
+    int[] iCostTotal = Controllers.Member.StaffController.GetCost(_usr, iStaff);
+    sCostTotal = "Personalkosten gesamt: " + iCostTotal[0].ToString("N0") + " €/Monat";
+    if (iCostTotal[1] > 0) sCostTotal += ", Abfindungen: " + iCostTotal[1].ToString("N0") + " €";
+
+    StateHasChanged();
+
+    return Task.CompletedTask;
+  }
+
+  private async Task hireStaff(int jStaff)
+  {
+    CornerkickManager.Club? clb = Controllers.Member.MemberController.ckClub(_usr);
+    if (clb == null) return;
+
+    int iBalanceStart = clb.iBalance;
+
+    string sMsg;
+    bool bOk = Controllers.Member.StaffController.Hire(_usr, jStaff, iStaff[jStaff], out sMsg);
+    MainLayout.headline.Refresh(clb, iBalanceStart: iBalanceStart);
+
+    updateStaff();
+
+    await CkDialog.ckDialog.Show("Personal", sMsg, sButtonCancelText2: "");
+  }
+
+  public Task HireFireDr(int iDrId, bool bHire)
+  {
+    if (_usr == null) return Task.CompletedTask;
+
+    string sMsg = "";
+
+    CornerkickManager.Club? clb = Controllers.Member.MemberController.ckClub(_usr);
+    if (clb == null) return Task.CompletedTask;
+    int iBalanceStart = clb.iBalance;
+
+    bool bOk = bHire ?
+      Controllers.Member.StaffController.Hire(_usr, 7, iDrId, out sMsg) :
+      Controllers.Member.StaffController.FireDr(_usr, iDrId);
+
+    if (bOk) {
+      updateStaff();
+      ltPlInjured = Controllers.Member.StaffController.GetInjuredPlayer(_usr);
+      MainLayout.headline.Refresh(clb, iBalanceStart: iBalanceStart);
+    }
+
+    if (!string.IsNullOrEmpty(sMsg)) {
+      //CkDialog.ckDialog.Show("Personal", sMsg, sButtonCancelText2: "", actionOnOk: null);
+
+      if (MainLayout.ckToast != null) {
+        if (MainLayout.ckToast.Visible) MainLayout.ckToast.Close(Blazorise.CloseReason.None);
+
+        MainLayout.toastMessage = sMsg;
+        MainLayout.ckToast.Show();
+      }
+    }
+
+    return Task.CompletedTask;
+  }
+
+  public Task SetPlayerDr(int iPlId, int iDrId)
+  {
+    if (_usr == null) return Task.CompletedTask;
+
+    Controllers.Member.StaffController.SetDr(_usr, iPlId, iDrId);
+
+    ltPlInjured = Controllers.Member.StaffController.GetInjuredPlayer(_usr);
+
+    return Task.CompletedTask;
+  }
+
+  public Task HireFireScout(int iScoutId, bool bHire)
+  {
+    string sMsg = "";
+
+    CornerkickManager.Club? clb = Controllers.Member.MemberController.ckClub(_usr);
+    if (clb == null) return Task.CompletedTask;
+    int iBalanceStart = clb.iBalance;
+
+    bool bOk = bHire ?
+      Controllers.Member.StaffController.Hire(_usr, 8, iScoutId, out sMsg) :
+      Controllers.Member.StaffController.FireScout(_usr, iScoutId);
+
+    updateStaff();
+    MainLayout.headline.Refresh(clb, iBalanceStart: iBalanceStart);
+
+    if (!string.IsNullOrEmpty(sMsg)) {
+      //CkDialog.ckDialog.Show("Personal", sMsg, sButtonCancelText2: "", actionOnOk: null);
+
+      if (MainLayout.ckToast != null) {
+        if (MainLayout.ckToast.Visible) MainLayout.ckToast.Close(Blazorise.CloseReason.None);
+
+        MainLayout.toastMessage = sMsg;
+        MainLayout.ckToast.Show();
+      }
+    }
+
+    return Task.CompletedTask;
+  }
+
+}

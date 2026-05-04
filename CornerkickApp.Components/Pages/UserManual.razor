@@ -1,0 +1,1230 @@
+﻿@page "/usermanual"
+
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using CornerkickApp.Shared.Models
+@using CornerkickApp.Components.Pages.Templates
+@using CornerkickApp.Components.Shared.Components
+
+@inject IJSRuntime JS
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+
+<PageTitle>Anleitung</PageTitle>
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width" />
+  <title>Anleitung</title>
+  <script type="text/javascript" src="~/js/Numbers.js"></script>
+  <script type="text/javascript" src="~/js/canvasjs.min.js"></script>
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <style>
+    .ckLink {
+      position: relative;
+      top: -52px;
+      width: 0px;
+      height: 0px;
+    }
+
+    .ckLinkLarge {
+      position: relative;
+      top: -68px;
+      width: 0px;
+      height: 0px;
+    }
+
+    h2 {
+      margin-top: 20px;
+    }
+
+    h3 {
+      margin-top: 16px;
+    }
+
+    h4 {
+      margin-top: 12px;
+    }
+
+    h5 {
+      margin-top: 8px;
+    }
+  </style>
+</head>
+
+<body>
+  <h2>Inhaltsverzeichnis</h2>
+  <ol>
+    <li>
+      <a href="#h2Intro">Einleitung</a>
+    </li>
+    <li>
+      <a href="#h2FirstSteps">Erste Schritte</a>
+    </li>
+    <li>
+      <a href="#h2Cups">Wettbewerbe</a>
+    </li>
+    <li>
+      <a href="#h2Calendar">Kalender</a>
+      <ol type="a">
+        <li>
+          <a href="#h3CalendarTestgame">Testspiele</a>
+        </li>
+        <li>
+          <a href="#h3CalendarTrainingscamp">Trainingslager</a>
+        </li>
+        <li>
+          <a href="#h3CalendarEvents">Ereignisse</a>
+          <ul>
+            <li>
+              <a href="#h4CalendarEventsTeammeeting">Krisensitzung</a>
+            </li>
+            <li>
+              <a href="#h4CalendarEventsChristmasParty">Weihnachtsfeier</a>
+            </li>
+            <li>
+              <a href="#h4CalendarEventsSummerParty">Sommerparty</a>
+            </li>
+            <li>
+              <a href="#h4CalendarEventsBrainWash">Gehirnwäsche</a>
+            </li>
+            <li>
+              <a href="#h4CalendarEventsJouthDay">Jugendtag</a>
+            </li>
+          </ul>
+        </li>
+      </ol>
+    </li>
+    <li>
+      <a href="#h2Team">Mannschaft</a>
+      <ol type="a">
+        <li>
+          <a href="#h3Team">Aufstellung</a>
+        </li>
+        <li>
+          <a href="#h3Tactic">Taktik</a>
+        </li>
+        <li>
+          <a href="#h3Training">Mannschaftstraining</a>
+        </li>
+        <li>
+          <a href="#h3Captains">Kapitäne</a>
+        </li>
+      </ol>
+    </li>
+    <li>
+      <a href="#h2Player">Spieler</a>
+      <ol type="a">
+        <li>
+          <a href="#h3PlayerSoftSkills">Soft-skills</a>
+        </li>
+        <li>
+          <a href="#h3PlayerSkills">Fähigkeiten</a>
+        </li>
+        <li>
+          <a href="#h3PlayerCharacter">Character</a>
+        </li>
+        <li>
+          <a href="#h3PlayerContract">Vertrag</a>
+        </li>
+        <li>
+          <a href="#h3PlayerDoping">Spielerdoping</a>
+        </li>
+      </ol>
+    </li>
+    <li>
+      <a href="#h2Club">Vereine</a>
+      <ol type="a">
+        <li>
+          <a href="#h3ClubMisc">Allgemeines</a>
+          <ul>
+            <li>
+              <a href="#h4ClubSuccessFactor">Erfolgsfaktor</a>
+            </li>
+          </ul>
+        </li>
+        <li>
+          <a href="#h3Staff">Personal</a>
+          <ul>
+            <li>
+              <a href="#h4StaffScout">Scouting-Abteilung</a>
+            </li>
+            <li>
+              <a href="#h4StaffMed">Medizinische Abteilung</a>
+            </li>
+          </ul>
+        </li>
+        <li>
+          <a href="#h3Finance">Finanzen</a>
+          <ul>
+            <li>
+              <a href="#h4SecretMoney">Schwarzgeld</a>
+            </li>
+          </ul>
+        </li>
+        <li>
+          <a href="#h3Sponsors">Sponsoren</a>
+        </li>
+        <li>
+          <a href="#h3Merchandising">Merchandising</a>
+        </li>
+        <li>
+          <a href="#h3Stadium">Stadion</a>
+        </li>
+        <li>
+          <a href="#h3Buildings">Vereinsgelände</a>
+        </li>
+      </ol>
+    </li>
+    <li>
+      <a href="#h2Office">Büro</a>
+      <ol type="a">
+        <li>
+          <a href="#h3Transfer">Transfermarkt</a>
+        </li>
+        <li>
+          <a href="#h3User">Persönliches</a>
+          <ul id="ulUserCoop" style="display: none">
+            <li>
+              <a href="#h4UserCoop">Kooperationen</a>
+            </li>
+          </ul>
+        </li>
+        <li>
+          <a href="#h3Livegame">Live-Spiel</a>
+        </li>
+      </ol>
+    </li>
+  </ol>
+
+  <h2><span id="h2Intro" class="ckLink"></span>Einleitung</h2>
+  Cornerkick ist eine sequentiell ablaufende Fußballmanagersimulation. Mit jeder Sequenz schreitet die Zeit in Cornerkick 15 Minuten voran. Ein neuer Zeitschritt erfolgt dabei alle 2:08 Minuten in realer Zeit. Das bedeutet, dass die Zeit in Cornerkick 7 mal schneller abläuft als die reale Zeit. Somit entspricht eine Woche Cornerkick-Zeit exakt 24h realer Zeit. Ligaspiele, samstags um 15:30 finden somit stets Abends statt.<br />
+  Zu Beginn des Spiels (Saisonstart) ist das Spiel pausiert. Du kannst dich somit in Ruhe in deinem Verein umsehen, deine Mannschaft kennen lernen, das Training festlegen usw. (s. <a href="#h2FirstSteps">Erste Schritte</a>).
+
+  <h2><span id="h2FirstSteps" class="ckLink"></span>Erste Schritte</h2>
+  Die wichtigsten Schritte zu Beginn des Spiels sind folgende:
+  <ul>
+    <li>
+      <u>Mach dich mit deiner <a href="#h3Team">Mannschaft</a> vertraut</u><br />
+      Dazu klickst du im oberen Reiter auf <i>Mannschaft->Aufstellung</i> (oder auf <i>Durchschnittsstärke (Startelf): X,XX (Y,YY)</i> im Hauptmenü). Durch klicken auf einen Spieler in der Aufstellungstabelle erhältst du detailliertere Informationen zu diesem Spieler.
+    </li>
+    <li>
+      <u>Wähle für jeden deiner Spieler sein <a href="#h3PlayerSkills">individuelles Training</a></u><br />
+      Im Spielermenü (s. O.) kannst du diejenige Fähigkeit festlegen, an welcher der Spieler arbeiten soll. Hier kannst du auch die Namen und Rückennummern der Spieler ändern. Jedoch nur am ersten Tag des Spiels!
+    </li>
+    <li>
+      <u>Wähle deinen <a href="#h3Captains">Mannschaftskapitän und Vize-Kapitän</a></u><br />
+      Ebenfalls im Spielermenü kannst Du einen Spieler zum (Vize-)Kapitän ernennen.
+    </li>
+    <li>
+      <u>Stelle <a href="#h3Staff">Personal</a> ein</u><br />
+      Über das Menü <i>Verein->Personal</i> kannst du Personal einstellen. Beachte, dass du das Personal immer für eine Saison einstellst. Willst du dein Personal später ändern, fallen Abfindungen in Höhe von 50% des restlichen Gehalts an.
+    </li>
+    <li>
+      <u>Lege das <a href="#h3Training">Mannschaftstraining</a> fest</u><br />
+      Über das Menü <i>Mannschaft->Mannschaftstraining</i> (oder durch klick auf <i>K: X%, F: Y%, M: Z%</i> im Hauptmenü) kannst du das Mannschaftstraining festlegen. Am Beginn einer Saison solltest Du vermehrt auf die Kondition achten. Während der Saison, dass die Spieler vor dem nächsten Spiel frisch sind.
+    </li>
+    <li>
+      <u>Schaue dich auf dem <a href="#h3Transfer">Transfermarkt</a> um</u><br />
+      Über das Menü <i>Büro->Transfermarkt</i> kannst du nach Spielern schauen um Deine Mannschaft zu verstärken.
+    </li>
+    <li>
+      <u>Plane Testspiele</u><br />
+      Über das Menü <i>Saison->Kalender</i> (oder durch klick auf das Datum) kommst du in die Kalenderübersicht. Durch klick auf ein Datum hast du die Wahl zwischen der Anfrage eines Testspiels und der Buchung eines Trainingslagers.
+    </li>
+    <li>
+      <u>Mache deine <a href="#h3Finance">Finanzplanung</a></u><br />
+      Über das Menü <i>Verein->Finanzen</i> (oder durch klick auf den Kontostand) kann die Finanzplanung für die kommende Saison vorgenommen werden. Hier kannst du auch die Eintrittspreise festlegen. Die Finanzplanung kann nur am ersten Tag jeder Saison festgelegt werden!
+    </li>
+    <li>
+      <u>Gib deinem Stadion einen Namen</u><br />
+      Über das Menü <i>Verein->Stadion</i> gelangst du zu deinem Stadion. Hier kannst du den Namen des Stadions ändern. Jedoch nur am ersten Tag des Spiels!
+    </li>
+  </ul>
+
+  <h2><span id="h2Cups" class="ckLink"></span>Wettbewerbe</h2>
+  Während einer Saison werden in jedem Land folgende nationale Wettbewerbe durchgeführt:
+  <ul>
+    <li>
+      <u><b>Nationale Ligen</b></u> (Attraktionsfaktor: @model.sAfLeague)<br />
+      Eine Liga besteht aus jeweils 16 Mannschaften. Es werden Hin- und Rückspiele durchgeführt.
+    </li>
+    <li>
+      <u><b>Nationale Pokale</b></u> (Attraktionsfaktor: @model.sAfCup)<br />
+      Für die nationalen Pokale sind alle Mannschaften des jeweiligen Landes qualifiziert. Die Pokalrunden werden im KO-Modus (nur ein Spiel) durchgeführt.
+    </li>
+  </ul>
+
+  Über die nationalen Ligen jedes Landes besteht die Möglichkeit, sich für die folgenden internationalen Pokale zu qualifizieren:
+  <ul>
+    <li>
+      <u><b>Gold-Cup</b></u> (Attraktionsfaktor: @model.sCupGoldAf)<br />
+      Die ersten vier Mannschaften jeder ersten nationalen Liga qualifizieren sich für den Gold-Cup. Die insgesamt 32 Mannschaften werden zunächst auf 8 Gruppen je 4 Mannschaften aufgeteilt und spielen eine Gruppenphase mit Hin- und Rückspiel. Die ersten zwei Mannschaften jeder Gruppe qualifizieren sich für das Achtelfinale. Achtel- Viertel und Halbfinale werden im KO-Modus mit Hin- und Rückspiel ausgetragen. Im Finale gibt es kein Rückspiel.<br />
+      <u>Prämien</u><br />
+      <ul>
+        <li>
+          Jede qualifizierte Mannschaft erhält @model.sCupGoldBonusStart mio. € als Startgeld.
+        </li>
+        <li>
+          Pro Runde werden @model.sCupGoldBonus mio. € an alle Sieger ausgeschüttet. D.h. in der Gruppenphase erhält jede siegreiche Mannschaft 0.5 mio. €, im Achtelfinale 2 mio. €, im Viertelfinale 4 mio. €, usw.
+        </li>
+      </ul>
+    </li>
+    <li>
+      <u><b>Silver-Cup</b></u> (Attraktionsfaktor: @model.sCupSilverAf)<br />
+      Die Mannschaften auf den Plätzen fünf bis acht jeder ersten nationalen Liga qualifizieren sich für den Silver-Cup. Der Modus ist der gleiche wie der des Gold-Cups.<br />
+      <u>Prämien</u><br />
+      <ul>
+        <li>
+          Jede qualifizierte Mannschaft erhält @model.sCupSilverBonusStart mio. € als Startgeld.
+        </li>
+        <li>
+          Pro Runde werden @model.sCupSilverBonus mio. € an alle Sieger ausgeschüttet. D.h. in der Gruppenphase erhält jede siegreiche Mannschaft 0,375 mio. €, im Achtelfinale 1.5 mio. €, im Viertelfinale 3 mio. €, usw.
+        </li>
+      </ul>
+    </li>
+    <li>
+      <u><b>Bronze-Cup</b></u> (Attraktionsfaktor: @model.sCupBronzeAf)<br />
+      Die Mannschaften auf den Plätzen neun bis zwölf jeder ersten nationalen Liga qualifizieren sich für den Bronze-Cup. Der Modus ist der gleiche wie der des Gold-Cups.<br />
+      <u>Prämien</u><br />
+      <ul>
+        <li>
+          Jede qualifizierte Mannschaft erhält @model.sCupBronzeBonusStart mio. € als Startgeld.
+        </li>
+        <li>
+          Pro Runde werden @model.sCupBronzeBonus mio. € an alle Sieger ausgeschüttet. D.h. in der Gruppenphase erhält jede siegreiche Mannschaft 0,25 mio. €, im Achtelfinale 1 mio. €, im Viertelfinale 2 mio. €, usw.
+        </li>
+      </ul>
+    </li>
+  </ul>
+
+  Am Ende jeder Saison findet eine <u><b>Weltmeisterschaft</b></u> (Attraktionsfaktor: @model.sAfWc) statt. Der bestplatzierte Manager jedes Landes darf die jeweilige Nationalmannschaft coachen.<br />
+
+  <u><b>Freundschaftsspiele</b></u> (Attraktionsfaktor: @model.sAfTg) können jederzeit durchgeführt werden. Es muss nur ein Abstand von 24h bis zum nächsten Spiel eingehalten werden.<br />
+
+  Der Attraktionsfaktor eines Wettbewerbs beeinflusst neben der Anzahl der Zuschauer die Moraländerungen der Spieler durch ein Spiel in diesem Wettbewerb (Torerfolg, Gegentor, Sieg, Niederlage, etc). Zudem sind die ausbezahlten Sponsorenprämien durch Bandenwerbung hiervon abhängig.
+
+  <h2><span id="h2Calendar" class="ckLink"></span>Kalender</h2>
+  <h3><span id="h3CalendarTestgame" class="ckLink"></span>Testspiele</h3>
+  <h3><span id="h3CalendarTrainingscamp" class="ckLink"></span>Trainingslager</h3>
+
+  <h3><span id="h3CalendarEvents" class="ckLink"></span>Ereignisse</h3>
+  Um ein Ereignis durchzuführen, musst du in der Kalenderansicht auf das gewünschte Datum klicken, dann "Ereignis" auswählen, das gewünschte Ereignis wählen und bestätigen.<br />
+
+  <h4><span id="h4CalendarEventsTeammeeting" class="ckLink"></span>Krisensitzung</h4>
+  Dies geschieht bei einer Krisensitzung:<br />
+  <ul>
+    <li>
+      Alle Spieler gewinnen oder verlieren (!) die Hälfte der Differenz zu 100%
+    </li>
+    <li>
+      Alle Spieler mit weniger als 100% Moral gewinnen zusätzlich 2.5% Moral dazu
+    </li>
+  </ul>
+  Beispiel A: Spieler A hat nur noch eine Moral von 90%. Bei einer Krisensitzung gewinnt er zunächst (100% - 90%)/2 = 5% Moral und anschließend zusätzlich noch einmal 2.5%. Er hat nach der Krisensitzung also eine Moral von 97.5%.<br />
+  Beispiel B: Spieler B hat eine Moral von 105%. Bei einer Krisensitzung verliert er (100% - 105%)/2 = -2.5% Moral. Er hat nach der Krisensitzung also nur noch eine Moral von 102.5%.<br /><br />
+  Das Ausrichten einer Krisensitzung ist kostenlos.<br /><br />
+  Bemerke: Krisensitzungen haben nur zwei Mal pro Saison einen Effekt.
+
+  <h4><span id="h4CalendarEventsChristmasParty" class="ckLink"></span>Weihnachtsfeier</h4>
+  Dies geschieht bei einer Weihnachtsfeier:<br />
+  <ul>
+    <li>
+      Alle Spieler gewinnen 4% Moral
+    </li>
+    <li>
+      Alle Spieler verlieren 2% Frische
+    </li>
+  </ul>
+  Die Kosten der Weihnachtsfeier belaufen sich auf @CkAppShared.ckMng.ltEvent[1].iCost.ToString("N0") €.<br /><br />
+  Bemerke: Eine Weihnachtsfeier hat nur ein Mal pro Saison und nur im Dezember einen Effekt.
+
+  <h4><span id="h4CalendarEventsSummerParty" class="ckLink"></span>Sommerparty</h4>
+  Dies geschieht bei einer Sommerparty:<br />
+  <ul>
+    <li>
+      Alle Spieler gewinnen 4% Moral skaliert mit der vierten Potenz der aktuellen Moral:
+      \[Moral_{neu} = Moral_{alt} + (4\% / Moral_{alt}^{4})\]
+    </li>
+  </ul>
+  Ein Spieler mit einer niedrigen Moral gewinnt somit mehr Moral durch die Sommerparty als ein Spieler mit einer hohen Moral.<br /><br />
+  Beispiel A: Spieler A hat eine Moral von 90%. Durch die Sommerparty gewinnt er 4% / 90%^4 = 6.1% und hat somit nach der Sommerparty eine Moral von 96.1%.<br />
+  Beispiel B: Spieler B hat eine Moral von 110%. Durch die Sommerparty gewinnt er 4% / 110%^4 = 2.73% und hat somit nach der Sommerparty eine Moral von 112.73%.<br /><br />
+  Die Kosten der Sommerparty belaufen sich auf @CkAppShared.ckMng.ltEvent[3].iCost.ToString("N0") €.<br /><br />
+  Bemerke: Eine Sommerparty hat nur zwei Mal pro Saison und nur zwischen April und September einen Effekt.
+
+  <h4><span id="h4CalendarEventsBrainWash" class="ckLink"></span>Gehirnwäsche</h4>
+  Bei einem Gehirnwäschetermin wird die Moral aller Spieler auf 100% gesetzt.
+  Die Kosten der Gehirnwäsche belaufen sich auf @CkAppShared.ckMng.ltEvent[4].iCost.ToString("N0") €.<br /><br />
+  Bemerke: Eine Gehirnwäsche hat nur einmal pro Saison einen Effekt.
+
+  <h4><span id="h4CalendarEventsJouthDay" class="ckLink"></span>Jugendtag</h4>
+  Bei einem Jugendtag entdeckst du mit folgener Wahrscheinlichkeit einen neuen Jugendspieler:<br />
+  <ul>
+    <li>Erster Jugendtag in der Saison: 100%</li>
+    <li>Zweiter Jugendtag in der Saison: 50%</li>
+    <li>Dritter Jugendtag in der Saison: 33%</li>
+    <li>Vierter Jugendtag in der Saison: 25%</li>
+    <li>usw.</li>
+  </ul>
+  Die Kosten des Jugendtages belaufen sich auf @CkAppShared.ckMng.ltEvent[2].iCost.ToString("N0") €.
+
+  <h2><span id="h2Team" class="ckLink"></span>Mannschaft</h2>
+  <h3><span id="h3Team" class="ckLink"></span>Aufstellung</h3>
+  Die Aufstellungsseite unterteilt sich in ein Spielfeld, auf dem die Position deiner Spieler festgelegt werden kann und eine Liste aller deiner Spieler.
+  Es gibt zwei Menüs um die Position deiner Spieler festzulegen: Die Formation und die offensive Positionierung.<br />
+  <img width="208" height="24" src="~/content/Images/user_manual/Team0.PNG" />
+  <ul>
+    <li>
+      <u style="font-size: 18px">Formation</u><br />
+      Auf der unteren Hälfte des Spielfeldes ist die aktuelle Aufstellung deiner Mannschaft zu sehen. Steht der nächste Gegner fest und hast du einen <a href="#uKibitzer">Spielbeobachter</a> eingestellt, sind Informationen deines Gegners in der oberen Spielhälfte dargestellt.<br />
+      <u>Position eines Spielers ändern</u><br />
+      <p>Im folgenden Video ist zu sehen, wie die Position eines Spielers auf dem Spielfeld geändert werden kann (in diesem Beispiel Angelo Schmidt). Durch klicken auf einen Spieler im Spielfeld (oder in der Mannschaftstabelle) wird der Spielermodus aktiviert. Durch Klicks auf die Pfeiltasten kann die Position des Spielers geändert werden. Ein Klick ins leere Spielfeld beendet den Spielermodus.</p>
+      <video width="500" height="406" controls="controls">
+        <source src="~/content/Videos/team_change_position.mp4" type="video/mp4">
+        <source src="~/content/Videos/team_change_position.ogg" type="video/ogg">
+        Your browser does not support the video tag.
+      </video>
+    </li>
+    <li>
+      <u style="font-size: 18px">Offensive</u><br />
+      Im Menü Offensive kann die Position deiner Spieler bei eigenem Ballbesitz festgelegt werden. Basis hierfür ist die Positionierung in der defensiven Formation.<br />
+      <div id="uTeamOrientation" class="ckLink"></div>
+      <u>Generelle offensive Ausrichtung</u><br />
+      Über den rechten Regler kann die Taktikeinstellung 'Ausrichtung' angepasst und deren Auswirkung auf die generelle offensive Positionierung der Spieler beobachtet werden.<br />
+      <u>Individuelle offensive Ausrichtung</u><br />
+      Nach klicken auf ein Spielersymbol kann durch den links erscheinenden Regler die individuelle offensive Ausrichtung des Spielers angepasst werden.<br />
+      <u>Positionstreue</u><br />
+      Die gelben Rechtecke um den Spieler repräsentieren die Positionstreue des Spielers. Die Zahlen in der oberen linken Ecke der Rechtecke geben an, zu wieviel Prozent sich der Spieler bei Ballbesitz innerhalb des jeweiligen Rechtecks aufhalten wird. Die Dimensionen der Rechtecke können über die horizontalen und vertikalen Pfeile geändert werden.<br />
+      <img width="500" src="~/content/Images/user_manual/Team3a.gif" />
+    </li>
+  </ul>
+
+  <h4>Spieler austauschen</h4>
+  Im folgenden Video wird gezeigt, wie ein Spieler durch einen anderen ersetzt wird (in diesem Beispiel Stanley Sommer durch Toni Kraus).
+  <video width="500" height="764" controls="controls">
+    <source src="~/content/Videos/team_substitute.mp4" type="video/mp4">
+    <source src="~/content/Videos/team_substitute.ogg" type="video/ogg">
+    Your browser does not support the video tag.
+  </video>
+
+  <h3><span id="h3Tactic" class="ckLink"></span>Taktik</h3>
+  Folgende taktische Einstellungen stehen zur Verfügung:
+  <ul>
+    <li>
+      <u>Ausrichtung</u><div id="uTacticOrientation" class="ckLinkLarge"></div>
+      Die Ausrichtung verändert die generelle Positionierung der Spieler bei Ballbesitz (s. auch <a href="#uTeamOrientation">Generelle offensive Ausrichtung</a>).
+    </li>
+    <li>
+      <u>Einsatz</u><div id="uTacticPower" class="ckLinkLarge"></div>
+      Bei hohem Einsatz legen die Spieler mehr Schritte pro Runde zurück. Je mehr sich die Anzahl der zurück gelegten Schritte der maximal möglichen Schrittzahl annähert, desto mehr Frische wird verbraucht (s. <a href="#h4FreshLoss">Frischeverlust im Spiel</a>).
+    </li>
+    <li>
+      <u>Aggressivität</u><div id="uTacticAggr" class="ckLinkLarge"></div>
+      Je höher die Aggressivität eingestellt ist, desto eher werden Zweikämpfe gewonnen. Gleichzeitig steigt aber auch das Risiko für Fouls und Karten.
+    </li>
+    <li>
+      <u>Schusshäufigkeit</u><br />
+      Je näher der Regler vom Tor weg gezogen wird, desto höher ist die Wahrscheinlichkeit eines Torschusses im Spiel.
+    </li>
+    <li>
+      <u>Passlänge</u><br />
+      Je weiter die Passlänge eingestellt ist, desto eher wird ein entfernter Mitspieler angespielt und umgekehrt.
+    </li>
+    <li>
+      <u>Passrisiko</u><br />
+      Je höher das Passrisiko, desto eher wird der Pass nach vorne gesucht und desto weiter wird der Ball in den Lauf des Spielers gespielt.
+    </li>
+    <li>
+      <u>Passhäufigkeit</u><br />
+      Je höher die Passhäufigkeit eingestellt ist, desto häufiger wird sich der Spieler für einen Pass und gegen ein Dribbling oder einen Torschuss entscheiden.
+    </li>
+    <li>
+      <u>Über links</u><br />
+      Je höher dieser Wert, desto eher entscheidet sich ein Spieler beim Abspiel für einen Pass ins linke Drittel des Spielfeldes.
+    </li>
+    <li>
+      <u>Über rechts</u><br />
+      Je höher dieser Wert, desto eher entscheidet sich ein Spieler beim Abspiel für einen Pass ins rechte Drittel des Spielfeldes.
+    </li>
+  </ul>
+
+  <div id="h3Training" class="ckLink"></div>
+  <h3>Mannschaftstraining</h3>
+  <p>Durch das Mannschaftstraining kann zum einen die körperliche Verfassung der Spieler (<a href="#uPlayerCondi">Kondition</a> und <a href="#uPlayerFresh">Frische</a>) gesteuert werden, zum anderen werden die <a href="#h3PlayerSkills">individuellen Fähigkeiten</a> der Spieler je nach Art des Trainings trainiert. Wird eine Trainingsart über einen längeren Zeitraum nicht durchgeführt, sinkt die Fähigkeit der Spieler in diesem Bereich.</p>
+  Die folgende Tabelle gibt qualitativ an, wie die Fitness, die Moral sowie die Fähigkeiten der Spieler durch die unterschiedlichen Mannschaftstrainings beeinflusst werden:<br />(Verl.risiko: Verletzungsrisiko pro Spieler pro Trainingseinheit (Spieler-Robustheit = 100%))
+  <table class="table table-bordered compact nowrap">
+    @{
+      List<string> ltSkills = new List<string>(CornerkickManager.Names.sSkills);
+      ltSkills.Remove("Beidfüßigkeit");
+      ltSkills.Remove("Spielintelligenz");
+    }
+    <tr>
+      <th style="text-align:center">Art</th>
+      <th style="text-align:center" title="Kondition">Kond.</th>
+      <th style="text-align:center" title="Frische">Fr.</th>
+      <th style="text-align:center" title="Moral">Moral</th>
+      @foreach (string s in ltSkills) {
+        <th style="text-align:center" title=@s>@s.Substring(0, 5)</th>
+      }
+      <th style="text-align:center" title="Verletzungsrisiko">Verl.risiko</th>
+    </tr>
+    @{
+      for (int iT = 0; iT < CkAppShared.ckMng.plt.ltTraining.Count; iT++) {
+        CornerkickManager.PlayerTool.Training tr = CkAppShared.ckMng.plt.ltTraining[iT];
+
+        if (tr.iId != -2 && tr.iId < 0) {
+          continue;
+        }
+
+        string[] sTr = new string[3];
+        int[] iMulti = new int[3];
+        if (tr.fCondi > 0) { // Type: Kondition
+          iMulti[0] = (int)Math.Round(Math.Abs(1f - tr.fCondi) * 30);
+          iMulti[1] = (int)Math.Round(Math.Abs(tr.fFresh) * 2);
+          iMulti[2] = (int)Math.Round(Math.Abs(tr.fMoral) * 6);
+        } else {
+          iMulti[0] = (int)Math.Round(Math.Abs(tr.fCondi) * 2);
+          iMulti[1] = (int)Math.Round(Math.Abs(tr.fFresh) / 3f);
+          iMulti[2] = (int)Math.Round(Math.Abs(tr.fMoral) * 5);
+        }
+
+        string[] sStyle = new string[] { "color: green", "color: green", "color: green", "color: green" };
+        float[] fTr = new float[] { tr.fCondi, tr.fFresh, tr.fMoral };
+        for (byte j = 0; j < sTr.Length; j++) {
+          char cPM = '+';
+          if (fTr[j] < 0f) {
+            cPM = '-';
+            sStyle[j] = "color: red";
+          }
+
+          if (iMulti[j] > 3) sTr[j] = iMulti[j].ToString() + cPM;
+          else               sTr[j] = new string(cPM, iMulti[j]);
+
+          if (string.IsNullOrEmpty(sTr[j])) {
+            sTr[j] = "o";
+            sStyle[j] = "color: black";
+          }
+        }
+
+        if (tr.fInjuryRisk > 0.003) {
+          sStyle[3] = "color: red";
+        } else if (tr.fInjuryRisk > 0.0015) {
+          sStyle[3] = "color: orange";
+        }
+
+        string[] sTrInd = new string[ltSkills.Count];
+        foreach (CornerkickManager.PlayerTool.Training.SkillBonus skb in tr.ltSkillBonus) {
+          if (skb.iSkillId >= 0 && skb.iSkillId < sTrInd.Length) sTrInd[skb.iSkillId] = new string('+', (int)Math.Ceiling(skb.fBonus * 100f));
+        }
+
+        string sInjuryRisk = (tr.fInjuryRisk / CkAppShared.ckMng.settings.iTrainingsPerDay).ToString("0.000%");
+
+        <tr>
+          <td align="center">@tr.sName</td>
+          <td align="center" style="@sStyle[0]">@sTr[0]</td>
+          <td align="center" style="@sStyle[1]">@sTr[1]</td>
+          <td align="center" style="@sStyle[2]">@sTr[2]</td>
+          @{
+            foreach (string s in sTrInd) {
+              <td align="center" style="color: green">@s</td>
+            }
+          }
+          <td align="center" style="@sStyle[3]">@sInjuryRisk</td>
+        </tr>
+      }
+    }
+  </table>
+
+  <div id="h4CFM" class="ckLink"></div>
+  <h4>Kondition/Frische/Moral</h4>
+  Der Konditionsgewinn hängt vom Alter des Spielers ab. Junge Spieler bauen leichter Kondition auf, ältere schwerer. Ein besserer Konditionstrainer/Masseur sowie Trainingslager und <a href="#h3PlayerDoping">Doping</a> können das Training beeinflussen.
+  <p>In der folgenden Graphik können diese Faktoren am Beispiel eines Spielers ausprobiert werden.</p>
+  <div style="position: relative; width: 100%; height: 380px; margin-top: 10px; margin-bottom: 10px">
+    <div id="divChartPlayerTraining" style="position: absolute; height: 100%; width: 80%"></div>
+    <div style="position: absolute; right: 0px">
+      <label>Training:</label>
+      @*
+      @Html.DropDownListFor(m => m.sTraining, new SelectList(Model.ddlTraining, "Value", "Text", 2), new { @class = "form-control", @onchange = "plotPlayerTraining()", id = "selectPlayerTrainingType", style = "width: 110px" })
+      <label>Konditionstrainer:</label>
+      @Html.DropDownListFor(m => m.sPlayerTrainingCoachCondi, new SelectList(Model.ddlPlayerTrainingCoachCondi, "Value", "Text", 5), new { @class = "form-control", @onchange = "plotPlayerTraining()", id = "ddlPlayerTrainingCoachCondi", @style = "width: 110px" })
+      <label>Masseur:</label>
+      @Html.DropDownListFor(m => m.sPlayerTrainingCoachPhysio, new SelectList(Model.ddlPlayerTrainingCoachPhysio, "Value", "Text", 5), new { @class = "form-control", @onchange = "plotPlayerTraining()", id = "ddlPlayerTrainingCoachPhysio", @style = "width: 110px" })
+      <label>Trainingslager:</label>
+      @Html.DropDownListFor(m => m.sPlayerTrainingCamp, new SelectList(Model.ddlPlayerTrainingCamp, "Value", "Text", -1), new { @class = "form-control", @onchange = "plotPlayerTraining()", id = "ddlPlayerTrainingCamp", @style = "width: 110px" })
+      <label>Doping:</label>
+      @Html.DropDownListFor(m => m.sPlayerTrainingDoping, new SelectList(Model.ddlPlayerTrainingDoping, "Value", "Text", -1), new { @class = "form-control", @onchange = "plotPlayerTraining()", id = "ddlPlayerTrainingDoping", @style = "width: 110px" })
+      *@
+      <label>Alter Spieler:</label>
+      <input class="form-control" style="width: 110px" id="inputAge" onkeyup="plotPlayerTraining()" type="number" value="25">
+    </div>
+  </div>
+
+  <div style="float: left">
+    <h3><span id="h3Captains" class="ckLink"></span>Kapitäne</h3>
+    Nach Ernennung eines Spielers zum Kapitän gewinnt er 15% Moral (Vize-Kapitän: 5%). Wird durch die Ernennung ein anderer Spieler als Kapitän abgelöst, verliert dieser 20% Moral (Vize-Kapitän: 8%).
+    Zu Beginn eines jeden Spiels erhält der Kaptiän zusätzlich einen Moralbonus von 2%. Bei einem Gegentor wird der Einfluß der Führungspersönlichkeit des Kapitäns (FP) um 10% erhöht.
+
+    <h2><span id="h2Player" class="ckLink"></span>Spieler</h2>
+    <h3>Konstitution</h3>
+    <ul>
+      <li>
+        <u>Kondition</u><div id="uPlayerCondi" class="ckLinkLarge"></div>
+        Je besser die Kondition des Spielers, desto geringer fällt der Frischeverlust in Spiel und Training aus.<br />
+        Der Konditionsbereich liegt zwischen 10 &lt; Kondition &lt; 100 (durch <a href="#h3PlayerDoping">Spielerdoping</a> kann die maximale Kondition erhöht werden).
+      </li>
+      <li>
+        <u>Frische</u><div id="uPlayerFresh" class="ckLinkLarge"></div>
+        Je größer die Frische des Spielers, desto mehr Schritte kann er zurücklegen.<br />
+        Der Frischebereich liegt zwischen 10 &lt; Frische &lt; 100.
+      </li>
+    </ul>
+
+    <h4><span id="h4FreshLoss" class="ckLink"></span>Frischeverlust im Spiel</h4>
+    Folgende Graphik veranschaulicht, wie sich die Frische eines Spielers pro Schritt abhängig von den bereits zurückgelegten Schritten innerhalb der aktuellen Runde, der Schnelligkeit, des Antritts (in Kombination mit den zurückgelegten Schritten der vorherigen Runde), der Tagesform und der Kondition des Spielers verringert.<br />
+    Die rote Linie markiert die Grenze bis zu der der Spieler Schritte durchführt, d.h der nächste ganzzahlige Wert links der Linie entspricht der Anzahl der Schritte des Spielers in der Runde. Das Limit kann mit Hilfe der Taktikeinstellung "<a href="#uTacticPower">Einsatz</a>" verschoben werden.
+    <div style="position: relative; width: 100%; height: 440px; margin-top: 10px; margin-bottom: 10px">
+      <div id="divChartPlayerStepsFreshLoss" style="position: absolute; height: 100%; width: 80%"></div>
+      <div style="position: absolute; right: 0px">
+        @*
+        <label>Schnelligkeit:</label>
+        @Html.DropDownListFor(m => m.sStepsSpeed, new SelectList(Model.ddlStepsSpeed, "Value", "Text", 6), new { @class = "form-control", @onchange = "plotPlayerStepsFreshLoss()", id = "ddlStepsSpeed", @style = "width: 80px" })
+        <label>Antritt:</label>
+        @Html.DropDownListFor(m => m.sStepsAcceleration, new SelectList(Model.ddlStepsAcceleration, "Value", "Text", 6), new { @class = "form-control", @onchange = "plotPlayerStepsFreshLoss()", id = "ddlStepsAcceleration", @style = "width: 80px" })
+        <label>Letzte Schritte:</label>
+        @Html.DropDownListFor(m => m.sStepsLastSteps, new SelectList(Model.ddlStepsLastSteps, "Value", "Text", 0), new { @class = "form-control", @onchange = "plotPlayerStepsFreshLoss()", id = "ddlStepsLastSteps", @style = "width: 80px" })
+        *@
+        <label>Frische (Start):</label>
+        <input class="form-control" style="width: 80px" id="iptFresh" onkeyup="plotPlayerStepsFreshLoss()" type="tel" value="0.99">
+        <label>Kondition:</label>
+        <input class="form-control" style="width: 80px" id="iptCondition" onkeyup="plotPlayerStepsFreshLoss()" type="tel" value="0.9">
+        <label>Form:</label>
+        <input class="form-control" style="width: 80px" id="iptForm" onkeyup="plotPlayerStepsFreshLoss()" type="tel" value="1.0">
+        <label>Taktik Einsatz:</label>
+        <input class="form-control" style="width: 80px" id="iptTcPower" onkeyup="plotPlayerStepsFreshLoss()" type="tel" value="0.0">
+      </div>
+    </div>
+
+    <h3><span id="h3PlayerSoftSkills" class="ckLink"></span>Soft-skills</h3>
+    <ul>
+      <li>
+        <u>Moral</u><br />
+        Die Moral wirkt sich auf die Fähigkeiten des Spielers aus.<br />
+        Der Moralbereich liegt zwischen 10 &lt; Moral &lt; inf. Ist ein Spieler hoch motiviert (Moral > 100) ist es schwerer die Motivation zu steigern als wenn er schwach motiviert ist. Mit der Zeit nähert sich die Motivation dem Normwert von 100 an.
+      </li>
+      <li>
+        <u>Spielpraxis</u><br /><div id="uPlayerSkillsExperience" class="ckLinkLarge"></div>
+        Je höher die Spielpraxis des Spielers, desto größer ist die Wahrscheinlichkeit, dass er sich in seinen Fähigkeiten verbessert.<br />
+        Die Spielpraxis eines Profispielers steigt mit jeder gespielten Spielminute und sinkt im Lauf der Zeit kontinuierlich ab. Junge Profispieler gewinnen schneller/verlieren langsamer Spielpraxis als ältere. Jugendspieler haben eine konstante Spielpraxis von 50.<br />
+        Der Bereich der Spielpraxis liegt zwischen 10 &lt; Spielpraxis &lt; 100.
+      </li>
+      <li>
+        <u>Talent</u><br /><div id="uPlayerSkillsTalent" class="ckLinkLarge"></div>
+        Das Talent ist für jeden Spieler konstant. Je größer das Talent des Spielers, desto größer ist die Wahrscheinlichkeit, dass er sich in seinen Fähigkeiten verbessert.<br />
+        Das Talent liegt üblicherweise zwischen 1 und 10. In Ausnahmefällen ist jedoch auch ein Talent größer 10 möglich.
+      </li>
+      <li>
+        <u>Tagesform</u><br />
+        Die Tagesform wirkt sich auf die Fähigkeiten des Spielers aus und ändert sich jeden Tag.<br />
+      </li>
+    </ul>
+
+    <h3><span id="h3PlayerSkills" class="ckLink"></span>Fähigkeiten</h3>
+    Die Fähigkeiten des Spielers werden beeinflußt durch seine Frische, seine Moral, seine Tagesform und seine Position (wenn nicht auf Hauptposition eingesetzt).
+    <ul>
+      <li>
+        <u>Schnelligkeit</u><br />
+        Der Wert der Schnelligkeit eines Spielers gibt die (maximale) Anzahl von möglichen Schritten pro Runde an. Reduziert wird dieser Wert durch die aktuelle Frische des Spielers:
+        \[Schritte_{Runde} = {Schnelligkeit \cdot \sqrt{Frische}} \cdot \left(\frac{6.5}{Schnelligkeit}\right)^{0.25}\]
+        Mit jedem Schritt innerhalb einer Runde steigt der Frischeverlust pro Schritt an (s. <a href="#h4FreshLoss">Frischeverlust im Spiel</a>). Durch die Taktikeinstellung <a href="#uTacticPower">Einsatz</a> kann festgelegt werden, wieviele Schritte von den maximal möglichen tatsächlich durchgeführt werden.
+      </li>
+      <li>
+        <u>Antritt</u><br />
+        Je höher der Antritt eines Spielers, desto geringer ist der zusätzliche Frischeverlust bei Schritten die in der letzten Runde nicht gemacht wurden (s. <a href="#h4FreshLoss">Frischeverlust im Spiel</a>).
+      </li>
+      <li>
+        <u>Technik</u><div id="uPlayerSkillsTechnic" class="ckLinkLarge"></div>
+        Der Wert der Technik eines Spielers beeinflusst die Fähigkeit Pässe und Flanken anzunehmen, d.h. je höher die Technik eines Spielers desto geringer ist das Risiko, dass der Ball bei der Annahme eines Passes/einer Flanke verspringt.
+        Zudem verringert eine höhere Technik den Malus auf die Schnelligkeit eines Spielers, wenn dieser den Ball führt.
+      </li>
+      <li>
+        <u>Dribbling</u><div id="uPlayerSkillsDuelOff" class="ckLinkLarge"></div>
+        Je höher der Dribbling-Wert, desto größer ist die Wahrscheinlichkeit einen offensiven Zweikampf zu gewinnen.
+      </li>
+      <li>
+        <u>Zweikampf</u><br /><div id="uPlayerSkillsDuelDef" class="ckLinkLarge"></div>
+        Je höher der Zweikampf-Wert, desto größer ist die Wahrscheinlichkeit einen defensiven Zweikampf zu gewinnen.<br />
+        Zudem steigert ein hoher Zweikampf-Wert (in Kombination mit dem Körpergewicht des Spielers) die Wahrscheinlichkeit, bei einem flachen Pass einen Gegenspieler auf der Flankenzielposition zu verdrängen bzw. verringert die Wahrscheinlichkeit von einem Gegenspieler verdrängt zu werden.
+      </li>
+      <li>
+        <u>Passstärke</u><br />
+        Die Fähigkeit Passstärke beeinflusst die mögliche Passweite und die (maximale) Dauer des Passes.
+      </li>
+      <li>
+        <u>Passgenauigkeit</u><br />
+        Eine höhere Passgenauigkeit verringert das Risiko, dass der Ball bei einem Pass an einem anderen als dem Zielort ankommt.
+      </li>
+      <li>
+        <u>Flankenstärke</u><br />
+        Die Fähigkeit Flankenstärke beeinflusst die mögliche Flankenweite und die (maximale) Dauer der Flanke.
+      </li>
+      <li>
+        <u>Flankengenauigkeit</u><br />
+        Eine höhere Flankengenauigkeit verringert das Risiko, dass der Ball bei einer Flanke an einem anderen als dem Zielort ankommt.
+      </li>
+      <li>
+        <u>Schusskraft</u><br />
+        Eine höhere Schusskraft erhöht die Chance eines Torerfolgs, sofern der Ball auf das Tor kommt (s. Schussgenauigkeit).
+      </li>
+      <li>
+        <u>Schussgenauigkeit</u><br />
+        Eine höhere Schussgenauigkeit erhöht die Chance, dass bei einem Schuss der Ball aufs Tor kommt sowie die Chance eines Torerfolgs.
+      </li>
+      <li>
+        <u>Kopfball</u><br />
+      </li>
+      <li>
+        <u>Freistoß</u><br />
+      </li>
+      <li>
+        <u>Elfmeter</u><br />
+      </li>
+      <li>
+        <u>Reaktion</u><br />
+        Die Reaktion ist eine exklusive Torwartfähigkeit. Eine gute Reaktion erhöht die Wahrscheinlichkeit, Torschüsse besonders aus kurzer Entfernung abzuwehren.
+      </li>
+      <li>
+        <u>Sprungkraft</u><br />
+        Die Fähigkeit Sprungkraft wird immer mit der Körpergröße des Spielers kombiniert.
+        <ul>
+          <li>
+            <u>Torwart</u><br />
+            Eine hohe Sprungkraft (und Körpergröße) erhöht die Wahrscheinlichkeit, Torschüsse besonders aus großer Entfernung abzuwehren.
+          </li>
+          <li>
+            <u>Feldspieler</u><br />
+            Eine hohe Sprungkraft (und Körpergröße) erhöht die Wahrscheinlichkeit, bei einer hohen Flanke einen Gegenspieler auf der Flankenzielposition zu verdrängen bzw. verringert die Wahrscheinlichkeit von einem Gegenspieler verdrängt zu werden.
+          </li>
+        </ul>
+      </li>
+      <li>
+        <u>Ballsicherheit</u><br />
+        Die Ballsicherheit ist eine exklusive Torwartfähigkeit. Eine gute Ballsicherheit erhöht die Wahrscheinlichkeit, dass der Ball nach einem Torschuss vom Torwart festgehalten wird und verringert das Risiko, dass der Torwart eine Flanke fallen lässt.
+      </li>
+      <li>
+        <u>Beidfüßigkeit</u><br />
+      </li>
+    </ul>
+
+    <h4><span id="h4Duel" class="ckLink"></span>Zweikämpfe</h4>
+    Die folgende Grafik veranschaulicht die Erfolgswahrscheinlichkeiten eines Zweikampfes in Abhängigkeit der Fähigkeiten des defensiven (<a href="#uPlayerSkillsDuelDef">Zweikampf</a>) und des offensiven Spielers (<a href="#uPlayerSkillsDuelOff">Dribbling</a>) sowie der Positionierung der Spieler zueinander und der gewählten <a href="#uTacticAggr">Aggressivität</a>.
+    Die Entfernung vom eigenen Tor ist zudem entscheidend, ob der defensive Spieler überhaupt in einen Zweikampf geht. Ist sie groß, wird er dies seltener tun um das Risiko von gelben/roten Karten zu verringern. Diese Wahrscheinlichkeit ist ebenfalls von der <a href="#uTacticAggr">Aggressivität</a> abhängig.<br />
+    Unabhängig vom Ausgang des Zweikampfes nimmt der verteidigende Spieler dem angreifenden Spieler Schritte ab. Er ist sozusagen in der Lage, auch bei verlorenem Zweikampf zumindest die Geschwindigkeit des angreifenden Spielers zu verlangsamen.
+    Die mittlere (ave) und maximale (max) Anzahl der reduzierten Schritte des angreifenden Spielers ist in der Grafik durch schwarze Linien auf der sekundären y-Achse dargestellt.
+    <div style="position: relative; width: 100%; height: 440px; margin-top: 10px; margin-bottom: 10px">
+      <div id="divChartDuel" style="position: absolute; height: 100%; width: 80%"></div>
+      <div style="position: absolute; right: 0px; width: 120px">
+        @*
+        <label>
+          Modus:
+          @Html.DropDownListFor(m => m.sDuelMode, new SelectList(Model.sliDuelMode, "Value", "Text", 1), new { @class = "form-control", @onchange = "plotDuel()", id = "sctDuelMode", @style = "width: 100px" })
+        </label>
+        <label>
+          Zweikampf:
+          @Html.DropDownListFor(m => m.sDuelDef, new SelectList(Model.sliDuelDef, "Value", "Text", 7), new { @class = "form-control", @onchange = "plotDuel()", id = "sctDuelDef", @style = "width: 100px" })
+        </label>
+        <label>
+          Dribbling:
+          @Html.DropDownListFor(m => m.sDuelOff, new SelectList(Model.sliDuelOff, "Value", "Text", 7), new { @class = "form-control", @onchange = "plotDuel()", id = "sctDuelOff", @style = "width: 100px" })
+        </label>
+        <label>
+          Angriff von:
+          @Html.DropDownListFor(m => m.sDuelPos, new SelectList(Model.sliDuelPos, "Value", "Text", 1), new { @class = "form-control", @onchange = "plotDuel()", id = "sctDuelPos", @style = "width: 100px" })
+        </label>
+        *@
+        <label id="lbDuelVar"></label>
+        <div style="position: relative">
+          <p id="pDuelVar" style="position: absolute; left: 0px; top: -8px">0</p>
+          <input class="form-control" type="range" max="0.95" step="0.05" value="0.5" style="width: 100px" id="iptDuelPosRel" oninput="plotDuel()">
+        </div>
+        <label>
+          Im Strafraum:
+          <input type="checkbox" id="cbDuelInOwnBox" onchange="plotDuel()">
+        </label>
+        <label>
+          Letzter Mann:
+          <input type="checkbox" id="cbDuelLastPl" onchange="plotDuel()">
+        </label>
+        <label>
+          Ber. verwarnt:
+          <input type="checkbox" id="cbDuelAlreadyYellowCard" onchange="plotDuel()">
+        </label>
+      </div>
+    </div>
+
+    <h4>Verbessern der Spielerfertigkeiten</h4>
+    Die Fähigkeiten der Spieler können durch individuelles Training verbessert werden. Die Wahrscheinlichkeit, dass sich ein Spieler in einer Fähigkeit verbessert ist von folgenden Faktoren abhängig:
+    <ul>
+      <li>
+        <u>Dem erarbeiteten Wert des Trainingsbonus</u><br />
+        In jedem Mannschaftstraining wird auch individuell trainiert. Der trainierende Spieler gewinnt Trainingsbonus in der Fähigkeit welche er gerade individuell trainiert. Das individuelle Training jedes Spielers kann in der Spieleransicht festgelegt werden.<br />
+        Ist die Durchschnittsstärke der Mannschaft höher als die Stärke des einzelnen Spielers, erhöht sich der pro Training gewonnene Trainingsbonus. Im Gegensatz dazu sinkt der gewonnene Trainingsbonus guter Spieler, welche mit einer relativ schlechten Mannschaft trainieren.<br />
+        Verbessert sich der Spieler in einer Fähigkeit, wird der Trainingsbonus auf 0 zurückgesetzt.
+      </li>
+      <li>
+        <u>Dem bereits erreichten Level der Fähigkeit</u><br />
+        Je höher eine Fähigkeit bereits ist, desto schwieriger ist es, den Spieler in dieser weiter zu verbessern.
+      </li>
+      <li>
+        <u>Dem Alter des Spielers</u><br />
+        Jüngere Spieler verbessern sich eher als alte.
+      </li>
+      <li>
+        <u>Dem <a href="#uPlayerSkillsTalent">Talent</a> des Spielers</u><br />
+      </li>
+      <li>
+        <u>Der aktuellen <a href="#uPlayerSkillsExperience">Spielpraxis</a> des Spielers</u><br />
+      </li>
+      <li>
+        <u>Trainer</u><br />
+        Je besser der <a href="#h3Staff">Co-Trainer</a> (Profi-Spieler) bzw. der <a href="#h3Staff">Jugendtrainer</a> (Jugendspieler) ist, desto eher verbessern sich deine Spieler.
+      </li>
+      <li>
+        <u>Gebäude</u><br />
+        Je höher das Level des <a href="#h3Buildings">Trainingsgeländes</a> (Profi-Spieler) bzw. des <a href="#h3Buildings">Jugendinternats</a> (Jugendspieler) ist, desto eher verbessern sich deine Spieler.
+      </li>
+      <li>
+        <u>Trainingslager</u><br />
+        Ein Trainingslager kann ebenfalls die Wahrscheinlichkeit erhöhen, dass sich ein Spieler in dieser Zeit verbessert.
+      </li>
+    </ul>
+
+    <h3><span id="h3PlayerCharacter" class="ckLink"></span>Charakter</h3>
+    <ul>
+      <li>
+        <u>Führungspersönlichkeit (FP)</u><br />
+        Je höher der mittlere Wert der Führungspersönlichkeit einer Mannschaft ist, desto geringer wirken sich Gegentore negativ auf die Moral der Mannschaft aus.
+      </li>
+      <li>
+        <u>Robustheit</u><br />
+        Je höher die Robustheit eines Spielers, desto seltener verletzt sich der Spieler.
+      </li>
+      <li>
+        <u>Flexibilität</u><br />
+        Je höher die Flexibilität eines Spielers, desto schneller erlernt er eine neue Position (wenn auf dieser eingesetzt).
+      </li>
+      <li>
+        <u>Gemüt</u><br />
+        Je höher der Gemüts-Wert ist, desto seltener neigt der Spieler zu unangemessenem Verhalten gegenüber dem Schiedsrichter.
+      </li>
+    </ul>
+
+    <h3><span id="h3PlayerContract" class="ckLink"></span>Vertrag</h3>
+    Soll ein Spieler am Transfermarkt erworben oder ein auslaufender Vertrag eines eigenen Spielers verlängert werden (über die Schaltfläche "Vertrag verlängern" in der Spieleransicht), muss ein neuer Vertrag ausgehandelt werden.
+    <ul>
+      <li>
+        Zunächst sollte die gewünschte Vertragslaufzeit eingestellt werden (a). Hierdurch kann sich das geforderte Gehalt des Spielers ändern. Junge Spieler verlangen ein höheres Gehalt für lange Vertragslaufzeiten während es bei älteren Spielern umgekehrt ist.
+      </li>
+      <li>
+        Über das Festlegen einer fixen Ablöse kann das geforderte Gehalt reduziert werden (b). Allerdings kann der Spieler dann ohne Zustimmung des Managers den Verein für diese Ablöse verlassen!
+      </li>
+      <li>
+        Nun kann ein eigenes Angebot für das Jahresgehalt sowie Spiel-, Punkt- und Torprämie angegeben werden. Anhand der Information "Geboren/Gefordert" ist ersichtlich, wie weit das eigene Angebot von den Vorstellungen des Spielers abweicht und wie hoch die aktuelle Verhandlungsbereitschaft des Spielers ist (c). Über die Schaltfläche "verhandeln" (d) kann das Angebot dem Spieler übermittelt werden. Sofern der angebotene Vertrag nicht zu weit von den Vorstellungen des Spielers entfernt ist, wird dieser sich mit seinem Angebot annähern.<br />
+        Dieser Schritt kann wiederholt werden, jedoch sinkt jeden Mal die Verhandlungsbereitschaft des Spielers. Fällt diese unter 0% bricht der Spieler die Verhandlungen ab und ist an einem neuen Vertrag nicht mehr interessiert. Es dauert nun 10 Tage, bis die Verhandlungen wieder aufgenommen werden können.
+      </li>
+      <li>
+        Ist der Manager mit dem Vertragsforderungen des Spielers zufrieden, kann er diesem über die Schaltfläche "Bestätigen" zustimmen (e).
+      </li>
+    </ul>
+    <img src="~/content/Images/user_manual/Nego2.png" width="380" />
+    <br /><br />
+
+    Wird eine Vertragsverhandlung mit einem Spieler unterbrochen (aber nicht vom Spieler abgebrochen!), steigt die Verhandlungsbereitschaft um 10% pro Tag. Sinkt die Verhandlungsbereitschaft des Spielers während der Verhandlung unter 0% bricht dieser die Verhandlung ab. Es dauert nun 10 Tage, bis die Bereitschaft des Spielers wieder pro Tag um 10% steigt.<br /><br />
+    Verträge eigener Spieler können ebenfalls mittels einer "Blitzverhandlung" auf der Seite Mannschaft->Verträge jeweils um ein Jahr verlängert werden. Dabei wird immer - abhängig vom Verhandlungsgeschick des Managers - die gleiche Vertragszufriedenheit des Spielers erreicht. Die Verhandlungsbereitschaft des Spielers ist nach einer Blitzverhandlung wieder bei 100%.
+
+    <h3><span id="h3PlayerDoping" class="ckLink"></span>Spielerdoping</h3>
+    Hast du Schwierigkeiten mit fairen Mitteln mit deinen Gegnern mitzuhalten? Spiel doch einfach unfair! Zum Beispiel indem du deine Spieler dopst. Hierfür stehen vier Mittelchen zur Verfügung.
+    Die ersten drei steigern die maximale Kondition des gedopten Spielers über 100%. Das vierte Mittel erhöht sofort die Frische deines Spielers ohne die Kondition zu beeinflussen. Dabei unterscheiden sich alle Mittel in der Stärke und der Dauer der Wirkung sowie des Detektionsrisikos und der Kosten. Alle Dopingmittel musst du natürlich aus deiner  <a href="#h4SecretMoney">schwarzen Kasse</a> bezahlen<br /><br />
+    Die Reduktionsrate gibt an, um wieviel Prozent die Wirkung pro Tag abnimmt. Daraus ergibt sich auch die Halbwertszeit (HWZ), zu der das Dopingmittel nur noch die Hälfte seiner Wirkung hat.<br /><br />
+    Nach einem Spiel wird manchmal ein Spieler deiner Mannschaft (Startelf- und Reservespieler) zur Dopingkontrolle gebeten. Das Detektionsrisiko gibt nun an, wie hoch das Risiko ist, dass das Dopingmittel nachgewiesen wird. Dabei spielt jedoch auch die aktuelle Wirkung des Mittels eine Rolle. Ist zum Beispiel nur noch die Hälfte des Mittels im Körper deines Spielers (HWZ erreicht), ist auch das Detektionsrisiko nur noch halb so hoch.
+    <table id="tblDopingDesc" class="table table-bordered compact" style="width: auto">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Max. Kondition</th>
+          <th>Einm. Frischegewinn</th>
+          <th>Reduktionsrate / d (HWZ)</th>
+          <th>Max. Detektionsrisiko</th>
+          <th>Kosten</th>
+        </tr>
+      </thead>
+    </table>
+
+    <h2><span id="h2Club" class="ckLink"></span>Verein</h2>
+
+    <h3><span id="h3ClubMisc" class="ckLink"></span>Allgemeines</h3>
+    <h4><span id="h4ClubSuccessFactor" class="ckLink"></span>Erfolgsfaktor</h4>
+    Der Vereins-Erfolgsfaktor setzt sich aus den aktuellen sowie den vergangenen Erfolgen in allen Wettbewerben zusammen, in denen der Verein teilnimmt bzw. teilgenommen hat. Je besser die Platzierung im jeweiligen Wettbewerb, desto höher der Erfolgsfaktor. Zusätzlich wird der errechnete Erfolgsfaktor eines Wettbewerbs mit dem jeweiligen <a href="#h2Cups">Wettbewerbs-Attraktionsfaktor</a> multipliziert.<br /><br />
+    Der Erfolgsfaktor eines Vereins ist eine wichtige Größe und hat Einfluss auf das Zuschaueraufkommen, die Höhe der <a href="#h3Sponsors">Sponsorenangebote</a> sowie auf die Nachfrage nach <a href="#h3Merchandising">Merchandisingartikeln</a>.<br /><br />
+    Der Erfolgsfaktor eines Wettbewerbes berechnet sich folgendermaßen:<br />
+    \[Erfolgsfaktor_{Wettbewerb} = {1000 \over \sqrt{Platzierung}} \cdot WettbewerbPrioritätsfaktor\]
+    D.h., belegt ein Verein in der ersten nationalen Liga den ersten Platz, erhält dieser einen Erfolgsfaktor von 1000. Der zweitplatzierte Verein erhält noch einen Erfolgsfaktor von 707, usw.<br />
+    Je länger die Erfolge in den jeweiligen Wettbewerben zurück liegen, desto geringer ist ihr Einfluss auf den Gesamtfaktor. Hier ist der Zusammenhang wie folgt:<br />
+    \[Erfolgsfaktor_{Wettbewerb} = {Erfolgsfaktor_{Wettbewerb} \over \sqrt{Jahre}}\]
+    Die Abnahme des Erfolgsfaktors vergangener Erfolge kann durch die Errichtung und den Ausbau eines <a href="#h3Buildings">Vereinsmuseums</a> reduziert werden.
+
+    <h3><span id="h3Staff" class="ckLink"></span>Personal</h3>
+    <ul>
+      <li>
+        <u>Co-Trainer</u><br />
+        Je besser der Co-Trainer, desto wahrscheinlicher entwickeln sich die <a href="#h3PlayerSkills">Fähigkeiten</a> der Spieler.
+      </li>
+      <li>
+        <u>Konditionstrainer</u><br />
+        Je besser der Konditionstrainer, desto effektiver ist das Konditionstraining (s. auch <a href="#h4CFM">Kondition/Frische/Moral</a>).
+      </li>
+      <li>
+        <u>Masseur</u><br />
+        Je besser der Masseur, desto schneller regenerieren die Spieler (s. auch <a href="#h4CFM">Kondition/Frische/Moral</a>).
+      </li>
+      <li>
+        <u>Mentaltrainer</u><br />
+        Je besser der Mentaltrainer, desto geringer wirken sich Niederlagen auf die Moral aus.
+      </li>
+      <li>
+        <u>Teamarzt</u><br />
+        Je besser der Teamarzt, desto kürzer sind die Verletzungszeiten deiner Spieler.
+      </li>
+      <li>
+        <u>Jugendtrainer</u><br />
+        Je besser der Jugendtrainer, desto wahrscheinlicher entwickeln sich die <a href="#h3PlayerSkills">Fähigkeiten</a> der Jugendspieler.
+      </li>
+      <li>
+        <u>Jugendscout</u><br />
+        Je besser der Jugendscout, desto wahrscheinlicher schließt sich ein neuer Jugendspieler deinem Verein an.
+      </li>
+      <li>
+        <u id="uKibitzer">Spielbeobachter</u><br />
+        Je besser der Spielbeobachter, desto mehr Informationen erhältst du über deinen nächsten Gegner.
+      </li>
+    </ul>
+    <h4><span id="h4StaffScout" class="ckLink"></span>Scouting-Abteilung</h4>
+    Ist das Scouting-System aktiviert, können die einzelnen <a href="#h3PlayerSkills">Spielerfähigkeiten</a> nicht mehr direkt eingesehen, sondern müssen erst durch Beobachtungen ermittelt werden.
+    Bei eigenen Spielern geschieht dies durch den Trainer - also durch Dich - während des Trainings. Für alle anderen Spieler müssen vorher Scouts eingestellt werden. Diese können dann einmal am Tag einen Spieler eines anderen Vereins beobachten. Nach einer Beobachtung kann der Scout erst wieder am nächsten Tag ab 12:00 Uhr eingesetzt werden.
+    Die Scouts unterscheiden sich sowohl in Qualität als auch in Quantität ihrer Beobachtungen. Hat ein Scout ein niedriges Level, erhöht sich das Risiko, dass der beobachtete Wert von dem eigentlichen Wert abweicht. Es werden somit mehr Beobachtungen notwendig, um einen korrekten Mittelwert zu erhalten.
+    Der Eintrag "Daten/Sc." auf der Scoutingkarte gibt an, wie viele Spielerfähigkeiten der Scout pro Beobachtung ermitteln kann. Die Graphik rechts auf der Scoutingkarte stellt die statistische Dichtefunktion der Normalverteilung (<a href="https://de.wikipedia.org/wiki/Normalverteilung">Gaußsche Glockenfunktion</a>) abhängig vom Level des Scouts dar.
+    Je spitzer und schmaler die Kurve ist, desto höher ist die Wahrscheinlichkeit einer korrekten Beobachtung. Die Fläche unter der Kurve entspricht dabei der Wahrscheinlichkeit einer Abweichung in der Beobachtung.<br /><br />
+    Anhand der unteren beiden Graphen kann der Wert der Wahrscheinlichkeit abhängig vom Scouting-Level abgelesen werden. Beispielsweise beträgt das Risiko eines Scouts mit Level 4, die Fähigkeit des Spielers zu niedrig einzuschätzen (-1, -2, -3 usw.) bei exakt 18.6%. Ebenso hoch liegt die Wahrscheinlichkeit um +1 oder mehr daneben zu liegen. Insgesamt liegt demnach die Wahrscheinlichkeit einer Fehleinschätzung von mindestens +/-1 bei 37.1%.
+    <div style="position: relative; height: 400px; width: 100%; display: flex; flex-wrap: wrap; margin-top: 20px">
+      <div style="position: absolute; left: 0px; top: 0px; padding: 4px; background-color: white; border: 1px solid black; z-index: 99">
+        <label><b>Scout-Level: </b><input style="width: 42px" id="iptScoutSkill" onchange="plotScouting(this.value)" onkeyup="plotScouting(this.value)" type="number" value="4" min="1" max="7"></label>
+        <p style="margin: 0">Abw. min. +/-1: <span id="spanScoutDiff1"></span></p>
+        <p style="margin: 0">Abw. min. +/-2: <span id="spanScoutDiff2"></span></p>
+        <p style="margin: 0">Abw. min. +/-3: <span id="spanScoutDiff3"></span></p>
+      </div>
+      <div id="divChartContainerProbDen" style="height: 100%; width: 49%; min-width: 300px"></div>
+      <div id="divChartContainerDistFct" style="height: 100%; width: 49%; min-width: 300px"></div>
+    </div>
+    <h4><span id="h4StaffMed" class="ckLink"></span>Medizinische Abteilung</h4>
+    Folgt
+
+    <h3><span id="h3Finance" class="ckLink"></span>Finanzen</h3>
+    Zu Beginn einer Saison kannst du eine Finanzplanung aufstellen. Somit bekommst du einen Überblick, wieviel Geld dir während der Saison zur Verfügung steht um neue Spieler zu kaufen oder das Stadion auszubauen. Ebenso können hier die Stadioneintrittspreise festgelegt werden.
+    <h4><span id="h4SecretMoney" class="ckLink"></span>Schwarzgeld</h4>
+    Ein bestimmter Prozentsatz der Zuschauer- und der Merchandisingeinnahmen kann in deine schwarze Kasse umgeleitet werden. Mit dem Schwarzgeld kannst du anschließend deine Spieler <a href="#h3PlayerDoping">dopen</a> (s. auch <a href="#h4CFM">K/F/M</a>), den Schiedsrichter des nächsten Spiels <a href="#h2PreviewGame">bestechen</a> oder bei einem <a href="#h3Transfer">Transfer</a> ein Handgeld bezahlen, welches 10x so wertvoll wie normales Geld ist.
+
+    <h3><span id="h3Sponsors" class="ckLink"></span>Sponsoren</h3>
+    Spondoren sind eine wichtige Einnahmequelle. Es gibt zwei verschiedene Arten von Sponsoren: ein Hauptsponsor und Bandenwerbung. Der Hauptsponsor bieten dir einen einmaligen Sockelbetrag und erfolgsabhängige Leistungen an, während Bandenwerbungen bei jedem Heimspiel Geld generieren.<br />
+    Zu Beginn des Spiels hast du nur ein Angebot eines Hauptsponsors. Mit fortschreitender Spieldauer wirst du aber weitere Angebote bekommen, die (abhängig von deinem Tabellenplatz) durchaus lukrativer sein können. Es lohnt sich also, hier hin und wieder mal vorbei zu schauen.<br />
+    Um ein Sponsorenangebot anzunehmen, muss es in der jeweiligen Liste ausgewählt und die Schaltfläche "Sponsor wählen" gedrückt werden.
+
+    <h3><span id="h3Merchandising" class="ckLink"></span>Merchandising</h3>
+    Eine weitere wichtige Einnahmequelle deines Vereins kann das Merchandising sein. Du hast dabei die Wahl zwischen einem Vermarkter, welcher dir sofort Geld einbringt, oder der Selbstvermarktung deiner Merchandisingartikel. Letzteres ist über die gesamte Saison gesehen lukrativer, jedoch benötigst du Fanshops und musst zunächst Merchandisingartikel erwerben.<br />
+    <h4>Selbstvermarktung</h4>
+    Je mehr Artikel gekauft werden, desto geringer ist der Stückpreis. Um den Gewinn zu maximieren sollten also möglichst viele Artikel einer Sorte auf einmal gekauft werden.<br />
+    ACHTUNG: Am Ende der Saison sind die restlichen Artikel nicht mehr verkaufbar und werden entsorgt.
+
+    <h3><span id="h3Stadium" class="ckLink"></span>Stadion</h3>
+    In der Basisversion - ohne Oberring - stehen 10 Stadionblöcke zur Verfügung, welche in drei Kategorien (Steh-, Sitzplätze und VIP-Logen) ausgebaut werden können.
+
+    <h4>Ausbaukosten</h4>
+    Die Kosten für den Ausbau der Stadionplätze ist abhängig von der Anzahl der neu zu bauenden Plätze und der bereits vorhandenen Plätze.<br />
+    Je mehr Plätze gebaut werden und je mehr Plätze bereits vorhanden sind, desto teurer sind die Kosten pro Platz.<br />
+    Zur Bestimmung der Baukosten wurde als Referenz das Stadionneubauprojekt des SC Freibung herangezogen (<a href="https://www.scfreiburg.com/stadion/europa-park-stadion/rund-ums-neue-stadion/">SC Freibung - Europa-Park-Stadion</a>).
+
+    <div id="chartContainerStadiumCost" style="position: relative; height: 300px; width: 100%; margin-top: 10px"></div>
+
+    <h4>Stadiondach</h4>
+    Jeder Stadionblock welcher nicht unter einem anderen Block liegt (Blöcke des Oberrings bzw. Blöcke des Unterrings wenn kein Oberring vorhanden) kann mit einem Dach versehen werden. Die Kosten für ein Dach sind abhängig von der Anzahl der vorhandenen Plätze und der Kategorie.
+
+    <div style="position: relative">
+      <h4>Oberring</h4>
+      Wird ein Oberring gebaut, stehen 14 neue Stadionblöcke zur Verfügung.<br />
+      Die Baukosten der Blöcke des Oberrings erhöhen sich um 50%. Untere Blöcke können nur noch bis zur Kapazität (abhängig vom Blocktyp) des größen Blocks des Unterings ausgebaut werden.
+    </div>
+
+    <h4><span id="h4StadiumExtras" class="ckLink"></span>Stadionausstattung</h4>
+    @{
+      string sSnackbar = (400f / CornerkickManager.Stadium.iFeatureSpecReqSnackbar).ToString("0.0");
+      string sToilets = (400f / CornerkickManager.Stadium.iFeatureSpecReqToilets).ToString("0.0");
+      string sCounter = (400f / CornerkickManager.Stadium.iFeatureSpecReqTicketcounter).ToString("0.0");
+      string sCarpark = (400f / CornerkickManager.Stadium.iFeatureSpecReqCarpark).ToString("0.0");
+    }
+    Folgende Stadionausstattungen stehen zur Verfügung, welche die (potentiellen) Zuschauerzahlen um bis zu 25% reduzieren, wenn sie nicht genügend vorhanden sind. Die Zahlen in Klammern geben an, welche Anzahl der jeweiligen Ausstattungen für 10.000 Stehplatz-, 8.000 Sitzplatz- und 400 VIP Zuschauer (mindestens) vorhanden sein muss, um eine Zuschauerreduktion zu vermeiden.
+    <ul>
+      <li>Imbissbuden (@sSnackbar)</li>
+      <li>Toiletten (@sToilets)</li>
+      <li>Ticketschalter (@sCounter)</li>
+      <li>Parkplätze (@sCarpark)</li>
+      <li>ÖPNV-Anbindung (*)</li>
+    </ul>
+    Mit anderen Worten: @sCarpark Parkplätze genügen für 10.000 Stehplatz-, 8.000 Sitzplatz- und 400 VIP Zuschauer. Sind keine vorhanden reduziert sich die Anzahl der potentiellen Zuschauer um 25%.<br />
+    * Jedes Level der ÖPNV-Anbindung schafft Kapazitäten für @CornerkickManager.Stadium.iFeatureSpecReqMassTransit.ToString() zusätzliche Stehplatz-/Sitzplatz- und VIP-Zuschauer.
+
+    <h3><span id="h3Buildings" class="ckLink"></span>Vereinsgelände</h3>
+    Auf dem Vereinsgelände können verschiedene Gebäudetypen (aus-)gebaut werden:
+    <ul>
+      <li>
+        <u>Trainingsgelände</u><br />
+        Jedes zusätzliche Level des Trainingsgeländes erhöht die Wahrscheinlichkeit der Weiterentwicklung der <a href="#h3PlayerSkills">Spielerfähigkeiten</a> deiner Profispieler.
+        <table class="table table-bordered compact nowrap" style="width: auto">
+          <tr>
+            <th style="text-align:center">Lv.</th>
+            <th style="text-align:center">Name</th>
+            <th style="text-align:center" title="Ausbaukosten [€]">Kosten</th>
+            <th style="text-align:center" title="Ausbaudauer [d]">Dauer</th>
+            <th style="text-align:center" title="Unterhaltskosten [€/Monat]">Unterhalt</th>
+            <th style="text-align:center" title="Anzahl Grundstücke">Gr.</th>
+          </tr>
+          @for (int i = 0; i < CornerkickManager.Stadium.bdgTrainingCourts.sLevelNames.Length; i++) {
+            <tr>
+              <td align="center">@(i + 1)</td>
+              <td align="center">@CornerkickManager.Stadium.bdgTrainingCourts.sLevelNames[i]</td>
+              <td align="right">@CornerkickManager.Stadium.bdgTrainingCourts.iCost[i].ToString("N0")</td>
+              <td align="right">@CornerkickManager.Stadium.bdgTrainingCourts.iDaysConstruct[i].ToString()</td>
+              <td align="right">@CornerkickManager.Stadium.bdgTrainingCourts.iCostMaintenance[i].ToString("N0")</td>
+              <td align="center">@CornerkickManager.Stadium.bdgTrainingCourts.iGround[i].ToString()</td>
+            </tr>
+          }
+        </table>
+      </li>
+      <li>
+        <u>Fittnessraum</u><br />
+        Jedes zusätzliche Level der Fittnesseinrichtung erhöht den Konditionsgewinn pro Trainingseinheit.
+        <table class="table table-bordered compact nowrap" style="width: auto">
+          <tr>
+            <th style="text-align:center">Lv.</th>
+            <th style="text-align:center">Name</th>
+            <th style="text-align:center" title="Ausbaukosten [€]">Kosten</th>
+            <th style="text-align:center" title="Ausbaudauer [d]">Dauer</th>
+            <th style="text-align:center" title="Unterhaltskosten [€/Monat]">Unterhalt</th>
+            <th style="text-align:center" title="Anzahl Grundstücke">Gr.</th>
+          </tr>
+          @for (int i = 1; i < CornerkickManager.Stadium.bdgGym.sLevelNames.Length; i++) {
+            <tr>
+              <td align="center">@i</td>
+              <td align="center">@CornerkickManager.Stadium.bdgGym.sLevelNames[i]</td>
+              <td align="right">@CornerkickManager.Stadium.bdgGym.iCost[i].ToString("N0")</td>
+              <td align="right">@CornerkickManager.Stadium.bdgGym.iDaysConstruct[i].ToString()</td>
+              <td align="right">@CornerkickManager.Stadium.bdgGym.iCostMaintenance[i].ToString("N0")</td>
+              <td align="center">@CornerkickManager.Stadium.bdgGym.iGround[i].ToString()</td>
+            </tr>
+          }
+        </table>
+      </li>
+      <li>
+        <u>Wellnessraum</u><br />
+        Jedes zusätzliche Level der Wellnesseinrichtung erhöht den Frischegewinn pro Trainingseinheit.
+        <table class="table table-bordered compact nowrap" style="width: auto">
+          <tr>
+            <th style="text-align:center">Lv.</th>
+            <th style="text-align:center">Name</th>
+            <th style="text-align:center" title="Ausbaukosten [€]">Kosten</th>
+            <th style="text-align:center" title="Ausbaudauer [d]">Dauer</th>
+            <th style="text-align:center" title="Unterhaltskosten [€/Monat]">Unterhalt</th>
+            <th style="text-align:center" title="Anzahl Grundstücke">Gr.</th>
+          </tr>
+          @for (int i = 1; i < CornerkickManager.Stadium.bdgSpa.sLevelNames.Length; i++) {
+            <tr>
+              <td align="center">@i</td>
+              <td align="center">@CornerkickManager.Stadium.bdgSpa.sLevelNames[i]</td>
+              <td align="right">@CornerkickManager.Stadium.bdgSpa.iCost[i].ToString("N0")</td>
+              <td align="right">@CornerkickManager.Stadium.bdgSpa.iDaysConstruct[i].ToString()</td>
+              <td align="right">@CornerkickManager.Stadium.bdgSpa.iCostMaintenance[i].ToString("N0")</td>
+              <td align="center">@CornerkickManager.Stadium.bdgSpa.iGround[i].ToString()</td>
+            </tr>
+          }
+        </table>
+      </li>
+      <li>
+        <u>Jugendinternat</u><br />
+        Jedes zusätzliche Level des Jugendinternats erhöht die Wahrscheinlichkeit der Weiterentwicklung der <a href="#h3PlayerSkills">Spielerfähigkeiten</a> deiner Jugendspieler.
+        <table class="table table-bordered compact nowrap" style="width: auto">
+          <tr>
+            <th style="text-align:center">Lv.</th>
+            <th style="text-align:center">Name</th>
+            <th style="text-align:center" title="Ausbaukosten [€]">Kosten</th>
+            <th style="text-align:center" title="Ausbaudauer [d]">Dauer</th>
+            <th style="text-align:center" title="Unterhaltskosten [€/Monat]">Unterhalt</th>
+            <th style="text-align:center" title="Anzahl Grundstücke">Gr.</th>
+          </tr>
+          @for (int i = 1; i < CornerkickManager.Stadium.bdgJouthInternat.sLevelNames.Length; i++) {
+            <tr>
+              <td align="center">@i</td>
+              <td align="center">@CornerkickManager.Stadium.bdgJouthInternat.sLevelNames[i]</td>
+              <td align="right">@CornerkickManager.Stadium.bdgJouthInternat.iCost[i].ToString("N0")</td>
+              <td align="right">@CornerkickManager.Stadium.bdgJouthInternat.iDaysConstruct[i].ToString()</td>
+              <td align="right">@CornerkickManager.Stadium.bdgJouthInternat.iCostMaintenance[i].ToString("N0")</td>
+              <td align="center">@CornerkickManager.Stadium.bdgJouthInternat.iGround[i].ToString()</td>
+            </tr>
+          }
+        </table>
+      </li>
+      <li>
+        <u>Vereinsheim</u><br />
+        Jedes zusätzliche Level des Vereinsheims erhöht das Zuschaueraufkommen um 5%.
+        <table class="table table-bordered compact nowrap" style="width: auto">
+          <tr>
+            <th style="text-align:center">Lv.</th>
+            <th style="text-align:center">Name</th>
+            <th style="text-align:center" title="Ausbaukosten [€]">Kosten</th>
+            <th style="text-align:center" title="Ausbaudauer [d]">Dauer</th>
+            <th style="text-align:center" title="Unterhaltskosten [€/Monat]">Unterhalt</th>
+            <th style="text-align:center" title="Anzahl Grundstücke">Gr.</th>
+          </tr>
+          @for (int i = 1; i < CornerkickManager.Stadium.bdgClubHouse.sLevelNames.Length; i++) {
+            <tr>
+              <td align="center">@i</td>
+              <td align="center">@CornerkickManager.Stadium.bdgClubHouse.sLevelNames[i]</td>
+              <td align="right">@CornerkickManager.Stadium.bdgClubHouse.iCost[i].ToString("N0")</td>
+              <td align="right">@CornerkickManager.Stadium.bdgClubHouse.iDaysConstruct[i].ToString()</td>
+              <td align="right">@CornerkickManager.Stadium.bdgClubHouse.iCostMaintenance[i].ToString("N0")</td>
+              <td align="center">@CornerkickManager.Stadium.bdgClubHouse.iGround[i].ToString()</td>
+            </tr>
+          }
+        </table>
+      </li>
+      <li>
+        <u>Vereinsmuseum</u><br />
+        Jedes zusätzliche Level des Vereinsmuseum reduziert die Abnahme des <a href="#h4ClubSuccessFactor">Erfolgsfaktors</a> für vergangene Erfolge.
+        <table class="table table-bordered compact nowrap" style="width: auto">
+          <tr>
+            <th style="text-align:center">Lv.</th>
+            <th style="text-align:center">Name</th>
+            <th style="text-align:center" title="Ausbaukosten [€]">Kosten</th>
+            <th style="text-align:center" title="Ausbaudauer [d]">Dauer</th>
+            <th style="text-align:center" title="Unterhaltskosten [€/Monat]">Unterhalt</th>
+            <th style="text-align:center" title="Anzahl Grundstücke">Gr.</th>
+          </tr>
+          @for (int i = 1; i < CornerkickManager.Stadium.bdgClubMuseum.sLevelNames.Length; i++) {
+            <tr>
+              <td align="center">@i</td>
+              <td align="center">@CornerkickManager.Stadium.bdgClubMuseum.sLevelNames[i]</td>
+              <td align="right">@CornerkickManager.Stadium.bdgClubMuseum.iCost[i].ToString("N0")</td>
+              <td align="right">@CornerkickManager.Stadium.bdgClubMuseum.iDaysConstruct[i].ToString()</td>
+              <td align="right">@CornerkickManager.Stadium.bdgClubMuseum.iCostMaintenance[i].ToString("N0")</td>
+              <td align="center">@CornerkickManager.Stadium.bdgClubMuseum.iGround[i].ToString()</td>
+            </tr>
+          }
+        </table>
+      </li>
+      <li>
+        <u>Fanshops</u><br />
+        Auf jedes Grundstück passen maximal @CornerkickManager.Stadium.iFanshopPerGround.ToString() Fanshops.
+      </li>
+      <li>
+        <u>Parkplätze</u><br />
+        siehe <a href="#h4StadiumExtras">Stadionausstattung</a>. Auf jedes Grundstück passen maximal @CornerkickManager.Stadium.iCarparkPerGround.ToString() Parkplätze.
+      </li>
+      <li>
+        <u>Ticketschalter</u><br />
+        siehe <a href="#h4StadiumExtras">Stadionausstattung</a>. Auf jedes Grundstück passen maximal @CornerkickManager.Stadium.iTicketcounterPerGround.ToString() Ticketschalter.
+      </li>
+      <li>
+        <u>ÖPNV-Anbindung</u><br />
+        siehe <a href="#h4StadiumExtras">Stadionausstattung</a>
+        <table class="table table-bordered compact nowrap" style="width: auto">
+          <tr>
+            <th style="text-align:center">Lv.</th>
+            <th style="text-align:center">Name</th>
+            <th style="text-align:center" title="Ausbaukosten [€]">Kosten</th>
+            <th style="text-align:center" title="Ausbaudauer [d]">Dauer</th>
+            <th style="text-align:center" title="Unterhaltskosten [€/Monat]">Unterhalt</th>
+            <th style="text-align:center" title="Anzahl Grundstücke">Gr.</th>
+          </tr>
+          @for (int i = 1; i < CornerkickManager.Stadium.bdgMassTransit.sLevelNames.Length; i++) {
+            <tr>
+              <td align="center">@i</td>
+              <td align="center">@CornerkickManager.Stadium.bdgMassTransit.sLevelNames[i]</td>
+              <td align="right">@CornerkickManager.Stadium.bdgMassTransit.iCost[i].ToString("N0")</td>
+              <td align="right">@CornerkickManager.Stadium.bdgMassTransit.iDaysConstruct[i].ToString()</td>
+              <td align="right">@CornerkickManager.Stadium.bdgMassTransit.iCostMaintenance[i].ToString("N0")</td>
+              <td align="center">@CornerkickManager.Stadium.bdgMassTransit.iGround[i].ToString()</td>
+            </tr>
+          }
+        </table>
+      </li>
+    </ul>
+    Um ein Gebäude bauen zu können, muss jedoch zunächst ein Grundstück erworben werden. Die Kosten für jedes neue Grundstück erhöhen sich um 50% zum vorherigen. Manche Gebäudeausbaustufen benötigen zudem mehr als ein Grundstück.
+
+    <h2><span id="h2PreviewGame" class="ckLink"></span>Spielvorschau</h2>
+    Die Spielvorschau lässt sich vom Hauptmenü über den link unter "Nächstes Spiel" öffnen. Dort sind alle Details zum nächsten Spiel zusammengefasst.<br />
+    Zudem kann hier der Schiedsrichter des nächsten Spiels mit <a href="#h4SecretMoney">Schwarzgeld</a> bestochen werden. Abhängig von der Summe die Sie ihm bezahlen (und der Summe die Ihr Gegner im bezahlt), wird er bis zu maximal 20% Fehlentscheidungen (bei einer Bestechungssumme von 100.000€) zu Ihren Gunsten treffen.
+
+    <h2><span id="h2Office" class="ckLink"></span>Büro</h2>
+    <h3><span id="h3Transfer" class="ckLink"></span>Transfermarkt</h3>
+    <h4>Spieler erwerben</h4>
+    Auf dem Transfermarkt können neue Spieler für deine Mannschaft verpflichtet werden. Benutze die Filter, um einen interessanten Spieler zu finden. Um ihn zu verpflichten, musst du zunächst einen <a href="#h3PlayerContract">Vertrag mit ihm aushandeln</a>. Besitzt der Spieler eine fixe Ablöse oder ist er vereinslos, wechselt er nun direkt zu deinem Verein. Ansonsten musst du dem bisherigen Verein des Spielers eine Ablösesumme anbieten.<br />
+    Vom 1. Januar bis zum Ende der Saison besteht zudem die Möglichkeit, Spieler für die nächste Saison zu verpflichten. Besitzt der Spieler einen auslaufenden Vertrag, wäre er also in der nächsten Saison vereinlos (Vertragslaufzeit = 1), geschieht dies ablösefrei.<br />
+    Bei Spielern deren Vertrag ausläuft, reduziert sich das geforderte Gehalt linear vom 1. Januar bis zum Ende der Saison auf 50% des ursprünglich geforderten Gehalts. Es kann sich also lohnen, bis zum Ende der Saison zu warten bevor man einen Spieler für die nächste Saison verpflichtet. Jedoch besteht natürlich die Gefahr, das ein anderer Manager dir zuvor kommt.
+    <h4>Spieler verkaufen</h4>
+    Ein eigener Spieler kann über die Option "Auf Transferliste setzen" in der Spieleransicht zum Verkauf angeboten werden. Hierbei verliert er jedoch 5% Moral. Über eingegangene Angebote für deinen Spieler wirst du im Neuigkeiten-Bereich informiert.
+
+    <h3><span id="h3User" class="ckLink"></span>Persönliches</h3>
+    <div id="divUserCoop" style="display: none">
+      <h4><span id="h4UserCoop" class="ckLink"></span>Kooperationen</h4>
+      Kooperationen zwischen zwei Managern können sehr vorteilhaft für beide Seiten sein. Bei einer Kooperation gibt es einen Mutter- und einen Tochterverein (von dem Manager der eingeladen hat bzw. eingeladen wurde). Einmal im Monat werden die durch Synergieeffekte erzeugten Einnahmen an beide Manager bzw. ihre Vereine ausbezahlt. Ausschlaggebend ist dabei der <a href="#h4ClubSuccessFactor">Erfolgsfaktor</a> des jeweils anderen Vereins.
+      Da Muttervereine in der Regel schon länger existieren und somit einen höheren Erfolgsfaktor ausweisen, ist der Anteil welcher an den Tochterverein überwiesen wird geringer als umgekehrt:
+      <ul>
+        <li>Einnahmen des Muttervereins: Erfolgsfaktor des Tochtervereins mal 500 €</li>
+        <li>Einnahmen des Tochtervereins: Erfolgsfaktor des Muttervereins mal 200 €</li>
+      </ul>
+      Hat sich der Verein des eingeladenen Managers also nach einer Saison einen Erfolgsfaktor von 1000 erarbeitet, erhält sein Mutterverein monatlich 500.000 €. Umgekehrt erhält der Tocherverein bei einem Erfolgsfaktor des Muttervereins von 5000 monatlich 1.000.000 €.
+    </div>
+
+    <h3><span id="h3Livegame" class="ckLink"></span>Live-Spiel</h3>
+    Findet gerade ein Spiel statt, kannst du es dir hier anschauen. Durch einen klick auf (3) kannst du die Trikotfarben wechslen. Über die links 'Aufstellung/Taktik' (2a) kannst du dein Team anpassen und Auswechslungen vornehmen und über den link 'home' (2b) kommst du zurück in den Startbildschirm.<br />
+    <img src="~/content/Images/user_manual/Game2.png" width="600" /> <br />
+    Ist gerade kein Spiel im Gange, kannst du vergangene Spiele über das Menü (1) auswählen und analysieren. Dazu stehen dir verschiedene Optionen zur Verfügung: Mit den Schaltflächen
+    <img src="~/content/Images/user_manual/LiveGame_options.png" width="200" /> kannst du dir jede Spielsituation noch einmal anschauen (5). Mit einem klick auf die Symbole über bzw. unter der timeline (4) kommst du direkt in die jeweilige Spielsituation<br />
+    Über den link 'Optionen' (2c) kannst du spezielle Darstellungsoptionen wie heatmap, Schüsse und Pässe aktivieren.<br />
+  </div>
+</body>
+</html>
+
+@code {
+  UserManualModel model;
+
+  protected override async Task OnInitializedAsync()
+  {
+    //await base.OnInitializedAsync();
+
+    model = CornerkickApp.Controllers.UserManualController.Get();
+
+    if (model != null) {
+
+#if _WebApp
+    } else {
+      NavigationManager.NavigateTo("/authentication/register");
+#endif
+    }
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender) {
+    }
+  }
+}

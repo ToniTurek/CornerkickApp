@@ -1,0 +1,3360 @@
+﻿@page "/editor/{dbfile?}"
+
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using CommunityToolkit.Maui.Core
+@using CommunityToolkit.Maui.Storage
+@using CommunityToolkit.Maui.Alerts
+@using CornerkickApp.Controllers
+@using CornerkickApp.Components.Shared.Components
+@using CornerkickApp.Components.Pages.Templates
+@using CornerkickApp.Shared.Models
+
+@inject IJSRuntime JS
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject IFolderPickerService folderPickerService
+
+<PageTitle>Spielerdetails</PageTitle>
+
+<!DOCTYPE html>
+<html>
+<head>
+</head>
+
+<body class="@sClassDisabled" style="margin-bottom: 4rem">
+  <h3>Datenbank: @dbfile2</h3>
+
+  @{
+#if ANDROID
+    //string sFilter = "application/octet-stream,application/xml";
+    string sFilter = "";
+#else
+    string sFilter = ".ckdbx,.xml.zip,.xml";
+#endif
+  }
+  <div style="width: fit-content; max-width: 100%; margin-top: 20px; display: flex; flex-wrap: wrap; flex-direction: row">
+    <div style="margin-right: 1rem; margin-bottom: 1rem">
+      <input class="form-control" placeholder="Name Datensatz" style="width: 100%; min-width: 160px; margin-bottom: 4px" @bind="dbfile2" />
+      <div style="display: flex; flex-direction: row; margin-bottom: 4px; flex-wrap: wrap">
+        <Button Color="Blazorise.Color.Primary" Clicked="@saveDatabase" Disabled="@string.IsNullOrEmpty(dbfile2)" Style="white-space: nowrap; margin-right: 4px; flex: 1">Datensatz speichern</Button>
+        <Select TValue="int" @bind-SelectedValue="iFileFormat" Style="width: 84px">
+          <SelectItem Value="0">ckdb</SelectItem>
+          <SelectItem Value="1">XML</SelectItem>
+        </Select>
+      </div>
+      <FileEdit Multiple Changed="@importDb" Written="@OnWritten" Progressed="@OnProgressed" Ended="@OnEnded" Filter="@sFilter" Placeholder="Daten importieren" Style="width: 100%" />
+      <Button Color="Blazorise.Color.Success" Clicked="@goBack" Style="width: 100%; margin-top: 4px">zurück</Button>
+    </div>
+
+    @*
+    <div>
+      <FileEdit Multiple Changed="@importDb" Written="@OnWritten" Progressed="@OnProgressed" Ended="@OnEnded" Filter="@sFilter" Placeholder="Datensatz importieren" Style="width: 100%" />
+      <Button Color="Blazorise.Color.Info" Clicked="@exportDatabaseXML" Style="width: 100%; margin-top: 4px">
+        <img height=24 src="./_content/CornerkickApp.Components/Content/Images/xml.png" />
+        XML Datensatz exportieren
+      </Button>
+      <Button Color="Color.Secondary" Clicked="@importTmDataset" Style="width: 100%; margin-top: 4px">Datensatz importieren</Button>
+    </div>
+    *@
+  </div>
+  <div style="width: 100%; margin-top: 12px; display: @( string.IsNullOrEmpty(sProgressType) ? "none" : "block" )">
+    <Progress Value="@iProgress" Animated Striped Color="Blazorise.Color.Success" />
+    <p>@sProgressType</p>
+  </div>
+  <Blazorise.Tabs SelectedTab="@selectedTab" SelectedTabChanged="@OnSelectedTabChanged" Style="margin-top: 12px">
+    <Items>
+      <Blazorise.Tab Name="tabOverview">
+        <Blazorise.Icon Name="Blazorise.IconName.Circle" />Übersicht
+      </Blazorise.Tab>
+      <Blazorise.Tab Name="tabCups">
+        <Blazorise.Icon Name="Blazorise.Icons.FontAwesome.FontAwesomeIcons.Trophy" />Wettbewerbe
+      </Blazorise.Tab>
+      <Blazorise.Tab Name="tabClubs">
+        <Blazorise.Icon Name="Blazorise.IconName.Shield" />Vereine
+      </Blazorise.Tab>
+      <Blazorise.Tab Name="tabPlayer">
+        <Blazorise.Icon Name="Blazorise.IconName.Users" />Spieler
+      </Blazorise.Tab>
+    </Items>
+    <Content>
+      <TabPanel Name="tabOverview">
+        <div id="tab-1" style="margin-top: 10px">
+          <EditorOverview @ref="editorOverview" changeCup="changeCkMngCup" deleteClub="deleteCkMngClub"></EditorOverview>
+        </div>
+      </TabPanel>
+      <TabPanel Name="tabCups">
+        <div id="tab-2" style="margin-top: 10px; overflow: auto">
+          <Select SelectedValue="@selectedCupName" SelectedValueChanged="changeCup" TValue="string">
+            @{
+              foreach (CornerkickManager.Cup cup in CkAppShared.ckMng.ltCups) {
+                <SelectItem Value="@getCupIdString(cup)">@getCupName(cup)</SelectItem>
+              }
+            }
+          </Select>
+
+          @if (selected_cup != null) {
+            CornerkickManager.Cup? c = CkAppShared.ckMng.ltCups.Find(c => c.iId == selected_cup.iId && c.iId2 == selected_cup.iId2 && c.iId3 == selected_cup.iId3);
+
+            int iCupTypeIx = Array.IndexOf(iCupIds, selected_cup.iId);
+            if (iCupTypeIx >= 0 && iCupTypeIx < sCupNames.Length) {
+              <h5>Typ: <span style="font-weight: normal">@sCupNames[Array.IndexOf(iCupIds, selected_cup.iId)]</span></h5>
+            }
+
+            <h5>Wappen</h5>
+            @if (isLoading) {
+              <p>Uploading ...</p>
+            } else {
+              @if (selected_cup.bEmblem != null) {
+                <img style="height: 150px; object-fit: contain; margin-bottom: 6px" src="data:image/*;base64,@Convert.ToBase64String(selected_cup.bEmblem)" />
+              }
+              <p>
+                <InputFile OnChange="loadCupEmblem" accept="image/*" />
+              </p>
+            }
+
+            <div style="display: flex; flex-wrap: wrap; max-width: 100%">
+              <div style="margin-right: 1rem; margin-bottom: 1rem">
+                <h5>Einstellungen</h5>
+                <div style="overflow: auto">
+                  <table class="cup_settings">
+                    @if (selected_cup.iId != CkAppShared.iCupIdWc) {
+                      <tr>
+                        <td style="text-align: right">Wochentag</td>
+                        <td>
+                          <Select TValue="int" SelectedValue="selected_cup.iDayOfWeek" SelectedValueChanged="setCupDayOfWeek">
+                            @for (int i = 0; i < 7; i++) {
+                              DateTime dt = CkAppShared.ckMng.dtSeasonStart.AddDays(i+1);
+                              int iDoW = (int)dt.DayOfWeek;
+                              <SelectItem Value="@iDoW">@dt.ToString("ddd")</SelectItem>
+                            }
+                          </Select>
+                        </td>
+                      </tr>
+                    } else {
+                      <tr>
+                        <td style="text-align: right">Austragung jedes N Jahr</td>
+                        <td>
+                          <input type="number" min="0" style="width: 46px; text-align: right" value="@selected_cup.nYears" @onchange="(e) => setCupEveryYear(e.Value)" />
+                        </td>
+                      </tr>
+                    }
+                    <tr>
+                      <td style="text-align: right">Anstoßzeit</td>
+                      <td>
+                        <RadzenTimePicker @ref="cupTimePicker" Name="CupTimeOfDay" TimeValue="@selected_cup.toTimeOfDay" TimeValueChanged="setCupTimeOfDay"></RadzenTimePicker>
+                      </td>
+                    </tr>
+                    @if (selected_cup.iId != CkAppShared.iCupIdWc) {
+                      <tr>
+                        <td style="text-align: right">Startwoche (&lt; 0: von Saisonende)</td>
+                        <td>
+                          @*
+                          <Radzen.Blazor.RadzenDatePicker TValue="DateTime?" Value=@selected_cup.dtStart InitialViewDate="CkAppShared.ckMng.dtSeasonStart" DateFormat="dd.MM." ShowCalendarWeek Change="@(args => setCupStart(args.Value))" Name="RadzenDatePickerChangeEvent" Style="width: 90px" />
+                          *@
+                          <input type="text" inputmode="numeric" style="width: 46px; text-align: right" value="@selected_cup.iStart" @onchange="(e) => setCupStart(e.Value)" />
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="text-align: right">Endwoche (&le; 0: von Saisonende)</td>
+                        <td>
+                          @*
+                          <Radzen.Blazor.RadzenDatePicker TValue="DateTime?" Value=@selected_cup.dtEnd InitialViewDate="CkAppShared.ckMng.dtSeasonEnd" DateFormat="dd.MM." ShowCalendarWeek Change="@(args => setCupEnd(args.Value))" Name="RadzenDatePickerChangeEvent" Style="width: 90px" />
+                          *@
+                          <input type="text" inputmode="numeric" style="width: 46px; text-align: right" value="@selected_cup.iEnd" @onchange="(e) => setCupEnd(e.Value)" />
+                        </td>
+                      </tr>
+                    }
+                    <tr>
+                      <td style="text-align: right">Anzahl Gruppen</td>
+                      <td>
+                        <input type="number" style="width: 46px; text-align: right" value="@selected_cup.nGroups" @onchange="(e) => setCupNGroups(selected_cup, e.Value)" />
+                      </td>
+                    </tr>
+                    @if (selected_cup.nGroups > 0) {
+                      <tr>
+                        <td style="text-align: right">Gruppenphase Hin- & Rückspiel</td>
+                        <td>
+                          <input type="checkbox" checked="@selected_cup.bGroupsTwoGames" @onchange="(e) => setCupBGroupTwoGames(selected_cup, e.Value)" />
+                        </td>
+                      </tr>
+                    }
+                    <tr>
+                      <td style="text-align: right">KO-Phase</td>
+                      <td>
+                        <input type="checkbox" checked="@selected_cup.bKo" @onchange="(e) => setCupBKo(selected_cup, e.Value)" />
+                      </td>
+                    </tr>
+                    @if (selected_cup.bKo && selected_cup.nGroups > 0) {
+                      <tr>
+                        <td style="text-align: right">Anzahl Qualif. für KO-Phase pro Gruppe</td>
+                        <td>
+                          <input type="number" min="0" style="width: 46px; text-align: right" value="@selected_cup.nQualifierKo" @onchange="(e) => setCupNQualiKo(selected_cup, e.Value)" />
+                        </td>
+                      </tr>
+                    }
+                    @if (selected_cup.bKo) {
+                      <tr>
+                        <td style="text-align: right">KO-Phase Hin- & Rückspiel</td>
+                        <td>
+                          <input type="checkbox" checked="@selected_cup.bKoTwoGames" @onchange="(e) => setCupBKoTwoGames(selected_cup, e.Value)" />
+                        </td>
+                      </tr>
+                    }
+                    <tr>
+                      <td style="text-align: right">Prioritätsfaktor</td>
+                      <td>
+                        <input type="tel" min="0" style="width: 46px; text-align: right" value="@selected_cup.fAttrFactor.ToString("0.00")" @onchange="(e) => setCupAttrFactor(selected_cup, e.Value)" />
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="text-align: right">Spieldauer [min]</td>
+                      <td>
+                        <input type="number" min="1" style="width: 46px; text-align: right" value="@selected_cup.nGameMin" @onchange="(e) => setCupGameMin(selected_cup, e.Value)" />
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="text-align: right">Anzahl Spieler</td>
+                      <td>
+                        <input type="number" min="1" style="width: 46px; text-align: right" value="@selected_cup.nPlStart" @onchange="(e) => setCupPlStart(selected_cup, e.Value)" />
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="text-align: right">Anzahl Reservespieler</td>
+                      <td>
+                        <input type="number" min="0" style="width: 46px; text-align: right" value="@selected_cup.nPlRes" @onchange="(e) => setCupPlRes(selected_cup, e.Value)" />
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="text-align: right">Anzahl Spielerwechsel</td>
+                      <td>
+                        <input type="number" min="0" style="width: 46px; text-align: right" value="@selected_cup.nSubstitutions" @onchange="(e) => setCupSubstitutions(selected_cup, e.Value)" />
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="text-align: right">Abseits</td>
+                      <td>
+                        <input type="checkbox" checked="@selected_cup.bOffsite" @onchange="(e) => setCupBOffsite(selected_cup, e.Value)" />
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="text-align: right">Karten</td>
+                      <td>
+                        <input type="checkbox" checked="@selected_cup.bCards" @onchange="(e) => setCupBCards(selected_cup, e.Value)" />
+                      </td>
+                    </tr>
+                    @if (selected_cup.bCards) {
+                      <tr>
+                        <td style="text-align: right">Sperre nach N gelben Karten</td>
+                        <td>
+                          <input type="number" min="0" style="width: 46px; text-align: right" value="@selected_cup.nYellowCardsSuspension" @onchange="(e) => setYellowCardSuspension(selected_cup, e.Value)" />
+                        </td>
+                      </tr>
+                    }
+                    @if (selected_cup.bKo && selected_cup.bKoTwoGames) {
+                      <tr>
+                        <td style="text-align: right">Auswärtstorregel</td>
+                        <td>
+                          <input type="checkbox" checked="@selected_cup.bAwwayGoalRule" @onchange="(e) => setCupBAwayGoalRule(selected_cup, e.Value)" />
+                        </td>
+                      </tr>
+                    }
+                    <tr>
+                      <td style="text-align: right">Größe Spielfeld</td>
+                      <td>
+                        <input type="tel" min="0" style="width: 46px; text-align: right" value="@selected_cup.fPitchSizeRel.ToString("0.00")" @onchange="(e) => setCupPitchSize(selected_cup, e.Value)" />
+                      </td>
+                    </tr>
+                  </table>
+                </div>
+                @if (selected_cup.iId != CkAppShared.iCupIdWc) {
+                  <div>
+                    <table>
+                      <tr>
+                        <td style="border: none; padding: 0; text-align: right">Erster Spieltag: </td>
+                        <td style="border: none; padding: 0; text-align: left">@selected_cup.dtStart.ToLongDateString()</td>
+                      </tr>
+                      <tr>
+                        <td style="border: none; padding: 0; text-align: right">Letzter Spieltag: </td>
+                        <td style="border: none; padding: 0; text-align: left">@selected_cup.dtEnd.ToLongDateString()</td>
+                      </tr>
+                      <tr>
+                        <td style="border: none; padding: 0; text-align: right">Anzahl Spieltage: </td>
+                        <td style="border: none; padding: 0; text-align: left">@selected_cup.nMatchdays.ToString()</td>
+                      </tr>
+                    </table>
+                  </div>
+                }
+              </div>
+              @if (selected_cup.iId != CkAppShared.iCupIdWc) {
+                <div style="margin-right: 1rem; margin-bottom: 1rem">
+                  <h5>Prämien:</h5>
+                  <div style="overflow: auto">
+                    <table class="cup_settings">
+                      <tr>
+                        <td style="text-align: right">Antrittsprämie</td>
+                        <td>
+                          <input type="tel" min="0" class="currency" value="@selected_cup.iBonusStart.ToString("N0")" @onchange="(e) => setCupBonusStart(selected_cup, e.Value)" />
+                        </td>
+                      </tr>
+                      @if (selected_cup.nGroups > 0 && selected_cup.bKo) {
+                        <tr>
+                          <td style="text-align: right">Prämie Sieg Gruppenphase</td>
+                          <td>
+                            <input type="tel" min="0" class="currency" value="@selected_cup.iBonusVicGroup.ToString("N0")" @onchange="(e) => setCupBonusVicGroup(selected_cup, e.Value)" />
+                          </td>
+                        </tr>
+                      }
+                      <tr>
+                        <td style="text-align: right">Prämie Titelgewinn</td>
+                        <td>
+                          <input type="tel" min="0" class="currency" value="@selected_cup.iBonusCupWin.ToString("N0")" @onchange="(e) => setCupBonusCupWin(selected_cup, e.Value)" />
+                        </td>
+                      </tr>
+                      @if (selected_cup.bKo) {
+                        <tr>
+                          <td style="text-align: right">Ausschüttung während KO Phase</td>
+                          <td>
+                            <input type="checkbox" checked="@selected_cup.bBonusReleaseCupWinInKo" @onchange="(e) => setCupBonusReleaseCupWinInKo(selected_cup, e.Value)" />
+                          </td>
+                        </tr>
+                      }
+                    </table>
+                  </div>
+                </div>
+                <div>
+                  <h5>TV-Gelder:</h5>
+                  <div style="overflow: auto">
+                    <label>
+                      Ausschüttung pro Spiel:
+                      <input type="tel" min="0" class="currency" value="@selected_cup.iTvBonus.ToString("N0")" @onchange="(e) => setCupTvBonus(selected_cup, e.Value)" />
+                    </label>
+                  </div>
+                </div>
+              }
+            </div>
+
+            <div style="display: flex; flex-wrap: wrap; max-width: 100%">
+              <div style="margin-right: 1rem; margin-bottom: 1rem">
+                <h5>Qualifikationen für Wettb.:</h5>
+                <div style="margin-left: 6px">
+                  @{
+                    int iQualiSum = 0;
+                  }
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>St.</th>
+                        <th>Von Pl.</th>
+                        <th>Bis Pl.</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @if (selected_cup.ltQ != null) {
+                        foreach (CornerkickManager.Cup.Qualification q in selected_cup.ltQ) {
+                          if (q.cup == null) continue;
+
+                          iQualiSum += (q.iPlaceLast > 0 ? q.iPlaceLast : q.cup.getClubsTotal()) - Math.Max(q.iPlaceFirst, (byte)1) + 1;
+
+                          <tr>
+                            <td>@getCupName(q.cup)</td>
+                            <td>
+                              @if (q.cup.iId == selected_cup.iId && q.cup.iId2 == selected_cup.iId2 && q.cup.iId3 == selected_cup.iId3) {
+                                <div title="verbleiben in Wettb.">
+                                  <Blazorise.Icon Name="Blazorise.Icons.FontAwesome.FontAwesomeIcons.Refresh" IconSize="IconSize.Large" />
+                                </div>
+                              } else {
+                                <div title="kommen zu Wettb. hinzu">
+                                  <Blazorise.Icon Name="Blazorise.Icons.FontAwesome.FontAwesomeIcons.ArrowCircleLeft" IconSize="IconSize.Large" TextColor="TextColor.Success" />
+                                </div>
+                              }
+                            </td>
+                            <td>@(Math.Max(q.iPlaceFirst, (byte)1).ToString())</td>
+                            <td>@(q.iPlaceLast > 0 ? q.iPlaceLast.ToString() : "Letzter")</td>
+                            <td>
+                              <Blazorise.Icon Name="Blazorise.IconName.MinusCircle" IconSize="IconSize.Large" TextColor="TextColor.Danger" Style="cursor: pointer" @onclick="() => removeQualiFromCup(selected_cup, q)" />
+                            </td>
+                          </tr>
+                        }
+                      }
+                      <tr>
+                        <td>
+                          <select @bind="selected_cup.sQualiCupName">
+                            @foreach (CornerkickManager.Cup cup in selected_cup.iId == CkAppShared.iCupIdWc ? CkAppShared.ckMng.ltCups.FindAll(c => c.iId == CkAppShared.iCupIdWc) : CkAppShared.ckMng.ltCups) {
+                              string cupIdStr = getCupIdString(cup);
+                              string cupName = getCupName(cup);
+                              <option value="@cupIdStr" selected>@cupName</option>
+                            }
+                          </select>
+                        </td>
+                        <td></td>
+                        <td>
+                          <input type="number" style="width: 46px; text-align: right" @bind-value="selected_cup.iPlaceFirst" />
+                        </td>
+                        <td>
+                          <input type="number" style="width: 46px; text-align: right" @bind-value="selected_cup.iPlaceLast" />
+                        </td>
+                        <td>
+                          <Blazorise.Icon Name="Blazorise.IconName.PlusSquare" IconSize="IconSize.Large" TextColor="TextColor.Success" Style="cursor: pointer" @onclick="addQualiToCup" />
+                        </td>
+                      </tr>
+                    </tbody>
+                    <tfoot>
+                      <tr style="font-weight: bold">
+                        <td colspan="2" style="text-align: right; border-top-style: double">Summe / akt.:</td>
+                        <td colspan="2" style="color: @(iQualiSum == selected_cup.nClubs ? "green" : "orange"); border-top-style: double">@(iQualiSum.ToString() + (selected_cup.nClubs.ToString(" / 0")))</td>
+                        <td></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                  <div style="display: flex; flex-wrap: wrap">
+                    @if (selected_cup.iId == CkAppShared.iCupIdLeague) {
+                      if (selected_cup.ltQ == null || selected_cup.ltQ.Find(q => q.cup.iId == selected_cup.iId && q.cup.iId2 == selected_cup.iId2 && q.cup.iId3 == selected_cup.iId3 - 1) == null) {
+                        CornerkickManager.Cup? cupUp = CkAppShared.ckMng.ltCups.Find(c => c.iId == selected_cup.iId && c.iId2 == selected_cup.iId2 && c.iId3 == selected_cup.iId3 - 1);
+                        if (cupUp != null) {
+                          <div style="margin-right: 1rem">
+                            <h6>Aufsteiger hinzufügen:</h6>
+                            <table>
+                              <thead>
+                                <tr>
+                                  <th>In Liga</th>
+                                  <th>Anzahl</th>
+                                  <th></th>
+                                </tr>
+                              </thead>
+                              <tr>
+                                <td>
+                                  <Blazorise.Icon Name="Blazorise.IconName.PlusSquare" IconSize="IconSize.Large" TextColor="TextColor.Success" Style="cursor: pointer" @onclick="addQualiLeagueUpToCup" />
+                                </td>
+                                <td>@cupUp.sName</td>
+                                <td>
+                                  <input type="number" style="width: 46px; text-align: right" @bind-value="selected_cup.iPlaceFirst" />
+                                </td>
+                              </tr>
+                            </table>
+                          </div>
+                        }
+                      }
+                      if (selected_cup.ltQ == null || selected_cup.ltQ.Find(q => q.cup.iId == selected_cup.iId && q.cup.iId2 == selected_cup.iId2 && q.cup.iId3 == selected_cup.iId3 + 1) == null) {
+                        CornerkickManager.Cup? cupDn = CkAppShared.ckMng.ltCups.Find(c => c.iId == selected_cup.iId && c.iId2 == selected_cup.iId2 && c.iId3 == selected_cup.iId3 + 1);
+                        if (cupDn != null) {
+                          <div>
+                            <h6>Absteiger hinzufügen:</h6>
+                            <table>
+                              <thead>
+                                <tr>
+                                  <th>In Liga</th>
+                                  <th>Anzahl</th>
+                                  <th></th>
+                                </tr>
+                              </thead>
+                              <tr>
+                                <td>@cupDn.sName</td>
+                                <td>
+                                  <input type="number" style="width: 46px; text-align: right" @bind-value="selected_cup.iPlaceFirst" />
+                                </td>
+                                <td>
+                                  <Blazorise.Icon Name="Blazorise.IconName.PlusSquare" IconSize="IconSize.Large" TextColor="TextColor.Success" Style="cursor: pointer" @onclick="addQualiLeagueDnToCup" />
+                                </td>
+                              </tr>
+                            </table>
+                          </div>
+                        }
+                      }
+                    }
+                  </div>
+                </div>
+              </div>
+
+              <div style="color: grey">
+                <h5>Qualifikationen aus Wettb.:</h5>
+                <div style="margin-left: 6px">
+                  <table>
+                    <tr>
+                      <th>Name</th>
+                      <th>St.</th>
+                      <th>Von Pl.</th>
+                      <th>Bis Pl.</th>
+                    </tr>
+                    @foreach (CornerkickManager.Cup cq in CkAppShared.ckMng.ltCups) {
+                      if (cq.iId == selected_cup.iId && cq.iId2 == selected_cup.iId2 && cq.iId3 == selected_cup.iId3) continue;
+
+                      if (cq.ltQualification != null) {
+                        foreach (CornerkickManager.Cup.Qualification q2 in cq.ltQualification) {
+                          if (q2.cup == null) continue;
+
+                          if (q2.cup.iId == selected_cup.iId && q2.cup.iId2 == selected_cup.iId2 && q2.cup.iId3 == selected_cup.iId3) {
+                            <tr>
+                              <td>@cq.sName</td>
+                              <td>
+                                <div title="Qualifikation für Wettb.">
+                                  <Blazorise.Icon Name="Blazorise.Icons.FontAwesome.FontAwesomeIcons.ArrowCircleRight" IconSize="IconSize.Large" TextColor="TextColor.Primary" />
+                                </div>
+                              </td>
+                              <td>@(Math.Max(q2.iPlaceFirst, (byte)1).ToString())</td>
+                              <td>@(q2.iPlaceLast > 0 ? q2.iPlaceLast.ToString() : "Letzter")</td>
+                            </tr>
+                          }
+                        }
+                      }
+                    }
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <h5>Teilnehmende @(selected_cup.iId == CkAppShared.iCupIdWc ? "Nationen" : "Vereine") @(selected_cup.nClubs.ToString("(0)")):</h5>
+            <div style="margin-left: 6px">
+              @if (selected_cup != null && selected_cup.ltClubs.Count > 0) {
+                <div style="width: fit-content">
+                  <DataGrid @ref="dgCupTeams"
+                  TItem="Club"
+                  Data="@selected_cup.ltClubs"
+                  Style="white-space:nowrap"
+                  ShowPager
+                  PageSize="50"
+                  Striped
+                  Narrow
+                  Sortable
+                  SortMode="DataGridSortMode.Single"
+                  Editable
+                  Responsive>
+                    <DataGridColumns>
+                      <DataGridColumn Field="@nameof(Club.iId)" Sortable="false" Displayable="false" />
+                      <DataGridColumn Field="@nameof(Club.bEmblem)" Sortable="false">
+                        <DisplayTemplate>
+                          @{
+                            string sImg = "";
+                            if (context.bEmblem != null) sImg = "<img style=\"height: 24px; object-fit: contain\" src=\"data:image/*;base64," + Convert.ToBase64String(context.bEmblem) + "\" />";
+                          }
+                          @((MarkupString)sImg)
+                        </DisplayTemplate>
+                      </DataGridColumn>
+                      <DataGridColumn Field="@nameof(Club.sName)" Caption="Name" />
+                      <DataGridColumn Field="@nameof(Club.iNat)" Caption="Land">
+                        <DisplayTemplate>
+                          @((MarkupString)CornerkickApp.Controllers.Tool.getNatIcon(context.iNat))
+                        </DisplayTemplate>
+                      </DataGridColumn>
+                      <DataGridColumn Field="@nameof(Club.fSkillAve)" Caption="Stärke" DisplayFormat="{0:N1}" TextAlignment="Blazorise.TextAlignment.Center" SortDirection="SortDirection.Descending" />
+                      <DataGridColumn Field="@nameof(Club.fAgeAve)" Caption="Alter" DisplayFormat="{0:N1}" TextAlignment="Blazorise.TextAlignment.Center" />
+                      <DataGridColumn Field="@nameof(Club.fValueAve)" Caption="MW [€]" DisplayFormat="{0:N0}" TextAlignment="Blazorise.TextAlignment.End" SortDirection="SortDirection.Descending" />
+                      <DataGridColumn Caption="Entf." TextAlignment="Blazorise.TextAlignment.Center">
+                        <DisplayTemplate>
+                          <Blazorise.Icon Name="Blazorise.IconName.MinusCircle" IconSize="IconSize.Large" TextColor="TextColor.Danger" Style="cursor: pointer" @onclick="() => removeClubFromCup(selected_cup, clb: context)" />
+                        </DisplayTemplate>
+                      </DataGridColumn>
+                      <DataGridCommandColumn NewCommandAllowed="false" EditCommandAllowed="false" DeleteCommandAllowed CancelCommandAllowed="false">
+                        <DeleteCommandTemplate>
+                          <Blazorise.Button Color="Blazorise.Color.Danger" Clicked="() => deleteClub(context.Item)"><Blazorise.Icon Name="Blazorise.IconName.Delete" TextColor="TextColor.White" Style="cursor: pointer" /></Blazorise.Button>
+                        </DeleteCommandTemplate>
+                      </DataGridCommandColumn>
+                    </DataGridColumns>
+                    <EmptyTemplate>
+                      <div class="box">
+                        Keine Spieler ...
+                      </div>
+                    </EmptyTemplate>
+                    <LoadingTemplate>
+                      <div class="box">
+                        <progress class="progress is-small is-primary" max="100" />
+                      </div>
+                    </LoadingTemplate>
+                  </DataGrid>
+                </div>
+              } else {
+                <span>keine</span>
+              }
+            </div>
+          }
+        </div>
+      </TabPanel>
+      <TabPanel Name="tabClubs">
+        <div id="tab-3" style="margin-top: 10px; display: flex; flex-wrap: wrap; flex-direction: row-reverse; justify-content: flex-end">
+          <div style="width: fit-content; height: fit-content; margin-top: 6px; padding: 6px; border: 1px solid black; text-align: center; background-color: azure">
+            <h5 style="margin-top: 0">Neuen Verein erstellen:</h5>
+            <div style="display: flex; margin-bottom: 6px">
+              <label style="white-space: nowrap">
+                Liga:
+                <Select TValue="string" @bind-SelectedValue="selectedLeagueName">
+                  @foreach (CornerkickManager.Cup cup in CkAppShared.ckMng.ltCups.FindAll(c => c.iId == CkAppShared.iCupIdLeague)) {
+                    string sName = getCupName(cup) + " - " + cup.getClubsTotal().ToString();
+                    <SelectItem Value="@cup.sName">@sName</SelectItem>
+                  }
+                </Select>
+              </label>
+              <label style="white-space: nowrap">
+                &#8709;-Stärke:
+                <input type="tel" style="width: 46px" @bind-value="fNewClubTeamAve" />
+              </label>
+            </div>
+
+            <Button Color="Blazorise.Color.Success" Clicked="createClub" Style="width: 100%">Verein erstellen</Button>
+          </div>
+
+          <div style="max-width: 100%">
+            <h5>Verein auswählen:</h5>
+            <Select SelectedValue="@selectedCupFilterClubs" SelectedValueChanged="(s) => fillSelectClubsFromCupIdStr(s, bChangeClub: true)" TValue="string" Style="margin-bottom: 4px">
+              <SelectItem Value="@("")">alle</SelectItem>
+              <SelectItem Value="-2">Nationen</SelectItem>
+              @*
+              <SelectItem Value="-1">vereinslos</SelectItem>
+              *@
+              @foreach (CornerkickManager.Cup cup in CkAppShared.ckMng.ltCups.FindAll(c => c.iId == CkAppShared.iCupIdLeague)) {
+                <SelectItem Value="@getCupIdString(cup)">@getCupName(cup)</SelectItem>
+              }
+            </Select>
+            <Select SelectedValue="@iClubId" SelectedValueChanged="changeClub" TValue="int" Disabled="@(ltClubs == null || ltClubs.Count < 1)">
+              @{
+                if (ltClubs != null && ltClubs.Count > 0) {
+                  foreach (LayoutModel.SelectListItem sli in ltClubs) {
+                    <SelectItem Value="@sli.Value">@sli.Text</SelectItem>
+                  }
+                }
+              }
+            </Select>
+
+            @if (selected_club != null) {
+              <div style="margin-top: 1.5rem; display: flex; justify-content: space-between">
+                <div>
+                  @if (!selected_club.bNation) {
+                    <h5 style="margin-top: 0">Vereinsdaten</h5>
+                    <label>
+                      Vereinsname:
+                      <input type="text" autocapitalize="on" value="@selected_club.sName" @onchange="(EventArgs) => { setClubName(EventArgs.Value.ToString()); }" />
+                    </label>
+                  }
+                  <p>ID: @selected_club.iId</p>
+                </div>
+                <img height=48 src="./_content/CornerkickApp.Components/Content/Images/xml.png" style="cursor: pointer; margin-right: 1rem" @onclick="() => saveClubXml(selected_club)" title="XML speichern" />
+              </div>
+
+              List<CornerkickManager.Cup> ltCupsToAdd = new List<CornerkickManager.Cup>(CkAppShared.ckMng.ltCups);
+              if (selected_club.bNation) ltCupsToAdd.RemoveAll(c => c.iId != CkAppShared.iCupIdWc);
+              else                       ltCupsToAdd.RemoveAll(c => c.iId == CkAppShared.iCupIdWc);
+
+              <h6>Wettbewerbsteilnahmen</h6>
+              <div style="margin-left: 6px">
+                <table>
+                  @foreach (CornerkickManager.Cup cup in CkAppShared.ckMng.ltCups) {
+                    if (cup.checkClubInCup(CkAppShared.ckMng.ltClubs.Find(c => c.iId == selected_club.iId && c.bNation == selected_club.bNation))) {
+                      <tr>
+                        <td>@cup.sName</td>
+                        <td>
+                          <Blazorise.Icon IconSize="IconSize.Large" Name="Blazorise.IconName.MinusCircle" TextColor="TextColor.Danger" Style="cursor: pointer" @onclick="() => removeClubFromCup(cup)" />
+                        </td>
+                      </tr>
+
+                      ltCupsToAdd.Remove(cup);
+
+                      // Club cannot be added to cups of same type
+                      if (cup.iId == CkAppShared.iCupIdLeague) ltCupsToAdd.RemoveAll(c => c.iId == cup.iId);
+                      //if (cup.iId == CkAppShared.iCupIdNatCup) ltCupsToAdd.RemoveAll(c => c.iId == cup.iId);
+                      if (cup.iId == CkAppShared.iCupIdInt)    ltCupsToAdd.RemoveAll(c => c.iId == cup.iId);
+                    }
+                  }
+
+                  @if (ltCupsToAdd.Count > 0) {
+                    if (string.IsNullOrEmpty(selectedCupToAddToClub) || ltCupsToAdd.Find(c => c.sName == selectedCupToAddToClub) == null) selectedCupToAddToClub = ltCupsToAdd[0].sName;
+
+                    <tr>
+                      <td>
+                        <Select TValue="string" SelectedValue="@selectedCupToAddToClub" SelectedValueChanged="@((e) => selectedCupToAddToClub = e)">
+                          @foreach (CornerkickManager.Cup cup in ltCupsToAdd) {
+                            <SelectItem Value="@cup.sName">@cup.sName</SelectItem>
+                          }
+                        </Select>
+                      </td>
+                      <td>
+                        <Blazorise.Icon IconSize="IconSize.Large" Name="Blazorise.IconName.PlusSquare" TextColor="TextColor.Success" Style="cursor: pointer" @onclick="() => addClubToCup(selectedCupToAddToClub)" />
+                      </td>
+                    </tr>
+                  }
+                </table>
+              </div>
+
+              <h6>Vereinsfarben</h6>
+              <div style="display: flex; flex-wrap: wrap">
+                <Jersey @ref="jerseyH" iClubId="@selected_club.iId" iSet="0" EditColors Header iNb="5"></Jersey>
+                <Jersey @ref="jerseyA" iClubId="@selected_club.iId" iSet="1" EditColors Header iNb="5"></Jersey>
+              </div>
+
+              @if (!selected_club.bNation) {
+                <h6>Wappen</h6>
+                @if (isLoading) {
+                  <p>Uploading ...</p>
+                } else {
+                  @if (selected_club.bEmblem != null) {
+                    <img style="height: 150px; object-fit: contain; margin-bottom: 6px" src="data:image/*;base64,@Convert.ToBase64String(selected_club.bEmblem)" />
+                  }
+                  <p>
+                    <InputFile OnChange="loadClubEmblem" accept="image/*" />
+                  </p>
+                }
+              }
+
+              <h6>Formation:</h6>
+              <Select SelectedValue="@selected_club.iFrm" SelectedValueChanged="setClubFrm" TValue="int">
+                @for (int iF = 0; iF < CkAppShared.ckMng.ltFormationen.Count; iF++) {
+                  string sFrmName = CkAppShared.ckMng.ltFormationen[iF].sName;
+                  <SelectItem Value="@iF">@sFrmName</SelectItem>
+                }
+              </Select>
+
+              @if (!selected_club.bNation) {
+                <div style="display: flex; flex-wrap: wrap">
+                  <div class="team" style="position: relative; width: fit-content; max-width: 100%; margin-right: 2rem">
+                    <h5>Mannschaft</h5>
+                    <DataGrid TItem="Player"
+                      Data="@tableTeam"
+                      SelectionMode="Blazorise.DataGrid.DataGridSelectionMode.Single"
+                      Style="white-space:nowrap"
+                      ShowPager
+                      PageSize="50"
+                      Striped
+                      Narrow
+                      Editable
+                      EditMode="Blazorise.DataGrid.DataGridEditMode.Inline"
+                      NewItemCreator="@iniPlayer"
+                      Responsive
+                      SelectedRowChanged="@selectPlayer">
+                      <DataGridColumns>
+                        <DataGridColumn Field="@nameof(Player.iIx)" Caption="" TextAlignment="Blazorise.TextAlignment.End">
+                          <DisplayTemplate>
+                            @(context.iIx + 1)
+                          </DisplayTemplate>
+                        </DataGridColumn>
+                        <DataGridColumn Field="@nameof(Player.iId)" Sortable="false" Displayable="false" />
+                        <DataGridColumn Field="@nameof(Player.sName)" Caption="Name" Editable>
+                          <DisplayTemplate>
+                            <input type="text" autocapitalize="word" value="@context.sName" @onchange="(EventArgs) => { setPlayerName(context.iId, EventArgs.Value.ToString()); }">
+                          </DisplayTemplate>
+                        </DataGridColumn>
+                        <DataGridColumn Field="@nameof(Player.iNb)" Caption="Nr" TextAlignment="Blazorise.TextAlignment.Center">
+                          <DisplayTemplate>
+                            @*
+                            <input type="number" value="@context.iNb" @onchange="(EventArgs) => { setPlayerNumber(context.iId, EventArgs.Value.ToString()); }" style="width: 26px; text-align: right" min="1" max="99">
+                            *@
+                            @*
+                            <Blazorise.NumericPicker TValue="int" Min="0" Step="1" ModifyValueOnWheel WheelOn="Blazorise.NumericWheelOn.Hover" Style="width: 52px" TextAlignment="Blazorise.TextAlignment.Start" Value="@(selected_player.iNb)" SelectedValueChanged="(i) => setPlayerNumber(context.iId, i.ToString())" />
+                            *@
+                            <RadzenNumeric TValue="int" Style="width: 52px" Value="@context.iNb" ValueChanged="(i) => setPlayerNumber(context.iId, i.ToString())" Min="0" Max="99" Step="1" TextAlign="TextAlign.Right" />
+                          </DisplayTemplate>
+                        </DataGridColumn>
+                        <DataGridColumn Field="@nameof(Player.iHp)" Caption="HP" TextAlignment="Blazorise.TextAlignment.Center">
+                          <DisplayTemplate>
+                            @CornerkickManager.Main.sPosition[context.iHp]
+                          </DisplayTemplate>
+                        </DataGridColumn>
+                        <DataGridColumn Field="@nameof(Player.fSkill)" Caption="Stärke" DisplayFormat="{0:N1}" TextAlignment="Blazorise.TextAlignment.Center" />
+                        <DataGridColumn Field="@nameof(Player.dtBirthday)" Caption="Geburtstag" TextAlignment="Blazorise.TextAlignment.Center" Editable>
+                          <DisplayTemplate>
+                            @*<DatePicker TValue="DateTime" @bind-Date="@context.dtBirthday" Placeholder="@context.dtBirthday.ToShortDateString()" />*@
+                            <input type="date" value="@context.dtBirthday.ToString("yyyy-MM-dd")" @onchange="(EventArgs) => { setPlayerBirthday(context.iId, EventArgs.Value.ToString()); }">
+                          </DisplayTemplate>
+                        </DataGridColumn>
+                        <DataGridColumn Field="@nameof(Player.iAge)" Caption="Alter" TextAlignment="Blazorise.TextAlignment.Center" />
+                        <DataGridColumn Field="@nameof(Player.fTalent)" Caption="Tal." DisplayFormat="{0:N1}" TextAlignment="Blazorise.TextAlignment.Center" />
+                        <DataGridColumn Field="@nameof(Player.iNat)" Caption="Nat." TextAlignment="Blazorise.TextAlignment.Center">
+                          <DisplayTemplate>
+                            @if (sliNation != null) {
+                              @*
+                              <Select Value="@context.iNat" @onchange="(EventArgs) => { setPlayerNat(context.iId, EventArgs.Value.ToString()); }" style="width: 60px">
+                                @foreach (LayoutModel.SelectListItem sli in sliNation) {
+                                  <SelectItem Value="@sli.Value">@sli.Text</SelectItem>
+                                }
+                              </Select>
+                              *@
+                              <select value="@context.iNat" @onchange="(EventArgs) => { setPlayerNat(context.iId, EventArgs.Value.ToString()); }" style="width: 60px">
+                                @foreach (LayoutModel.SelectListItem sli in sliNation) {
+                                  <option value="@sli.Value">@sli.Text</option>
+                                }
+                              </select>
+                            }
+                          </DisplayTemplate>
+                        </DataGridColumn>
+                        @*
+                        <DataGridColumn Field="@nameof(Player.iNat)" Caption="Nat." TextAlignment="Blazorise.TextAlignment.Center">
+                          <DisplayTemplate>
+                            @{
+                              if (selected_player != null) {
+                                @((MarkupString)CornerkickApp.Controllers.App.getNatIcon(selected_player.iNat))
+                              }
+                            }
+                          </DisplayTemplate>
+                        </DataGridColumn>
+                        *@
+                        <DataGridCommandColumn NewCommandAllowed EditCommandAllowed="false" DeleteCommandAllowed CancelCommandAllowed="false">
+                          <NewCommandTemplate>
+                            @*<Button Color="Color.Success" Clicked="@context.Clicked">Neu</Button>*@
+                            <Blazorise.Button Color="Blazorise.Color.Success" Clicked="@context.Clicked">Neu</Blazorise.Button>
+                          </NewCommandTemplate>
+                          <SaveCommandTemplate>
+                            <Blazorise.Button ElementId="btnSave" Type="Blazorise.ButtonType.Submit" PreventDefaultOnSubmit Color="Blazorise.Color.Primary" Clicked="@context.Clicked">@context.LocalizationString</Blazorise.Button>
+                          </SaveCommandTemplate>
+                          @*
+                          <CancelCommandTemplate>
+                          <Button ElementId="btnCancel" Color="Color.Secondary" Clicked="@context.Clicked">@context.LocalizationString</Button>
+                          </CancelCommandTemplate>
+                          *@
+                          <DeleteCommandTemplate>
+                            <Blazorise.Button Color="Blazorise.Color.Danger" Clicked="() => deletePlayer(context.Item)">Entf.</Blazorise.Button>
+                          </DeleteCommandTemplate>
+                        </DataGridCommandColumn>
+                      </DataGridColumns>
+                      <EmptyTemplate>
+                        <div class="box">
+                          Keine Spieler ...
+                        </div>
+                      </EmptyTemplate>
+                      <LoadingTemplate>
+                        <div class="box">
+                          <progress class="progress is-small is-primary" max="100" />
+                        </div>
+                      </LoadingTemplate>
+                      @*
+                      <ButtonRowTemplate>
+                        <Button Color="Color.Success" Clicked="context.NewCommand.Clicked">New</Button>
+                        <Button Color="Color.Primary" Disabled="(selected_player is null)" Clicked="context.EditCommand.Clicked">Edit</Button>
+                        <Button Color="Color.Danger" Disabled="(selected_player is null)" Clicked="context.DeleteCommand.Clicked">Delete</Button>
+                        <Button Color="Color.Link" Clicked="context.ClearFilterCommand.Clicked">Clear Filter</Button>
+                      </ButtonRowTemplate>
+                      *@
+                    </DataGrid>
+                  </div>
+
+                  @if (selected_club.stadium != null) {
+                    <div>
+                      <h5>Stadion</h5>
+                      <input type="text" style="margin-bottom: 6px" autocapitalize="word" value="@(selected_club.stadium != null ? selected_club.stadium.sName : "")" @onchange="(e) => { setStadiumBlockName(e.Value.ToString()); }" />
+                      <div>Plätze: @selected_club.stadium.getSeats().ToString("N0")</div>
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Block</th>
+                            <th>Sitze</th>
+                            <th>Typ</th>
+                            <th>Dach</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @{
+                            if (selected_club.stadium != null) {
+                              int iB = 0;
+                              string[] sBlockColor = new string[] { "grey", "lightblue", "gold" };
+                              foreach (CornerkickGame.Stadium.Block block in selected_club.stadium.blocks) {
+                                int jB = iB;
+                                <tr>
+                                  <td>@block.sName</td>
+                                  <td>
+                                    <input type="number" style="width: 60px; text-align: right" value="@block.iSeats" @onchange="(e) => { setStadiumBlockSeats(jB, e.Value.ToString()); }" />
+                                  </td>
+                                  <td style="background-color: @(block.iType < sBlockColor.Length ? sBlockColor[block.iType] : "white") !important">
+                                    <select value="@block.iType" @onchange="(i) => setStadiumBlockType(jB, int.Parse(i.Value.ToString()))">
+                                      <option value="0">Steh</option>
+                                      <option value="1">Sitz</option>
+                                      <option value="2">VIP</option>
+                                    </select>
+                                  </td>
+                                  <td>
+                                    <input type="checkbox" checked="@block.bRoof" @onchange="(e) => { setStadiumBlockRoof(jB, bool.Parse(e.Value.ToString())); }" />
+                                  </td>
+                                </tr>
+
+                                iB++;
+                              }
+                            }
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                  }
+                </div>
+              }
+            }
+          </div>
+        </div>
+      </TabPanel>
+      <Blazorise.TabPanel Name="tabPlayer">
+        <div id="tab-4" style="margin-top: 10px; width: fit-content; max-width: 100%; overflow: auto">
+          @*
+          <Select SelectedValue="@iPlayer" SelectedValueChanged="selectPlayer" TValue="int">
+            @foreach (LayoutModel.SelectListItem sli in ltPlayer) {
+              <SelectItem Value="@sli.Value">@sli.Text</SelectItem>
+            }
+          </Select>
+          *@
+          <div style="margin-bottom: 1rem; display: flex; justify-content: space-between">
+            <label>
+              Anzahl Spieler: @(CkAppShared.ckMng.ltPlayer == null ? "0" : CkAppShared.ckMng.ltPlayer.Count().ToString())
+            </label>
+
+            <div>
+              <div style="width: 100%">
+                <input type="text" autocapitalize="on" @bind="sPlayerSearchString" />
+                <button @onclick="SearchPlayer">suchen</button>
+              </div>
+              @if (ltPlayerSearchResult != null) {
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Geburtstag</th>
+                      <th>Pos.</th>
+                      <th>Verein</th>
+                      <th>Nat.</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @if (ltPlayerSearchResult.Count > 0) {
+                      foreach (Player p in ltPlayerSearchResult) {
+                        <tr>
+                          <td class="pseudo-link" @onclick="() => selectPlayer(p.iId)">@p.sName</td>
+                          <td>@p.dtBirthday.ToShortDateString()</td>
+                          <td>@p.sPos</td>
+                          <td>@(CkAppShared.ckMng.ltClubs.Find(c => c.iId == p.iClubId && !c.bNation)?.sName ?? "vereinslos")</td>
+                          <td>@((MarkupString)CornerkickApp.Controllers.Tool.getNatIcon(p.iNat))</td>
+                        </tr>
+                      }
+                    } else {
+                      <tr>
+                        <td colspan="5">keine Spieler gefunden</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              }
+            </div>
+          </div>
+
+          @{
+            if (selected_player != null) {
+              <div style="display: flex; justify-content: space-between">
+                <span class="pseudo-link" @onclick="() => NextPlayer(-1)">vorh.</span>
+                <span class="pseudo-link" @onclick="() => NextPlayer(+1)">näch.</span>
+              </div>
+              <div style="margin-top: 1.5rem; display: flex; justify-content: space-between">
+                <div>
+                  <h5 style="margin-top: 0">Spielerdaten</h5>
+                  <input type="text" value="@selected_player.sName" @onchange="(EventArgs) => { setPlayerName(selected_player.iId, EventArgs.Value.ToString()); }" />
+                  <p>ID: @selected_player.iId</p>
+                </div>
+                <img height=48 src="./_content/CornerkickApp.Components/Content/Images/xml.png" style="cursor: pointer" @onclick="() => savePlayerXml(selected_player.iId)" title="XML speichern" />
+              </div>
+              <table cellspacing="0" cellpadding="0">
+                <tr>
+                  <td style="border: none; text-align: left; padding: 0">Stärke:</td>
+                  <td style="border: none; text-align: left; padding: 0">@(selected_player.fSkill.ToString("0.0"))</td>
+                </tr>
+                <tr>
+                  <td style="border: none; text-align: left; padding: 0">Alter:</td>
+                  <td style="border: none; text-align: left; padding: 0">@(selected_player.iAge.ToString())</td>
+                </tr>
+                <tr>
+                  <td style="border: none; text-align: left; padding: 0">Marktwert:</td>
+                  <td style="border: none; text-align: left; padding: 0">@((selected_player.iValue * 1000).ToString("N0")) €</td>
+                </tr>
+              </table>
+
+              <h5>Portrait</h5>
+              <div style="display: flex; flex-direction: row; flex-wrap: nowrap">
+                <div style="position: relative">
+                  @{
+                    if (selected_player.bPortrait != null) {
+                      <img style="height: 150px; object-fit: contain; margin-bottom: 6px" src="data:image/*;base64,@Convert.ToBase64String(selected_player.bPortrait)" />
+                    } else if (!string.IsNullOrEmpty(selected_player.sPortrait)) {
+                      @*<img style="height: 150px; object-fit: contain; margin-bottom: 6px" src="@(CkAppShared.sContentDir + "/Images/portraits/" + selected_player.iId.ToString() + ".png")" />*@
+                      @((MarkupString)selected_player.sPortrait)
+                    }
+                    if (selected_player.iPlPortraitId >= 0) {
+                      <span style="position: absolute; bottom: 1px; right: 1px; background-color: rgba(255,255,255,0.5)">@(selected_player.iPlPortraitId + 1)</span>
+                    }
+                  }
+                </div>
+                <div style="display: flex; flex-direction: column; margin-left: 0.5rem">
+                  <button style="width: 100%; flex-grow: 1" @onclick="() => PlayerNextPortrait(+1)">
+                    <Blazorise.Icon Name="Blazorise.IconName.AngleUp" />
+                  </button>
+                  <button style="width: 100%; flex-grow: 1" @onclick="() => PlayerNextPortrait(-1)">
+                    <Blazorise.Icon Name="Blazorise.IconName.AngleDown" />
+                  </button>
+                </div>
+                <div style="display: flex; flex-direction: column; margin-left: 0.5rem">
+                  <button style="width: 100%; flex-grow: 1" @onclick="() => PlayerNextPortrait(+24)">
+                    <Blazorise.Icon Name="Blazorise.IconName.SortUp" />
+                  </button>
+                  <button style="width: 100%; flex-grow: 1" @onclick="() => PlayerNextPortrait(-24)">
+                    <Blazorise.Icon Name="Blazorise.IconName.SortDown" />
+                  </button>
+                </div>
+              </div>
+              <p>
+                <InputFile OnChange="loadPlayerPortrait" accept="image/*" />
+              </p>
+
+              <h5>Nationalität:</h5>
+              if (sliNation != null) {
+                <Select SelectedValue="@selected_player.iNat" @onchange="(EventArgs) => { setPlayerNat(selected_player.iId, EventArgs.Value.ToString()); }">
+                  @foreach (LayoutModel.SelectListItem sli in sliNation) {
+                    <SelectItem Value="@sli.Value">@sli.Text</SelectItem>
+                  }
+                </Select>
+              }
+
+              <h5>Verein:</h5>
+              <Select SelectedValue="@selectedCupFilterClubs" SelectedValueChanged="(s) => fillSelectClubsFromCupIdStr(s, bChangeClub: false)" TValue="string" Style="margin-bottom: 4px">
+                <SelectItem Value="@("")">alle</SelectItem>
+                <SelectItem Value="-1">vereinslos</SelectItem>
+                @foreach (CornerkickManager.Cup cup in CkAppShared.ckMng.ltCups.FindAll(c => c.iId == CkAppShared.iCupIdLeague)) {
+                  <SelectItem Value="@getCupIdString(cup)">@getCupName(cup)</SelectItem>
+                }
+              </Select>
+              <Select SelectedValue="@selected_player.iClubId" SelectedValueChanged="changePlayerClub" TValue="int" Disabled="@(ltClubs == null || ltClubs.Count < 1)">
+                @foreach (LayoutModel.SelectListItem sli in ltClubs) {
+                  <SelectItem Value="@sli.Value">@sli.Text</SelectItem>
+                }
+              </Select>
+
+              <h5>Körperbau:</h5>
+              <label>
+                Größe:
+                @*<input type="number" min="1" style="width: 50px" value="@selected_player.iHeight" @onchange="(e) => setPlayerHeight(selected_player.iId, e.Value.ToString())" />*@
+                <RadzenNumeric TValue="int" Style="width: 60px" Value="@selected_player.iHeight" ValueChanged="(i) => setPlayerHeight(selected_player.iId, i.ToString())" Min="120" Max="250" Step="1" TextAlign="TextAlign.Right" />
+              </label>
+              <label>
+                Gewicht:
+                @*<input type="number" min="1" style="width: 50px" value="@selected_player.iWeight" @onchange="(e) => setPlayerWeight(selected_player.iId, e.Value.ToString())" />*@
+                <RadzenNumeric TValue="int" Style="width: 60px" Value="@selected_player.iWeight" ValueChanged="(i) => setPlayerWeight(selected_player.iId, i.ToString())" Min="50" Max="200" Step="1" TextAlign="TextAlign.Right" />
+              </label>
+
+              <div style="display: flex; max-width: 100%; overflow-x: auto">
+                @if (selected_player.iSkill != null) {
+                  <div style="margin-right: 12px">
+                    <h5>Fähigkeiten</h5>
+                    <table>
+                      @{
+                        int jS = 0;
+                        foreach (int iS in selected_player.iSkill) {
+                          int kS = jS;
+                          <tr>
+                            <td>@CornerkickManager.Names.sSkills[jS]</td>
+                            <td>
+                              @*<input type="number" min="1" style="width: 40px; text-align: right" value="@iS" @onchange="(EventArgs) => { setPlayerSkill(selected_player.iId, kS, EventArgs.Value.ToString()); }" />*@
+                              <RadzenNumeric TValue="int" Style="width: 52px" Value="@iS" ValueChanged="(i) => setPlayerSkill(selected_player.iId, kS, i)" Min="1" Max="20" Step="1" TextAlign="TextAlign.Right" />
+                            </td>
+                          </tr>
+                          jS++;
+                        }
+                      }
+                    </table>
+                  </div>
+                }
+                @if (selected_player.iTalent != null) {
+                  <div style="margin-right: 12px">
+                    <h5>Talent</h5>
+                    <table>
+                      @{
+                        int jT = 0;
+                        foreach (int iT in selected_player.iTalent) {
+                          int kT = jT;
+                          <tr>
+                            <td>@CornerkickManager.Names.sSkillCategorys[jT]</td>
+                            <td>
+                              @*<input type="number" min="1" style="width: 40px; text-align: right" value="@(iT + 1)" @onchange="(EventArgs) => { setPlayerTalent(selected_player.iId, kT, EventArgs.Value.ToString()); }" />*@
+                              <RadzenNumeric TValue="int" Style="width: 52px" Value="@(iT + 1)" ValueChanged="(i) => setPlayerTalent(selected_player.iId, kT, i)" Min="1" Max="20" Step="1" TextAlign="TextAlign.Right" />
+                            </td>
+                          </tr>
+                          jT++;
+                        }
+                      }
+                    </table>
+                  </div>
+                }
+                @if (selected_player.fPos != null) {
+                  <div style="margin-right: 12px">
+                    <h5>Positionen</h5>
+                    <table>
+                      @{
+                        int jP = 0;
+                        foreach (float fP in selected_player.fPos) {
+                          int kP = jP;
+                          <tr>
+                            <td>@CornerkickManager.Names.sPosition[jP + 1]</td>
+                            <td>
+                              @*<input type="tel" min="0" style="width: 60px; text-align: right" value="@fP.ToString("0.00000")" @onchange="(EventArgs) => { setPlayerPosition(selected_player.iId, kP, EventArgs.Value.ToString()); }" />*@
+                              <RadzenNumeric TValue="float" Format="0.00000" Style="width: 80px" Value="@fP" ValueChanged="(f) => setPlayerPosition(selected_player.iId, kP, f)" Min="0" Max="1" Step="0.1" TextAlign="TextAlign.Right" />
+                            </td>
+                          </tr>
+                          jP++;
+                        }
+                      }
+                    </table>
+                  </div>
+                }
+                <div>
+                  <div style="margin-right: 12px">
+                    <h5>Fuß</h5>
+                    <table>
+                      <tr>
+                        <td>Rechter Fuß:</td>
+                        <td>
+                          @*<input type="tel" min="0" max="1" style="width: 60px; text-align: right" value="@selected_player.fFoot[0].ToString("0.00000")" @onchange="(e) => setPlayerFoot(selected_player.iId, 0, e.Value.ToString())" />*@
+                          <RadzenNumeric TValue="float" Format="0.00000" Style="width: 80px" Value="@selected_player.fFoot[0]" ValueChanged="(f) => setPlayerFoot(selected_player.iId, 0, f)" Min="0" Max="1" Step="0.1" TextAlign="TextAlign.Right" />
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>Linker Fuß:</td>
+                        <td>
+                          @*<input type="tel" min="0" max="1" style="width: 60px; text-align: right" value="@selected_player.fFoot[1].ToString("0.00000")" @onchange="(e) => setPlayerFoot(selected_player.iId, 1, e.Value.ToString())" />*@
+                          <RadzenNumeric TValue="float" Format="0.00000" Style="width: 80px" Value="@selected_player.fFoot[1]" ValueChanged="(f) => setPlayerFoot(selected_player.iId, 1, f)" Min="0" Max="1" Step="0.1" TextAlign="TextAlign.Right" />
+                        </td>
+                      </tr>
+                    </table>
+                  </div>
+                </div>
+                @if (selected_player.character != null) {
+                  <div style="margin-right: 12px">
+                    <h5>Charakter</h5>
+                    <table>
+                      <tr>
+                        <td>Führungspers.</td>
+                        <td>
+                          @*<input type="tel" min="0" style="width: 60px; text-align: right" value="@selected_player.character.fLeader.ToString("0.00000")" @onchange="(EventArgs) => { setPlayerCharacter(selected_player.iId, 0, EventArgs.Value.ToString()); }" />*@
+                          <RadzenNumeric TValue="float" Format="0.00000" Style="width: 80px" Value="@selected_player.character.fLeader" ValueChanged="(f) => setPlayerCharacter(selected_player.iId, 0, f)" Min="0" Max="2" Step="0.1" TextAlign="TextAlign.Right" />
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>Schusshäufigkeit</td>
+                        <td>
+                          @*<input type="tel" min="0" style="width: 60px; text-align: right" value="@selected_player.character.fShoot.ToString("0.00000")" @onchange="(EventArgs) => { setPlayerCharacter(selected_player.iId, 1, EventArgs.Value.ToString()); }" />*@
+                          <RadzenNumeric TValue="float" Format="0.00000" Style="width: 80px" Value="@selected_player.character.fShoot" ValueChanged="(f) => setPlayerCharacter(selected_player.iId, 1, f)" Min="0" Max="2" Step="0.1" TextAlign="TextAlign.Right" />
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>Teamplayer</td>
+                        <td>
+                          @*<input type="tel" min="0" style="width: 60px; text-align: right" value="@selected_player.character.fPass.ToString("0.00000")" @onchange="(EventArgs) => { setPlayerCharacter(selected_player.iId, 2, EventArgs.Value.ToString()); }" />*@
+                          <RadzenNumeric TValue="float" Format="0.00000" Style="width: 80px" Value="@selected_player.character.fPass" ValueChanged="(f) => setPlayerCharacter(selected_player.iId, 2, f)" Min="0" Max="2" Step="0.1" TextAlign="TextAlign.Right" />
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>Dribbler</td>
+                        <td>
+                          @*<input type="tel" min="0" style="width: 60px; text-align: right" value="@selected_player.character.fDribbling.ToString("0.00000")" @onchange="(EventArgs) => { setPlayerCharacter(selected_player.iId, 3, EventArgs.Value.ToString()); }" />*@
+                          <RadzenNumeric TValue="float" Format="0.00000" Style="width: 80px" Value="@selected_player.character.fDribbling" ValueChanged="(f) => setPlayerCharacter(selected_player.iId, 3, f)" Min="0" Max="2" Step="0.1" TextAlign="TextAlign.Right" />
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>Flexibilität</td>
+                        <td>
+                          @*<input type="tel" min="0" style="width: 60px; text-align: right" value="@selected_player.character.fFlexibel.ToString("0.00000")" @onchange="(EventArgs) => { setPlayerCharacter(selected_player.iId, 4, EventArgs.Value.ToString()); }" />*@
+                          <RadzenNumeric TValue="float" Format="0.00000" Style="width: 80px" Value="@selected_player.character.fFlexibel" ValueChanged="(f) => setPlayerCharacter(selected_player.iId, 4, f)" Min="0" Max="2" Step="0.1" TextAlign="TextAlign.Right" />
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>Robustheit</td>
+                        <td>
+                          @*<input type="tel" min="0" style="width: 60px; text-align: right" value="@selected_player.character.fRobustness.ToString("0.00000")" @onchange="(EventArgs) => { setPlayerCharacter(selected_player.iId, 5, EventArgs.Value.ToString()); }" />*@
+                          <RadzenNumeric TValue="float" Format="0.00000" Style="width: 80px" Value="@selected_player.character.fRobustness" ValueChanged="(f) => setPlayerCharacter(selected_player.iId, 5, f)" Min="0" Max="2" Step="0.1" TextAlign="TextAlign.Right" />
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>Gemüt</td>
+                        <td>
+                          @*<input type="tel" min="0" style="width: 60px; text-align: right" value="@selected_player.character.fCholeric.ToString("0.00000")" @onchange="(EventArgs) => { setPlayerCharacter(selected_player.iId, 6, EventArgs.Value.ToString()); }" />*@
+                          <RadzenNumeric TValue="float" Format="0.00000" Style="width: 80px" Value="@selected_player.character.fCholeric" ValueChanged="(f) => setPlayerCharacter(selected_player.iId, 6, f)" Min="0" Max="2" Step="0.1" TextAlign="TextAlign.Right" />
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>Geldgier</td>
+                        <td>
+                          @*<input type="tel" min="0" style="width: 60px; text-align: right" value="@selected_player.character.fMoney.ToString("0.00000")" @onchange="(EventArgs) => { setPlayerCharacter(selected_player.iId, 7, EventArgs.Value.ToString()); }" />*@
+                          <RadzenNumeric TValue="float" Format="0.00000" Style="width: 80px" Value="@selected_player.character.fMoney" ValueChanged="(f) => setPlayerCharacter(selected_player.iId, 7, f)" Min="0" Max="2" Step="0.1" TextAlign="TextAlign.Right" />
+                        </td>
+                      </tr>
+                    </table>
+                  </div>
+                }
+              </div>
+            } else {
+              <h4>Kein Spieler ausgewählt</h4>
+              <p>Zunächst Spieler in der Mannschaftsliste auswählen</p>
+            }
+          }
+        </div>
+      </Blazorise.TabPanel>
+    </Content>
+  </Blazorise.Tabs>
+</body>
+</html>
+
+@code {
+  [Parameter]
+  public string? dbfile { get; set; } = "";
+
+  string dbfile2 { get; set; } = "";
+
+  private bool bWorking { get; set; }
+  private string sProgressInfo { get; set; } = "";
+  private string sProgressType { get; set; } = "";
+  private int iProgress { get; set; } = 0;
+  private int iFileFormat { get; set; } = 0;
+
+  private readonly IFolderPicker folderPicker;
+
+  private string sClassDisabled = "";
+
+  EditorOverview editorOverview = new EditorOverview();
+
+  int selectedCupDayOfWeek = (int)DayOfWeek.Saturday;
+  public static DateTime dtSeasonStart;
+  public static DateTime dtSeasonEnd;
+
+  internal static List<LayoutModel.SelectListItem> sliNation { get; set; }
+  internal static int[] iCupIds = new int[] { CkAppShared.iCupIdLeague, CkAppShared.iCupIdNatCup, CkAppShared.iCupIdInt, CkAppShared.iCupIdWc };
+  internal static string[] sCupNames = new string[] { "Nat. Liga", "Nat. Pokal", "Int. Cup", "Nationenwettb." };
+  internal static List<LayoutModel.SelectListItem> sliCups { get; set; }
+
+  string selectedTab = "tabOverview";
+
+  int iCup { get; set; }
+  Cup? selected_cup;
+  string selectedCupName = "";
+  private DataGrid<Club>? dgCupTeams;
+  RadzenTimePicker? cupTimePicker;
+
+  // New club
+  string selectedLeagueName = "";
+  float fNewClubTeamAve = 6f;
+
+  // Filter Clubs
+  string selectedCupFilterClubs = "";
+
+  class Cup
+  {
+    public int iIx { get; set; }
+    public int iId { get; set; }
+    public int iId2 { get; set; }
+    public int iId3 { get; set; }
+    public string sName { get; set; } = "";
+
+    public int iDayOfWeek { get; set; }
+    public sbyte iStart { get; set; }
+    public sbyte iEnd { get; set; }
+    public TimeOnly toTimeOfDay { get; set; }
+    public DateTime dtStart { get; set; }
+    public DateTime dtEnd { get; set; }
+
+    public int nClubs { get; set; }
+    public List<Club> ltClubs { get; set; } = new List<Club>();
+    public int nMatchdays { get; set; }
+
+    public byte[]? bEmblem { get; set; }
+
+    public byte nGroups { get; set; }
+    public bool bGroupsTwoGames { get; set; }
+    public bool bKo { get; set; }
+    public bool bKoTwoGames { get; set; }
+    public byte nQualifierKo { get; set; }
+    public float fAttrFactor { get; set; }
+    public byte nGameMin { get; set; }
+    public byte nPlStart { get; set; }
+    public byte nPlRes { get; set; }
+    public byte nSubstitutions { get; set; }
+    public bool bOffsite { get; set; } = true;
+    public bool bCards { get; set; } = true;
+    public bool bAwwayGoalRule { get; set; } = true;
+    public byte nYellowCardsSuspension { get; set; } = 5; // 5 yellow cards = suspension
+    public float fPitchSizeRel { get; set; }
+    public byte nYears { get; set; }
+
+    public List<CornerkickManager.Cup.Qualification>? ltQ { get; set; }
+
+    // Add quali
+    public string sQualiCupName { get; set; } = "";
+    public byte iPlaceFirst { get; set; } = 1;
+    public byte iPlaceLast { get; set; } = 0;
+
+    // Cup boni
+    public int iBonusStart;
+    public int iBonusVicGroup;
+    public int iBonusCupWin;
+    public bool bBonusReleaseCupWinInKo;
+
+    // TV payments
+    public int iTvBonus;
+  }
+
+  int iClubId { get; set; }
+  //int iClubIx { get; set; }
+  List<LayoutModel.SelectListItem> ltClubs { get; set; } = new List<LayoutModel.SelectListItem>();
+  Club? selected_club;
+  CornerkickApp.Components.Pages.Templates.Jersey? jerseyH { get; set; }
+  CornerkickApp.Components.Pages.Templates.Jersey? jerseyA { get; set; }
+
+  public class Club
+  {
+    public int iIx { get; set; }
+    public int iId { get; set; }
+    public string sName { get; set; } = "";
+    public int iNat { get; set; }
+    public int iFrm { get; set; }
+    public byte[]? bEmblem { get; set; }
+    public float fSkillAve { get; set; }
+    public float fAgeAve { get; set; }
+    public float fValueAve { get; set; }
+    public bool bNation { get; set; }
+    public CornerkickGame.Stadium? stadium { get; set; }
+  }
+  string selectedCupToAddToClub = "";
+
+  List<CornerkickApp.Services.Emblem> ltCupEmblem      { get; set; } = new List<CornerkickApp.Services.Emblem>();
+  List<CornerkickApp.Services.Emblem> ltClubEmblem     { get; set; } = new List<CornerkickApp.Services.Emblem>();
+  List<CornerkickApp.Services.Emblem> ltPlayerPortrait { get; set; } = new List<CornerkickApp.Services.Emblem>();
+
+  class Player
+  {
+    public int iIx { get; set; }
+    public int iId { get; set; }
+    public string sName { get; set; } = "";
+    public byte iHeight { get; set; }
+    public byte iWeight { get; set; }
+    public int iNb { get; set; }
+    public int iClubId { get; set; }
+    public byte iHp { get; set; }
+    public string sPos { get; set; } = "";
+    public float fSkill { get; set; }
+    public DateTime dtBirthday { get; set; }
+    public byte iAge { get; set; }
+    public float fTalent { get; set; }
+    public byte iNat { get; set; }
+    public byte[]? bPortrait { get; set; }
+    public string? sPortrait { get; set; }
+    public int iPlPortraitId { get; set; }
+    public byte[]? iSkill { get; set; }
+    public byte[]? iTalent { get; set; }
+    public float[]? fPos { get; set; }
+    public float[]? fFoot { get; set; } = [1f, 1f];
+    public CornerkickManager.Player.Character? character { get; set; }
+    public int iValue { get; set; }
+  }
+
+  int iPlayer { get; set; }
+  List<LayoutModel.SelectListItem> ltPlayer { get; set; } = new List<LayoutModel.SelectListItem>();
+  Player? selected_player;
+  List<Player> tableTeam = new List<Player>();
+
+  string sPlayerSearchString = "";
+  List<Player>? ltPlayerSearchResult = null;
+
+  protected override async Task OnInitializedAsync()
+  {
+    await base.OnInitializedAsync();
+
+    if (dbfile == null || dbfile.Equals("default")){
+      dbfile2 = "";
+    } else {
+      dbfile2 = Path.GetFileNameWithoutExtension(dbfile);
+      iFileFormat = dbfile.EndsWith("ckdbx") ? 0 : 1;
+    }
+
+    await update();
+  }
+
+  private async Task update()
+  {
+    if (editorOverview != null) await editorOverview.updateCalendar();
+
+    if (CornerkickManager.Main.sLandShort != null) {
+      sliNation = new List<LayoutModel.SelectListItem>();
+      for (int i = 0; i < CornerkickManager.Main.sLandShort.Length; i++) sliNation.Add(new LayoutModel.SelectListItem() { Value = i.ToString(), Text = CornerkickManager.Main.sLandShort[i] });
+    }
+
+    getSeasonDates();
+
+    sliCups = new List<LayoutModel.SelectListItem>();
+    for (int i = 0; i < iCupIds.Length; i++) {
+      sliCups.Add(new LayoutModel.SelectListItem() {
+          Value = iCupIds[i].ToString(),
+          Text = sCupNames[i]
+        }
+      );
+    }
+
+    fillSelectClubs();
+
+    ltPlayer = new List<LayoutModel.SelectListItem>();
+    foreach (CornerkickManager.Player pl in CkAppShared.ckMng.ltPlayer) {
+      ltPlayer.Add(new LayoutModel.SelectListItem() {
+        Value = pl.plGame.iId.ToString(),
+        Text = pl.plGame.sName
+      });
+    }
+
+    if (sliCups != null && sliCups.Count > 0 && CkAppShared.ckMng.ltCups?.Count > 0) await changeCup(getCupIdString(CkAppShared.ckMng.ltCups[0]));
+    //if (ltClubs != null && ltClubs.Count > 0 &&                  ltClubs?.Count > 0) await changeClub(int.Parse(ltClubs[0].Value));
+    //if (ltPlayer != null && ltPlayer.Count > 0) await selectPlayer(0);
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender) {
+      /*
+      // Load emblems
+      Progress<int[]> progressIndicator = new Progress<int[]>(ReportProgress);
+      bool bOk = await CornerkickApp.Maui.Data.StartGameService.loadMedia(dbfile2, ltCupEmblem, ltClubEmblem, ltPlayerPortrait, progressIndicator);
+
+      sProgressType = "";
+      */
+    }
+
+    editorOverview.YearChanged += YearChanged;
+    //editorOverview.changeCup += changeCup;
+  }
+
+  public void getSeasonDates()
+  {
+    CkAppShared.ckMng.setSeasonStartEndDates(out dtSeasonStart, out dtSeasonEnd);
+    CkAppShared.ckMng.calcMatchdays(bForce: true);
+  }
+
+  public void YearChanged(int _year)
+  {
+    CkAppShared.ckMng.dtDatum = new DateTime(_year, CkAppShared.ckMng.dtDatum.Month, CkAppShared.ckMng.dtDatum.Day);
+    getSeasonDates();
+
+    editorOverview.updateCalendar();
+
+    if (selected_club != null) getTableTeam(selected_club.iId);
+  }
+
+  /*
+  void ReportProgress(int[] value)
+  {
+    string[] sType = new string[] { "Pokale", "Vereine", "Spieler" };
+
+    int iTotal = CkAppShared.ckMng.ltCups.Count + CkAppShared.ckMng.ltClubs.Count + CkAppShared.ckMng.ltPlayer.Count;
+    sProgressType = "Lade Mediendaten: " + sType[value[0]];
+    iProgress = ((100 * (value[1] + 1)) / iTotal);
+
+    //Update the UI to reflect the progress value that is passed back.
+    StateHasChanged();
+    //await InvokeAsync(StateHasChanged);
+    }
+  */
+
+  private Task OnSelectedTabChanged(string name)
+  {
+    selectedTab = name;
+
+    return Task.CompletedTask;
+  }
+
+  /*
+  protected Task changeCup(string sCupName)
+  {
+    selectedCupName = sCupName;
+
+    selected_cup = CkAppShared.ckMng.ltCups.Find(c => c.sName == sCupName);
+
+    return Task.CompletedTask;
+    }
+  */
+
+  protected void changeCkMngCup(CornerkickManager.Cup? cup)
+  {
+    changeCup(cup);
+  }
+  protected Task changeCup(string sCupIds)
+  {
+    int iId  = -1;
+    int iId2 = -1;
+    int iId3 = -1;
+    string[] sIds = sCupIds.Split('_');
+    if (sIds.Length > 2) {
+      iId  = int.Parse(sIds[0]);
+      iId2 = int.Parse(sIds[1]);
+      iId3 = int.Parse(sIds[2]);
+    }
+
+    //return changeCup(CkAppShared.ckMng.ltCups.Find(c => c.sName.Equals(sCupName)));
+    return changeCup(CkAppShared.ckMng.ltCups.Find(c => c.iId == iId && c.iId2 == iId2 && c.iId3 == iId3));
+  }
+  private Task changeCup(Cup cup)
+  {
+    if (cup == null) return Task.CompletedTask;
+    return changeCup(CkAppShared.ckMng.ltCups.Find(c => c.iId == cup.iId && c.iId2 == cup.iId2 && c.iId3 == cup.iId3));
+  }
+  protected async Task changeCup(CornerkickManager.Cup? cup)
+  {
+    if (cup == null) return;
+
+    if (cup.iId == CkAppShared.iCupIdNatCup) {
+      cup.iId3 = Math.Max(cup.iId3, 0);
+    }
+
+    selectedCupName = getCupIdString(cup);
+
+    selected_cup = new Cup();
+    selected_cup.iId  = cup.iId;
+    selected_cup.iId2 = cup.iId2;
+    selected_cup.iId3 = cup.iId3;
+    selected_cup.sName = cup.sName;
+    selected_cup.iDayOfWeek = cup.settings.iDayOfWeek;
+    selected_cup.toTimeOfDay = TimeOnly.FromTimeSpan(cup.settings.tsTimeOfDay);
+    if (selected_cup.toTimeOfDay.Equals(TimeOnly.MinValue)) selected_cup.toTimeOfDay = new TimeOnly(15, 30);
+    if (cupTimePicker != null) {
+      cupTimePicker.TimeValue = selected_cup.toTimeOfDay;
+      cupTimePicker.refresh();
+    }
+    selected_cup.iStart = cup.settings.iStart;
+    selected_cup.iEnd   = cup.settings.iEnd;
+    if (cup.ltMatchdays != null && cup.ltMatchdays.Count > 0) {
+      selected_cup.dtStart = cup.ltMatchdays[0].dt;
+      selected_cup.dtEnd   = cup.ltMatchdays[cup.ltMatchdays.Count - 1].dt;
+      selected_cup.nMatchdays = cup.ltMatchdays.Count;
+    }
+
+    selected_cup.nClubs = cup.getClubsTotal();
+    foreach (CornerkickManager.Club clb in cup.getParticipants()) {
+      float[] fTeamAve = CornerkickManager.Tool.getTeamAve(clb, CkAppShared.ckMng.dtDatum, CkAppShared.ckMng.dtSeasonEnd, bIdeal: true, bTeamValue: true);
+      Services.Emblem? ce = ltClubEmblem.Find(ce => ce.iId == clb.iId);
+
+      selected_cup.ltClubs.Add(
+        new Club() {
+          iId = clb.iId,
+          sName = clb.sName,
+          fSkillAve = fTeamAve[3],
+          fAgeAve = fTeamAve[4],
+          fValueAve = fTeamAve[5],
+          iNat = clb.iLand,
+          bEmblem = ce == null ? await CornerkickApp.Services.StartGameService.loadMediaDataClub(dbfile2, clb.iId) : ce.bEmblem
+        }
+      );
+    }
+
+    if (ltCupEmblem != null) {
+      CornerkickApp.Services.Emblem? ce = new CornerkickApp.Services.Emblem();
+      ce = ltCupEmblem.Find(c => c.iId == selected_cup.iId && c.iId2 == selected_cup.iId2 && c.iId3 == selected_cup.iId3);
+      if (ce != null) selected_cup.bEmblem = ce.bEmblem;
+    }
+
+    if (selected_cup.bEmblem == null) {
+      selected_cup.bEmblem = await CornerkickApp.Services.StartGameService.loadMediaDataCup(dbfile2, cup);
+    }
+
+    selected_cup.nGroups         = cup.settings.nGroups;
+    selected_cup.bGroupsTwoGames = cup.settings.bGroupsTwoGames;
+    selected_cup.bKo             = cup.settings.bKo;
+    selected_cup.bKoTwoGames     = cup.settings.bKoTwoGames;
+    selected_cup.nQualifierKo    = cup.settings.nQualifierKo;
+    selected_cup.fAttrFactor     = cup.settings.fAttraction;
+    selected_cup.nGameMin        = cup.settings.nGameMin;
+    selected_cup.nPlStart        = cup.settings.nPlStart;
+    selected_cup.nPlRes          = cup.settings.nPlRes;
+    selected_cup.nSubstitutions  = cup.settings.nSubstitutions;
+    selected_cup.bOffsite        = cup.settings.bOffsite;
+    selected_cup.bCards          = cup.settings.bCards;
+    selected_cup.bAwwayGoalRule  = cup.settings.bAwayGoalRule;
+    selected_cup.nYellowCardsSuspension = cup.settings.nYellowCardSuspension;
+    selected_cup.fPitchSizeRel   = cup.settings.fPitchSizeRel;
+    selected_cup.nYears = cup.settings.nYears;
+
+    selected_cup.iBonusStart             = cup.settings.iBonusStart;
+    selected_cup.iBonusVicGroup          = cup.settings.iBonusVicGroup;
+    selected_cup.iBonusCupWin            = cup.settings.iBonusCupWin;
+    selected_cup.bBonusReleaseCupWinInKo = cup.settings.bBonusReleaseCupWinInKo;
+
+    selected_cup.iTvBonus = cup.settings.iTvBonus;
+
+    selected_cup.ltQ = cup.ltQualification;
+
+    if (dgCupTeams != null) await dgCupTeams.ApplySorting(new DataGridSortColumnInfo(nameof(Club.fSkillAve), SortDirection.Descending));
+
+    //fillSelectClubs(selected_cup);
+    /*
+    StateHasChanged();
+    */
+    return;
+  }
+
+  private static string getCupName(CornerkickManager.Cup cup)
+  {
+    string sName = cup.sName + " (" + sCupNames[Array.IndexOf(iCupIds, cup.iId)];
+    if (cup.iId != CkAppShared.iCupIdInt && CornerkickManager.Main.sLandShort != null && cup.iId2 >= 0 && cup.iId2 < CornerkickManager.Main.sLandShort.Length) {
+      sName += ", " + CornerkickManager.Main.sLandShort[cup.iId2];
+      if (cup.iId == CkAppShared.iCupIdLeague) sName += " / " + (cup.iId3 + 1).ToString();
+    }
+    sName += ")";
+    return sName;
+  }
+
+  private static string getCupIdString(CornerkickManager.Cup cup)
+  {
+    return cup.iId.ToString() + "_" + cup.iId2.ToString() + "_" + cup.iId3.ToString();
+  }
+
+  private async Task setCupDayOfWeek(int jDayOfWeek)
+  {
+    selectedCupDayOfWeek = jDayOfWeek;
+
+    CornerkickManager.Cup? cup = CkAppShared.ckMng.ltCups.Find(c => c.iId == selected_cup.iId && c.iId2 == selected_cup.iId2 && c.iId3 == selected_cup.iId3);
+    if (cup == null) return;
+
+    cup.settings.iDayOfWeek = (byte)jDayOfWeek;
+    await changeCup(cup);
+
+    CkAppShared.ckMng.calcMatchdays(cup, dtSeasonStart, dtSeasonEnd, bForce: true);
+    editorOverview.updateCalendar();
+
+    //InvokeAsync(StateHasChanged);
+  }
+
+  private async Task setCupEveryYear(object? o)
+  {
+    if (selected_cup == null) return;
+    if (o == null) return;
+
+    byte i;
+    if (!byte.TryParse(o.ToString(), out i)) return;
+
+    selected_cup.nYears = i;
+
+    CornerkickManager.Cup? cup = CkAppShared.ckMng.ltCups.Find(c => c.iId == selected_cup.iId && c.iId2 == selected_cup.iId2 && c.iId3 == selected_cup.iId3);
+    if (cup == null) return;
+
+    cup.settings.nYears = i;
+
+    CkAppShared.ckMng.calcMatchdays(cup, dtSeasonStart, dtSeasonEnd, bForce: true);
+    editorOverview.updateCalendar();
+
+    await changeCup(cup);
+
+    //InvokeAsync(StateHasChanged);
+  }
+
+  private async Task setCupStart(object? o)
+  {
+    if (selected_cup == null) return;
+    if (o == null) return;
+
+    sbyte i;
+    if (!sbyte.TryParse(o.ToString(), out i)) return;
+
+    selected_cup.iStart = i;
+
+    CornerkickManager.Cup? cup = CkAppShared.ckMng.ltCups.Find(c => c.iId == selected_cup.iId && c.iId2 == selected_cup.iId2 && c.iId3 == selected_cup.iId3);
+    if (cup == null) return;
+
+    cup.settings.iStart = i;
+
+    CkAppShared.ckMng.calcMatchdays(cup, dtSeasonStart, dtSeasonEnd, bForce: true);
+    editorOverview.updateCalendar();
+
+    await changeCup(cup);
+
+    //InvokeAsync(StateHasChanged);
+  }
+
+  private async Task setCupEnd(object? o)
+  {
+    if (selected_cup == null) return;
+    if (o == null) return;
+
+    sbyte i;
+    if (!sbyte.TryParse(o.ToString(), out i)) return;
+
+    selected_cup.iEnd = i;
+
+    CornerkickManager.Cup? cup = CkAppShared.ckMng.ltCups.Find(c => c.iId == selected_cup.iId && c.iId2 == selected_cup.iId2 && c.iId3 == selected_cup.iId3);
+    if (cup == null) return;
+
+    cup.settings.iEnd = i;
+
+    CkAppShared.ckMng.calcMatchdays(cup, dtSeasonStart, dtSeasonEnd, bForce: true);
+    editorOverview.updateCalendar();
+
+    await changeCup(cup);
+
+    //InvokeAsync(StateHasChanged);
+  }
+
+  private async Task setCupTimeOfDay(TimeOnly to)
+  {
+    selected_cup.toTimeOfDay = to;
+
+    CornerkickManager.Cup? cup = CkAppShared.ckMng.ltCups.Find(c => c.iId == selected_cup.iId && c.iId2 == selected_cup.iId2 && c.iId3 == selected_cup.iId3);
+    if (cup == null) return;
+
+    cup.settings.tsTimeOfDay = to.ToTimeSpan();
+    await changeCup(cup);
+
+    //InvokeAsync(StateHasChanged);
+  }
+
+  private Task setCupTimeOfDay(Cup cup, object? o)
+  {
+    if (cup == null) return Task.CompletedTask;
+    if (CkAppShared.ckMng?.ltCups == null) return Task.CompletedTask;
+
+    return setCupTimeOfDay(CkAppShared.ckMng.ltCups.Find(c => c.iId == cup.iId && c.iId2 == cup.iId2 && c.iId3 == cup.iId3), o);
+  }
+  private async Task setCupTimeOfDay(CornerkickManager.Cup? cup, object? o)
+  {
+    if (cup == null) return;
+    if (o == null) return;
+
+    TimeSpan ts;
+    if (!TimeSpan.TryParse(o.ToString(), out ts)) return;
+
+    cup.settings.tsTimeOfDay = ts;
+    await changeCup(cup);
+
+    //InvokeAsync(StateHasChanged);
+  }
+
+  private Task setCupNGroups(Cup cup, object? o)
+  {
+    if (cup == null) return Task.CompletedTask;
+    if (CkAppShared.ckMng?.ltCups == null) return Task.CompletedTask;
+
+    return setCupNGroups(CkAppShared.ckMng.ltCups.Find(c => c.iId == cup.iId && c.iId2 == cup.iId2 && c.iId3 == cup.iId3), o);
+  }
+  private async Task setCupNGroups(CornerkickManager.Cup? cup, object? o)
+  {
+    if (cup == null) return;
+    if (o == null) return;
+
+    byte nGroups;
+    if (!byte.TryParse(o.ToString(), out nGroups)) return;
+
+    cup.settings.nGroups = nGroups;
+
+    List<CornerkickManager.Club> ltClubsOld = new List<CornerkickManager.Club>();
+    foreach (List<CornerkickManager.Club> lc in cup.ltClubs) ltClubsOld.AddRange(lc);
+    cup.ltClubs = new List<CornerkickManager.Club>[nGroups];
+    for (int i = 0; i < nGroups; i++) cup.ltClubs[i] = new List<CornerkickManager.Club>();
+
+    // Distribute clubs into new groups
+    for (int i = 0; i < ltClubsOld.Count; i++) cup.ltClubs[i % nGroups].Add(ltClubsOld[i]);
+
+    await changeCup(cup);
+
+    //InvokeAsync(StateHasChanged);
+  }
+
+  private Task setCupBGroupTwoGames(Cup cup, object? o)
+  {
+    if (cup == null) return Task.CompletedTask;
+    if (CkAppShared.ckMng?.ltCups == null) return Task.CompletedTask;
+
+    return setCupBGroupTwoGames(CkAppShared.ckMng.ltCups.Find(c => c.iId == cup.iId && c.iId2 == cup.iId2 && c.iId3 == cup.iId3), o);
+  }
+  private Task setCupBGroupTwoGames(CornerkickManager.Cup? cup, object? o)
+  {
+    if (o == null) return Task.CompletedTask;
+
+    bool bGroupsTwoGames;
+    if (!bool.TryParse(o.ToString(), out bGroupsTwoGames)) return Task.CompletedTask;
+
+    if (cup == null) return Task.CompletedTask;
+
+    cup.settings.bGroupsTwoGames = bGroupsTwoGames;
+    changeCup(cup);
+
+    return Task.CompletedTask;
+  }
+
+  private Task setCupBKo(Cup cup, object? o)
+  {
+    if (cup == null) return Task.CompletedTask;
+    if (CkAppShared.ckMng?.ltCups == null) return Task.CompletedTask;
+
+    return setCupBKo(CkAppShared.ckMng.ltCups.Find(c => c.iId == cup.iId && c.iId2 == cup.iId2 && c.iId3 == cup.iId3), o);
+  }
+  private async Task setCupBKo(CornerkickManager.Cup? cup, object? o)
+  {
+    if (cup == null) return;
+    if (o == null) return;
+
+    bool bKo;
+    if (!bool.TryParse(o.ToString(), out bKo)) return;
+
+    cup.settings.bKo = bKo;
+    await changeCup(cup);
+
+    //InvokeAsync(StateHasChanged);
+  }
+
+  private Task setCupNQualiKo(Cup cup, object? o)
+  {
+    if (cup == null) return Task.CompletedTask;
+    if (CkAppShared.ckMng?.ltCups == null) return Task.CompletedTask;
+
+    return setCupNQualiKo(CkAppShared.ckMng.ltCups.Find(c => c.iId == cup.iId && c.iId2 == cup.iId2 && c.iId3 == cup.iId3), o);
+  }
+  private Task setCupNQualiKo(CornerkickManager.Cup? cup, object? o)
+  {
+    if (o == null) return Task.CompletedTask;
+
+    byte nQualifierKo;
+    if (!byte.TryParse(o.ToString(), out nQualifierKo)) return Task.CompletedTask;
+
+    if (cup == null) return Task.CompletedTask;
+
+    cup.settings.nQualifierKo = nQualifierKo;
+
+    return Task.CompletedTask;
+  }
+
+  private Task setCupBKoTwoGames(Cup cup, object? o)
+  {
+    if (cup == null) return Task.CompletedTask;
+    if (CkAppShared.ckMng?.ltCups == null) return Task.CompletedTask;
+
+    return setCupBKoTwoGames(CkAppShared.ckMng.ltCups.Find(c => c.iId == cup.iId && c.iId2 == cup.iId2 && c.iId3 == cup.iId3), o);
+  }
+  private Task setCupBKoTwoGames(CornerkickManager.Cup? cup, object? o)
+  {
+    if (o == null) return Task.CompletedTask;
+
+    bool bKoTwoGames;
+    if (!bool.TryParse(o.ToString(), out bKoTwoGames)) return Task.CompletedTask;
+
+    if (cup == null) return Task.CompletedTask;
+
+    cup.settings.bKoTwoGames = bKoTwoGames;
+
+    return Task.CompletedTask;
+  }
+
+  private Task setCupBOffsite(Cup cup, object? o)
+  {
+    if (cup == null) return Task.CompletedTask;
+    if (CkAppShared.ckMng?.ltCups == null) return Task.CompletedTask;
+
+    return setCupBOffsite(CkAppShared.ckMng.ltCups.Find(c => c.iId == cup.iId && c.iId2 == cup.iId2 && c.iId3 == cup.iId3), o);
+  }
+  private Task setCupBOffsite(CornerkickManager.Cup? cup, object? o)
+  {
+    if (o == null) return Task.CompletedTask;
+
+    bool b;
+    if (!bool.TryParse(o.ToString(), out b)) return Task.CompletedTask;
+
+    if (cup == null) return Task.CompletedTask;
+
+    cup.settings.bOffsite = b;
+    changeCup(cup);
+
+    return Task.CompletedTask;
+  }
+
+  private Task setCupBCards(Cup cup, object? o)
+  {
+    if (cup == null) return Task.CompletedTask;
+    if (CkAppShared.ckMng?.ltCups == null) return Task.CompletedTask;
+
+    return setCupBCards(CkAppShared.ckMng.ltCups.Find(c => c.iId == cup.iId && c.iId2 == cup.iId2 && c.iId3 == cup.iId3), o);
+  }
+  private Task setCupBCards(CornerkickManager.Cup? cup, object? o)
+  {
+    if (o == null) return Task.CompletedTask;
+
+    bool b;
+    if (!bool.TryParse(o.ToString(), out b)) return Task.CompletedTask;
+
+    if (cup == null) return Task.CompletedTask;
+
+    cup.settings.bCards = b;
+    changeCup(cup);
+
+    return Task.CompletedTask;
+  }
+
+  private Task setYellowCardSuspension(Cup cup, object? o)
+  {
+    if (cup == null) return Task.CompletedTask;
+    if (CkAppShared.ckMng?.ltCups == null) return Task.CompletedTask;
+
+    return setYellowCardSuspension(CkAppShared.ckMng.ltCups.Find(c => c.iId == cup.iId && c.iId2 == cup.iId2 && c.iId3 == cup.iId3), o);
+  }
+  private Task setYellowCardSuspension(CornerkickManager.Cup? cup, object? o)
+  {
+    if (o == null) return Task.CompletedTask;
+
+    byte i;
+    if (!byte.TryParse(o.ToString(), out i)) return Task.CompletedTask;
+
+    if (cup == null) return Task.CompletedTask;
+
+    cup.settings.nYellowCardSuspension = i;
+    changeCup(cup);
+
+    return Task.CompletedTask;
+  }
+
+  private Task setCupBAwayGoalRule(Cup cup, object? o)
+  {
+    if (cup == null) return Task.CompletedTask;
+    if (CkAppShared.ckMng?.ltCups == null) return Task.CompletedTask;
+
+    return setCupBAwayGoalRule(CkAppShared.ckMng.ltCups.Find(c => c.iId == cup.iId && c.iId2 == cup.iId2 && c.iId3 == cup.iId3), o);
+  }
+  private Task setCupBAwayGoalRule(CornerkickManager.Cup? cup, object? o)
+  {
+    if (o == null) return Task.CompletedTask;
+
+    bool b;
+    if (!bool.TryParse(o.ToString(), out b)) return Task.CompletedTask;
+
+    if (cup == null) return Task.CompletedTask;
+
+    cup.settings.bAwayGoalRule = b;
+    changeCup(cup);
+
+    return Task.CompletedTask;
+  }
+
+  // Set cup boni
+  private Task setCupBonusStart(Cup cup, object? o)
+  {
+    if (cup == null) return Task.CompletedTask;
+    if (CkAppShared.ckMng?.ltCups == null) return Task.CompletedTask;
+
+    return setCupBonusStart(CkAppShared.ckMng.ltCups.Find(c => c.iId == cup.iId && c.iId2 == cup.iId2 && c.iId3 == cup.iId3), o);
+  }
+  private async Task setCupBonusStart(CornerkickManager.Cup? cup, object? o)
+  {
+    if (cup == null) return;
+    if (o == null) return;
+
+    int iB;
+    if (!int.TryParse(o.ToString().Replace(".", ""), out iB)) return;
+
+    cup.settings.iBonusStart = iB;
+    await changeCup(cup);
+
+    //InvokeAsync(StateHasChanged);
+  }
+
+  private Task setCupBonusVicGroup(Cup cup, object? o)
+  {
+    if (cup == null) return Task.CompletedTask;
+    if (CkAppShared.ckMng?.ltCups == null) return Task.CompletedTask;
+
+    return setCupBonusVicGroup(CkAppShared.ckMng.ltCups.Find(c => c.iId == cup.iId && c.iId2 == cup.iId2 && c.iId3 == cup.iId3), o);
+  }
+  private async Task setCupBonusVicGroup(CornerkickManager.Cup? cup, object? o)
+  {
+    if (cup == null) return;
+    if (o == null) return;
+
+    int iB;
+    if (!int.TryParse(o.ToString().Replace(".", ""), out iB)) return;
+
+    cup.settings.iBonusVicGroup = iB;
+    await changeCup(cup);
+
+    //InvokeAsync(StateHasChanged);
+  }
+
+  private Task setCupBonusCupWin(Cup cup, object? o)
+  {
+    if (cup == null) return Task.CompletedTask;
+    if (CkAppShared.ckMng?.ltCups == null) return Task.CompletedTask;
+
+    return setCupBonusCupWin(CkAppShared.ckMng.ltCups.Find(c => c.iId == cup.iId && c.iId2 == cup.iId2 && c.iId3 == cup.iId3), o);
+  }
+  private async Task setCupBonusCupWin(CornerkickManager.Cup? cup, object? o)
+  {
+    if (cup == null) return;
+    if (o == null) return;
+
+    int iB;
+    if (!int.TryParse(o.ToString().Replace(".", ""), out iB)) return;
+
+    cup.settings.iBonusCupWin = iB;
+    await changeCup(cup);
+
+    //InvokeAsync(StateHasChanged);
+  }
+
+  private Task setCupBonusReleaseCupWinInKo(Cup cup, object? o)
+  {
+    if (cup == null) return Task.CompletedTask;
+    if (CkAppShared.ckMng?.ltCups == null) return Task.CompletedTask;
+
+    return setCupBonusReleaseCupWinInKo(CkAppShared.ckMng.ltCups.Find(c => c.iId == cup.iId && c.iId2 == cup.iId2 && c.iId3 == cup.iId3), o);
+  }
+  private Task setCupBonusReleaseCupWinInKo(CornerkickManager.Cup? cup, object? o)
+  {
+    if (o == null) return Task.CompletedTask;
+
+    bool b;
+    if (!bool.TryParse(o.ToString(), out b)) return Task.CompletedTask;
+
+    if (cup == null) return Task.CompletedTask;
+
+    cup.settings.bBonusReleaseCupWinInKo = b;
+    changeCup(cup);
+
+    return Task.CompletedTask;
+  }
+
+  private Task setCupTvBonus(Cup cup, object? o)
+  {
+    if (cup == null) return Task.CompletedTask;
+    if (CkAppShared.ckMng?.ltCups == null) return Task.CompletedTask;
+
+    return setCupTvBonus(CkAppShared.ckMng.ltCups.Find(c => c.iId == cup.iId && c.iId2 == cup.iId2 && c.iId3 == cup.iId3), o);
+  }
+  private async Task setCupTvBonus(CornerkickManager.Cup? cup, object? o)
+  {
+    if (cup == null) return;
+    if (o == null) return;
+
+    int iTv;
+    if (!int.TryParse(o.ToString().Replace(".", ""), out iTv)) return;
+
+    cup.settings.iTvBonus = iTv;
+    await changeCup(cup);
+
+    //InvokeAsync(StateHasChanged);
+  }
+
+  private Task setCupGameMin(Cup cup, object? o)
+  {
+    if (cup == null) return Task.CompletedTask;
+    if (CkAppShared.ckMng?.ltCups == null) return Task.CompletedTask;
+
+    return setCupGameMin(CkAppShared.ckMng.ltCups.Find(c => c.iId == cup.iId && c.iId2 == cup.iId2 && c.iId3 == cup.iId3), o);
+  }
+  private Task setCupGameMin(CornerkickManager.Cup? cup, object? o)
+  {
+    if (o == null) return Task.CompletedTask;
+
+    byte i;
+    if (!byte.TryParse(o.ToString(), out i)) return Task.CompletedTask;
+
+    if (cup == null) return Task.CompletedTask;
+
+    cup.settings.nGameMin = i;
+
+    return Task.CompletedTask;
+  }
+
+  private Task setCupPlStart(Cup cup, object? o)
+  {
+    if (cup == null) return Task.CompletedTask;
+    if (CkAppShared.ckMng?.ltCups == null) return Task.CompletedTask;
+
+    return setCupPlStart(CkAppShared.ckMng.ltCups.Find(c => c.iId == cup.iId && c.iId2 == cup.iId2 && c.iId3 == cup.iId3), o);
+  }
+  private Task setCupPlStart(CornerkickManager.Cup? cup, object? o)
+  {
+    if (o == null) return Task.CompletedTask;
+
+    byte i;
+    if (!byte.TryParse(o.ToString(), out i)) return Task.CompletedTask;
+
+    if (cup == null) return Task.CompletedTask;
+
+    cup.settings.nPlStart = i;
+
+    return Task.CompletedTask;
+  }
+
+  private Task setCupPlRes(Cup cup, object? o)
+  {
+    if (cup == null) return Task.CompletedTask;
+    if (CkAppShared.ckMng?.ltCups == null) return Task.CompletedTask;
+
+    return setCupPlRes(CkAppShared.ckMng.ltCups.Find(c => c.iId == cup.iId && c.iId2 == cup.iId2 && c.iId3 == cup.iId3), o);
+  }
+  private Task setCupPlRes(CornerkickManager.Cup? cup, object? o)
+  {
+    if (o == null) return Task.CompletedTask;
+
+    byte i;
+    if (!byte.TryParse(o.ToString(), out i)) return Task.CompletedTask;
+
+    if (cup == null) return Task.CompletedTask;
+
+    cup.settings.nPlRes = i;
+
+    return Task.CompletedTask;
+  }
+
+  private Task setCupSubstitutions(Cup cup, object? o)
+  {
+    if (cup == null) return Task.CompletedTask;
+    if (CkAppShared.ckMng?.ltCups == null) return Task.CompletedTask;
+
+    return setCupSubstitutions(CkAppShared.ckMng.ltCups.Find(c => c.iId == cup.iId && c.iId2 == cup.iId2 && c.iId3 == cup.iId3), o);
+  }
+  private Task setCupSubstitutions(CornerkickManager.Cup? cup, object? o)
+  {
+    if (o == null) return Task.CompletedTask;
+
+    byte nSubs;
+    if (!byte.TryParse(o.ToString(), out nSubs)) return Task.CompletedTask;
+
+    if (cup == null) return Task.CompletedTask;
+
+    cup.settings.nSubstitutions = nSubs;
+
+    return Task.CompletedTask;
+  }
+
+  private Task setCupPitchSize(Cup cup, object? o)
+  {
+    if (cup == null) return Task.CompletedTask;
+    if (CkAppShared.ckMng?.ltCups == null) return Task.CompletedTask;
+
+    return setCupPitchSize(CkAppShared.ckMng.ltCups.Find(c => c.iId == cup.iId && c.iId2 == cup.iId2 && c.iId3 == cup.iId3), o);
+  }
+  private Task setCupPitchSize(CornerkickManager.Cup? cup, object? o)
+  {
+    if (o == null) return Task.CompletedTask;
+
+    float f;
+    if (!float.TryParse(o.ToString(), out f)) return Task.CompletedTask;
+
+    if (cup == null) return Task.CompletedTask;
+
+    cup.settings.fPitchSizeRel = f;
+
+    return Task.CompletedTask;
+  }
+
+  private Task setCupAttrFactor(Cup cup, object? oAttrFactor)
+  {
+    if (cup == null) return Task.CompletedTask;
+    if (CkAppShared.ckMng?.ltCups == null) return Task.CompletedTask;
+
+    return setCupAttrFactor(CkAppShared.ckMng.ltCups.Find(c => c.iId == cup.iId && c.iId2 == cup.iId2 && c.iId3 == cup.iId3), oAttrFactor);
+  }
+  private Task setCupAttrFactor(CornerkickManager.Cup? cup, object? oAttrFactor)
+  {
+    if (oAttrFactor == null) return Task.CompletedTask;
+
+    float fAttrFactor;
+    if (!float.TryParse(oAttrFactor.ToString(), out fAttrFactor)) return Task.CompletedTask;
+
+    if (cup == null) return Task.CompletedTask;
+
+    cup.settings.fAttraction = fAttrFactor;
+
+    return Task.CompletedTask;
+  }
+
+  private Task removeQualiFromCup(Cup cup, CornerkickManager.Cup.Qualification q)
+  {
+    CornerkickManager.Cup? c = CkAppShared.ckMng.ltCups.Find(c => c.iId == cup.iId && c.iId2 == cup.iId2 && c.iId3 == cup.iId3);
+    if (c?.ltQualification != null) c.ltQualification.Remove(q);
+    StateHasChanged();
+    return Task.CompletedTask;
+  }
+
+  private Task addQualiToCup()
+  {
+    if (selected_cup == null) return Task.CompletedTask;
+
+    CornerkickManager.Cup? c = CkAppShared.ckMng.ltCups.Find(c => c.iId == selected_cup.iId && c.iId2 == selected_cup.iId2 && c.iId3 == selected_cup.iId3);
+    if (c == null) return Task.CompletedTask;
+
+    if (addQualiToCup(c,
+                      CkAppShared.ckMng.ltCups.Find(c => getCupIdString(c).Equals(selected_cup.sQualiCupName)),
+                      selected_cup.iPlaceFirst,
+                      selected_cup.iPlaceLast)) {
+      selected_cup.ltQ = c.ltQualification;
+      StateHasChanged();
+    }
+
+    return Task.CompletedTask;
+  }
+  private static bool addQualiToCup(CornerkickManager.Cup? cup, CornerkickManager.Cup? cupQ, int iPlaceFrst, int iPlaceLast)
+  {
+    if (cup == null) return false;
+    if (cupQ == null) return false;
+
+    byte jPlaceFrst = (byte)(iPlaceFrst < 0 ? (cupQ.ltClubs[0].Count + iPlaceFrst) + 1 : iPlaceFrst);
+    byte jPlaceLast = (byte)(iPlaceLast < 0 ? (cupQ.ltClubs[0].Count + iPlaceLast) + 1 : iPlaceLast);
+
+    if (cup.ltQualification == null) cup.ltQualification = new List<CornerkickManager.Cup.Qualification>();
+    cup.ltQualification.Add(new CornerkickManager.Cup.Qualification() {
+        cup = cupQ,
+        iPlaceFirst = jPlaceFrst,
+        iPlaceLast = jPlaceLast
+      });
+
+    // Order qualifications
+    cup.ltQualification = cup.ltQualification.OrderBy(q => q.cup.iId).ThenBy(q => q.cup.iId2).ThenBy(q => q.cup.iId3).ToList();
+
+    // Adjust self quali in qualification cup
+    if (cupQ.ltQualification != null) {
+      foreach (CornerkickManager.Cup.Qualification q in cupQ.ltQualification) {
+        if (q.cup.iId == cupQ.iId && q.cup.iId2 == cupQ.iId2 && q.cup.iId3 == cupQ.iId3) {
+          byte jQPlaceLast = (byte)(q.iPlaceLast < 1 ? cupQ.ltClubs[0].Count : q.iPlaceLast);
+
+          if (q.iPlaceFirst < jPlaceFrst) q.iPlaceLast = (byte)Math.Min(jQPlaceLast, jPlaceFrst - 1);
+          if (jQPlaceLast > (jPlaceLast == 0 ? 999 : jPlaceLast)) q.iPlaceFirst = (byte)Math.Max(q.iPlaceFirst, jPlaceLast + 1);
+        }
+      }
+    }
+
+    return true;
+  }
+
+  private Task addQualiLeagueUpToCup()
+  {
+    if (selected_cup == null) return Task.CompletedTask;
+
+    CornerkickManager.Cup? cup = CkAppShared.ckMng.ltCups.Find(c => c.iId == selected_cup.iId && c.iId2 == selected_cup.iId2 && c.iId3 == selected_cup.iId3);
+    if (cup == null) return Task.CompletedTask;
+
+    CornerkickManager.Cup? cupUp = CkAppShared.ckMng.ltCups.Find(c => c.iId == selected_cup.iId && c.iId2 == selected_cup.iId2 && c.iId3 == selected_cup.iId3 - 1);
+    if (cupUp == null) return Task.CompletedTask;
+
+    if (!addQualiToCup(cup, cupUp, -selected_cup.iPlaceFirst, 0)) return Task.CompletedTask;
+    if (!addQualiToCup(cupUp, cup, +1, selected_cup.iPlaceFirst)) return Task.CompletedTask;
+
+    selected_cup.ltQ = cup.ltQualification;
+    StateHasChanged();
+
+    return Task.CompletedTask;
+  }
+
+  private Task addQualiLeagueDnToCup()
+  {
+    if (selected_cup == null) return Task.CompletedTask;
+
+    CornerkickManager.Cup? cup = CkAppShared.ckMng.ltCups.Find(c => c.iId == selected_cup.iId && c.iId2 == selected_cup.iId2 && c.iId3 == selected_cup.iId3);
+    if (cup == null) return Task.CompletedTask;
+
+    CornerkickManager.Cup? cupDn = CkAppShared.ckMng.ltCups.Find(c => c.iId == selected_cup.iId && c.iId2 == selected_cup.iId2 && c.iId3 == selected_cup.iId3 + 1);
+    if (cupDn == null) return Task.CompletedTask;
+
+    if (!addQualiToCup(cup, cupDn, +1, selected_cup.iPlaceFirst)) return Task.CompletedTask;
+    if (!addQualiToCup(cupDn, cup, -selected_cup.iPlaceFirst, 0)) return Task.CompletedTask;
+
+    selected_cup.ltQ = cup.ltQualification;
+    StateHasChanged();
+
+    return Task.CompletedTask;
+  }
+
+  private async Task loadCupEmblem(InputFileChangeEventArgs e)
+  {
+    isLoading = true;
+
+    await loadCupEmblem(e.File);
+
+    isLoading = false;
+  }
+  private async Task loadCupEmblem(IBrowserFile ibf)
+  {
+    if (selected_cup == null) return;
+
+    try {
+      //string sFileParentDir = Path.Combine(CornerkickApp.Controllers.App.getDocumentsDir, "database", "media_" + dbfile2, "images", "emblems");
+      //CornerkickApp.Controllers.App.uploadFile(fil.OpenReadStream(), sFileParentDir, selected_club.iId);
+
+      if (ltCupEmblem == null) ltCupEmblem = new List<CornerkickApp.Services.Emblem>();
+
+      CornerkickApp.Services.Emblem? ce = ltCupEmblem.Find(c => c.iId == selected_cup.iId && c.iId2 == selected_cup.iId2 && c.iId3 == selected_cup.iId3);
+      if (ce == null) {
+        ce = new CornerkickApp.Services.Emblem() { iId = selected_cup.iId, iId2 = selected_cup.iId2, iId3 = selected_cup.iId3 };
+        ltCupEmblem.Add(ce);
+      }
+      MemoryStream ms = new MemoryStream();
+      await ibf.OpenReadStream().CopyToAsync(ms);
+      ce.bEmblem = ms.ToArray();
+      selected_cup.bEmblem = ce.bEmblem;
+    } catch (Exception ex) {
+      string sError = "File: " + ibf.Name + " Error: " + ex.Message;
+
+      await CkDialog.ckDialog.Show(
+        "Fehler",
+        sError,
+        sButtonCancelText2: ""
+      );
+      /*
+      Logger.LogError("File: {FileName} Error: {Error}",
+      file.Name, ex.Message);
+      */
+    }
+  }
+
+  private int[] getCupIdsFromCupIdStr(string sCupIdStr)
+  {
+    int iId1 = -9;
+    int iId2 = -9;
+    int iId3 = -9;
+
+    if (!string.IsNullOrEmpty(sCupIdStr)) {
+      string[] sParts = sCupIdStr.Split('_');
+      if (sParts.Length > 2) {
+        int.TryParse(sParts[0], out iId1);
+        int.TryParse(sParts[1], out iId2);
+        int.TryParse(sParts[2], out iId3);
+      } else if (sParts.Length > 0) {
+        int.TryParse(sParts[0], out iId1);
+      }
+    }
+
+    return [iId1, iId2, iId3];
+  }
+
+  private CornerkickManager.Cup? getCupFromCupIdStr(string sCupIdStr)
+  {
+    int[] iCupIds = getCupIdsFromCupIdStr(sCupIdStr);
+    return CkAppShared.ckMng.ltCups.Find(c => c.iId == iCupIds[0] && c.iId2 == iCupIds[1] && c.iId3 == iCupIds[2]);
+  }
+
+  private void fillSelectClubsFromCupIdStr(string sCupIdStr, bool bChangeClub = true)
+  {
+    selectedCupFilterClubs = sCupIdStr;
+
+    int[] iCupIds = getCupIdsFromCupIdStr(sCupIdStr);
+    fillSelectClubs(iCupId1: iCupIds[0], iCupId2: iCupIds[1], iCupId3: iCupIds[2], bChangeClub: bChangeClub);
+  }
+  private void fillSelectClubs(Cup cp, bool bChangeClub = true)
+  {
+    fillSelectClubs(iCupId1: cp.iId, iCupId2: cp.iId2, iCupId3: cp.iId3, bChangeClub: bChangeClub);
+  }
+  private async Task fillSelectClubs(int iCupId1 = -9, int iCupId2 = -9, int iCupId3 = -9, bool bChangeClub = true)
+  {
+    ltClubs = new List<LayoutModel.SelectListItem>();
+
+    List<CornerkickManager.Club>? ltClubsTmp = null;
+
+    if (iCupId1 >= 0) {
+      CornerkickManager.Cup cup = CkAppShared.ckMng.tl.getCup(iId: iCupId1, iId2: iCupId2, iId3: iCupId3);
+      ltClubsTmp = cup == null ? null : cup.getParticipants();
+    } else if (iCupId1 == -2) { // Nations
+      ltClubsTmp = CkAppShared.ckMng.ltClubs.Where(c => c.bNation).ToList();
+    } else if (iCupId1 == -9) { // All clubs
+      ltClubsTmp = CkAppShared.ckMng.ltClubs;
+    }
+
+    if (ltClubsTmp != null) {
+      ltClubsTmp = ltClubsTmp.OrderBy(c => c.sName).ToList();
+
+      foreach (CornerkickManager.Club clb in ltClubsTmp) {
+        ltClubs.Add(new LayoutModel.SelectListItem() {
+            Value = clb.iId.ToString(),
+            Text = clb.sName
+          });
+      }
+
+      if (bChangeClub) {
+        int jClubId = -1;
+        if (ltClubs.Count > 0) int.TryParse(ltClubs[0].Value, out jClubId);
+        await changeClub(jClubId);
+      } else {
+        await InvokeAsync(StateHasChanged);
+      }
+    }
+  }
+
+  protected async Task createClub()
+  {
+    if (string.IsNullOrEmpty(selectedLeagueName)) return;
+    if (fNewClubTeamAve < 1f) return;
+
+    CornerkickManager.Cup? league = CkAppShared.ckMng.ltCups.Find(c => c.sName == selectedLeagueName);
+    if (league == null) return;
+
+    CornerkickManager.Club? clbNew = CornerkickApp.Controllers.App.createClub(CkAppShared.ckMng, "", (byte)league.iId2, (byte)league.iId3);
+    if (clbNew == null) return;
+
+    string sTeamNameLand = "Land_" + league.iId2.ToString();
+    if (CornerkickManager.Main.sLandShort != null && CornerkickManager.Main.sLandShort.Length > league.iId2) sTeamNameLand = CornerkickManager.Main.sLandShort[league.iId2];
+    clbNew.sName = "Team_" + sTeamNameLand + "_" + clbNew.iId.ToString();
+
+    CornerkickApp.Controllers.App.addPlayerToClub(CkAppShared.ckMng, ref clbNew, fSkillAve: fNewClubTeamAve);
+
+    CkAppShared.ckMng.ltClubs.Add(clbNew);
+    league.ltClubs[0].Add(clbNew);
+
+    await changeCup(league);
+    await changeClub(clbNew.iId);
+    fillSelectClubs();
+  }
+
+  protected async Task changeClub(int jClubId)
+  {
+    sClassDisabled = "disabled";
+    await InvokeAsync(StateHasChanged);
+
+    iClubId = jClubId;
+
+    selectedCupToAddToClub = "";
+
+    int[] iCupIds = getCupIdsFromCupIdStr(selectedCupFilterClubs);
+    bool bNat = iCupIds[0] == CkAppShared.iCupIdWc || iCupIds[0] == -2;
+    selected_club = new Club();
+    CornerkickManager.Club? clb = CkAppShared.ckMng.ltClubs.Find(c => c.iId == iClubId && c.bNation == bNat);
+    if (clb == null) {
+      sClassDisabled = "";
+      await InvokeAsync(StateHasChanged);
+      return;
+    }
+
+    selected_club.iId = clb.iId;
+    selected_club.sName = clb.sName;
+    selected_club.iNat = clb.iLand;
+    selected_club.bNation = clb.bNation;
+
+    if (clb.ltTactic != null && clb.ltTactic.Count > 0) selected_club.iFrm = CkAppShared.ckMng.ltFormationen.FindIndex(f => f.iId == clb.ltTactic[0].formation.iId);
+
+    selected_club.stadium = clb.stadium;
+
+    float[] fTeamAve = CornerkickManager.Tool.getTeamAve(clb, CkAppShared.ckMng.dtDatum, CkAppShared.ckMng.dtSeasonEnd, bIdeal: true, bTeamValue: true);
+    selected_club.fSkillAve = fTeamAve[3];
+    selected_club.fAgeAve   = fTeamAve[4];
+    selected_club.fValueAve = fTeamAve[5];
+
+    /*
+    selected_club.sCl1 = new string[3];
+    selected_club.sCl2 = new string[3];
+    for (int iC = 0; iC < 3; iC++) {
+      selected_club.sCl1[iC] = CornerkickApp.Controllers.Tool.convertToHex(clb.cl1[iC]);
+      selected_club.sCl2[iC] = CornerkickApp.Controllers.Tool.convertToHex(clb.cl2[iC]);
+      }
+    */
+    if (jerseyH != null) await jerseyH.draw(clb);
+    if (jerseyA != null) await jerseyA.draw(clb);
+
+    if (ltClubEmblem != null) {
+      CornerkickApp.Services.Emblem? ce = new CornerkickApp.Services.Emblem();
+      ce = ltClubEmblem.Find(c => c.iId == clb.iId);
+      if (ce != null) selected_club.bEmblem = ce.bEmblem;
+    }
+
+    if (selected_club.bEmblem == null) {
+      selected_club.bEmblem = await CornerkickApp.Services.StartGameService.loadMediaDataClub(dbfile2, clb.iId);
+    }
+
+    await getTableTeam(clb, bInteractive: false);
+
+    // Select first player of team
+    if (tableTeam != null && tableTeam.Count > 0) selectPlayer(tableTeam[0]);
+
+    sClassDisabled = "";
+    await InvokeAsync(StateHasChanged);
+  }
+
+  private async Task getTableTeam(int iClubId, bool bInteractive = true)
+  {
+    await getTableTeam(CkAppShared.ckMng.ltClubs.Find(c => c.iId == iClubId), bInteractive: bInteractive);
+  }
+  private async Task getTableTeam(CornerkickManager.Club? clb, bool bInteractive = true)
+  {
+    if (bInteractive) {
+      sClassDisabled = "disabled";
+      //StateHasChanged();
+      //body.Invoke(StateHasChanged);
+      await InvokeAsync(StateHasChanged);
+    }
+
+    tableTeam = new List<Player>();
+
+    if (clb?.ltPlayer != null) {
+      clb.ltPlayer = clb.ltPlayer.OrderBy(p => p.plGame.getMainPosition()).ToList();
+
+      int iIx = 0;
+      foreach (CornerkickManager.Player pl in clb.ltPlayer) {
+        Player? player = await getPlayer(pl, iIx: iIx++);
+        if (player != null) tableTeam.Add(player);
+      }
+    }
+
+    if (bInteractive) {
+      sClassDisabled = "";
+      //body.Invoke(StateHasChanged);
+      await InvokeAsync(StateHasChanged);
+    }
+  }
+
+  private Task setClubName(string sName)
+  {
+    CornerkickManager.Club? clb = CkAppShared.ckMng.ltClubs.Find(c => c.iId == iClubId);
+    if (clb == null) return Task.CompletedTask;
+
+    clb.sName = sName;
+
+    fillSelectClubs();
+
+    return Task.CompletedTask;
+  }
+
+  private Task setClubFrm(int iFrm)
+  {
+    CornerkickManager.Club? clb = CkAppShared.ckMng.ltClubs.Find(c => c.iId == iClubId);
+    if (clb == null) return Task.CompletedTask;
+
+    clb.ltTactic[0].formation = CkAppShared.ckMng.ltFormationen[iFrm].Clone();
+
+    if (selected_club != null) selected_club.iFrm = iFrm;
+    //fillSelectClubs();
+
+    return Task.CompletedTask;
+  }
+
+  private bool isLoading;
+  private async Task loadClubEmblem(InputFileChangeEventArgs e)
+  {
+    isLoading = true;
+
+    await loadClubEmblem(e.File);
+
+    isLoading = false;
+  }
+  private async Task loadClubEmblem(IBrowserFile ibf)
+  {
+    if (selected_club == null) return;
+
+    try {
+      //string sFileParentDir = Path.Combine(CornerkickApp.Controllers.App.getDocumentsDir, "database", "media_" + dbfile2, "images", "emblems");
+      //CornerkickApp.Controllers.App.uploadFile(fil.OpenReadStream(), sFileParentDir, selected_club.iId);
+
+      if (ltClubEmblem == null) ltClubEmblem = new List<CornerkickApp.Services.Emblem>();
+
+      CornerkickApp.Services.Emblem? ce = ltClubEmblem.Find(c => c.iId == selected_club.iId);
+      if (ce == null) {
+        ce = new CornerkickApp.Services.Emblem() { iId = selected_club.iId };
+        ltClubEmblem.Add(ce);
+      }
+      MemoryStream ms = new MemoryStream();
+      await ibf.OpenReadStream().CopyToAsync(ms);
+      ce.bEmblem = ms.ToArray();
+      selected_club.bEmblem = ce.bEmblem;
+
+      if (selected_cup != null) await changeCup(selected_cup);
+    } catch (Exception ex) {
+      string sError = "File: " + ibf.Name + " Error: " + ex.Message;
+
+      await CkDialog.ckDialog.Show(
+        "Fehler",
+        sError,
+        sButtonCancelText2: ""
+      );
+      /*
+      Logger.LogError("File: {FileName} Error: {Error}",
+      file.Name, ex.Message);
+      */
+    }
+  }
+
+  private Task removeClubFromCup(Cup cup, Club? clb = null)
+  {
+    if (cup == null) return Task.CompletedTask;
+    if (CkAppShared.ckMng?.ltCups == null) return Task.CompletedTask;
+
+    return removeClubFromCup(CkAppShared.ckMng.ltCups.Find(c => c.iId == cup.iId && c.iId2 == cup.iId2 && c.iId3 == cup.iId3), clb: clb);
+  }
+  private async Task removeClubFromCup(CornerkickManager.Cup? cup, Club? clb = null)
+  {
+    if (cup == null) return;
+
+    if (clb == null && selected_club != null) clb = selected_club;
+    if (clb == null) return;
+
+    CornerkickManager.Club? clbCk = CkAppShared.ckMng.ltClubs.Find(c => c.iId == clb.iId);
+    if (clbCk == null) return;
+
+    for (int iG = 0; iG < cup.ltClubs.Length; iG++) cup.ltClubs[iG].Remove(clbCk);
+
+    await changeCup(cup);
+
+    await InvokeAsync(StateHasChanged);
+  }
+
+  private Task addClubToCup(string sCupName)
+  {
+    if (selected_club == null) return Task.CompletedTask;
+
+    CornerkickManager.Club? clb = CkAppShared.ckMng.ltClubs.Find(c => c.iId == selected_club.iId);
+    if (clb == null) return Task.CompletedTask;
+
+    CornerkickManager.Cup? cup = CkAppShared.ckMng.ltCups.Find(c => c.sName == sCupName);
+    if (cup == null) return Task.CompletedTask;
+
+    selectedCupToAddToClub = "";
+
+    if (!cup.checkClubInCup(clb)) {
+      //int iG = Array.FindIndex(cup.ltClubs, l => l.Count
+      //int iG = cup.ltClubs.Min(l => l.Count);
+      int iG = 0;
+      int nCl = cup.ltClubs[0].Count;
+      for (int i = cup.ltClubs.Length - 1; i > 0; i--) {
+        if (cup.ltClubs[i].Count < nCl) iG = i;
+      }
+      cup.ltClubs[iG].Add(clb);
+
+      changeCup(cup);
+    }
+    //StateHasChanged();
+
+    return Task.CompletedTask;
+  }
+
+  private Task setStadiumBlockName(string sName)
+  {
+    CornerkickManager.Club? clb = CkAppShared.ckMng.ltClubs.Find(c => c.iId == iClubId);
+    if (clb == null) return Task.CompletedTask;
+
+    clb.stadium.sName = sName;
+
+    return Task.CompletedTask;
+  }
+
+  private Task setStadiumBlockSeats(int iBlock, string sSeats)
+  {
+    int iSeats;
+    if (int.TryParse(sSeats, out iSeats)) setStadiumBlockSeats(iBlock, iSeats);
+
+    return Task.CompletedTask;
+  }
+  private Task setStadiumBlockSeats(int iBlock, int iSeats)
+  {
+    CornerkickManager.Club? clb = CkAppShared.ckMng.ltClubs.Find(c => c.iId == iClubId);
+    if (clb == null) return Task.CompletedTask;
+
+    clb.stadium.blocks[iBlock].iSeats = iSeats;
+
+    return Task.CompletedTask;
+  }
+
+  private Task setStadiumBlockType(int iBlock, int iType)
+  {
+    CornerkickManager.Club? clb = CkAppShared.ckMng.ltClubs.Find(c => c.iId == iClubId);
+    if (clb == null) return Task.CompletedTask;
+
+    clb.stadium.blocks[iBlock].iType = (byte)iType;
+
+    return Task.CompletedTask;
+  }
+
+  private Task setStadiumBlockRoof(int iBlock, bool bRoof)
+  {
+    CornerkickManager.Club? clb = CkAppShared.ckMng.ltClubs.Find(c => c.iId == iClubId);
+    if (clb == null) return Task.CompletedTask;
+
+    clb.stadium.blocks[iBlock].bRoof = bRoof;
+
+    return Task.CompletedTask;
+  }
+
+  private void deleteCkMngClub(CornerkickManager.Club? clb = null, bool bForce = false)
+  {
+    deleteClub(clb, bForce);
+  }
+  private Task deleteClub(Club? clb = null)
+  {
+    if (clb == null) return Task.CompletedTask;
+    return deleteClub(clb: CkAppShared.ckMng.ltClubs.Find(c => c.iId == clb.iId));
+  }
+  private Task deleteClub(CornerkickManager.Club? clb = null, bool bForce = false)
+  {
+    if (clb == null && selected_club != null && !bForce) clb = CkAppShared.ckMng.ltClubs.Find(c => c.iId == selected_club.iId);
+    if (clb == null) return Task.CompletedTask;
+
+    if (bForce) {
+      deleteClubWork(clb);
+      return Task.CompletedTask;
+    }
+
+    CkDialog.ckDialog.Show(
+      "Verein wirklich löschen?",
+      "Alle Spieler des Vereins werden ebenfalls gelöscht!",
+      actionOnOk: () => deleteClubWork(clb)
+    );
+
+    return Task.CompletedTask;
+  }
+
+  private Task deleteClubWork(CornerkickManager.Club? clb = null)
+  {
+    if (clb == null && selected_club != null) clb = CkAppShared.ckMng.ltClubs.Find(c => c.iId == selected_club.iId);
+    if (clb == null) return Task.CompletedTask;
+
+    // Remove club from cups
+    foreach (CornerkickManager.Cup cup in CkAppShared.ckMng.ltCups) {
+      cup.ltClubs[0].Remove(clb);
+    }
+
+    // Delete player from club
+    while (clb.ltPlayer.Count > 0) {
+      CornerkickManager.Player pl = clb.ltPlayer[0];
+
+      CkAppShared.ckMng.ltPlayer.Remove(pl);
+      clb.ltPlayer.RemoveAt(0);
+    }
+
+    CkAppShared.ckMng.ltClubs.Remove(clb);
+
+    fillSelectClubs();
+
+    changeCup(selected_cup);
+
+    StateHasChanged();
+
+    return Task.CompletedTask;
+  }
+
+  private async Task loadPlayerPortrait(InputFileChangeEventArgs e)
+  {
+    if (selected_player == null) return;
+
+    IBrowserFile ibf = e.File;
+
+    try {
+      if (ltPlayerPortrait == null) ltPlayerPortrait = new List<CornerkickApp.Services.Emblem>();
+
+      CornerkickApp.Services.Emblem? pp = ltPlayerPortrait.Find(c => c.iId == selected_player.iId);
+      if (pp == null) {
+        pp = new CornerkickApp.Services.Emblem() { iId = selected_player.iId };
+        ltPlayerPortrait.Add(pp);
+      }
+      MemoryStream ms = new MemoryStream();
+      await ibf.OpenReadStream().CopyToAsync(ms);
+      pp.bEmblem = ms.ToArray();
+      selected_player.bPortrait = pp.bEmblem;
+      selected_player.iPlPortraitId = -1;
+    } catch (Exception ex) {
+      string sError = "File: " + ibf.Name + " Error: " + ex.Message;
+
+      await CkDialog.ckDialog.Show(
+        "Fehler",
+        sError,
+        sButtonCancelText2: ""
+      );
+    }
+  }
+
+  private async Task<Player?> getPlayer(CornerkickManager.Player? pl, int iIx = -1)
+  {
+    if (pl == null) return null;
+
+    CornerkickApp.Services.Emblem? ce = null;
+    if (ltPlayerPortrait != null) {
+      ce = ltPlayerPortrait.Find(p => p.iId == pl.plGame.iId);
+    }
+
+    byte[]? bPortrait = ce != null ? ce.bEmblem : await CornerkickApp.Services.StartGameService.loadMediaDataPlayer(dbfile2, pl.plGame.iId);
+    //if (bPortrait == null) bPortrait = File.ReadAllBytes(Controllers.Member.PlayerController.getPlayerPortrait(pl));
+    return new Player() {
+        iIx = iIx,
+        iId = pl.plGame.iId,
+        sName = pl.plGame.sName,
+        iHeight = pl.plGame.iHeight,
+        iWeight = pl.plGame.iWeight,
+        iNb = pl.plGame.iNr,
+        iClubId = pl.contract?.club == null ? -1 : pl.contract.club.iId,
+        iHp = pl.plGame.getMainPosition(),
+        sPos = CornerkickManager.PlayerTool.getStrPos(pl),
+        fSkill = CornerkickGame.Tool.getAveSkill(pl.plGame, bIdeal: true),
+        fTalent = pl.getTalentAve() + 1f,
+        dtBirthday = pl.plGame.dtBirthday,
+        iAge = (byte)pl.plGame.getAge(CkAppShared.ckMng.dtDatum),
+        iNat = pl.iNat1,
+        iSkill = pl.plGame.iSkill,
+        iTalent = pl.iTalent,
+        fPos = pl.plGame.fExperiencePos,
+        fFoot = [ pl.plGame.fFootR, pl.plGame.fFootL ],
+        iValue = pl.getValue(CkAppShared.ckMng.dtDatum, CkAppShared.ckMng.dtDatum),
+        character = pl.plGame.character,
+        bPortrait = bPortrait,
+        sPortrait = bPortrait == null ? Controllers.Member.PlayerController.getPlayerPortraitHtmlImg(pl) : "",
+        iPlPortraitId = bPortrait == null ? Controllers.Member.PlayerController.getPlayerPortraitId(pl) : -1
+      };
+  }
+
+  private async Task selectPlayer(int jPl)
+  {
+    await selectPlayer(CkAppShared.ckMng.ltPlayer.Find(p => p.plGame.iId == jPl));
+  }
+  private async Task selectPlayer(CornerkickManager.Player? plCk)
+  {
+    if (plCk == null) return;
+
+    iPlayer = plCk.plGame.iId;
+
+    CornerkickManager.Club? clbPlayer = plCk.contract == null ? null : plCk.contract.club;
+    if (clbPlayer != null) {
+      //CornerkickManager.Cup? league = CkAppShared.ckMng.ltCups.Find(c => c.iId == CkAppShared.iCupIdLeague && c.iId2 == plCk.contract?.club?.iLand && c.iId3 == plCk.contract?.club?.iDivision);
+      CornerkickManager.Cup? league = CkAppShared.ckMng.ltCups.Find(c => c.iId == CkAppShared.iCupIdLeague && c.getParticipants().Contains(clbPlayer));
+      if (league != null) fillSelectClubsFromCupIdStr(getCupIdString(league), bChangeClub: false);
+    } else {
+      fillSelectClubsFromCupIdStr("-1", bChangeClub: false); // Vereinslos
+    }
+
+    selected_player = await getPlayer(plCk);
+  }
+
+  private void selectPlayer(Player pl)
+  {
+    selected_player = pl;
+  }
+
+  private Player iniPlayer()
+  {
+    //selected_player = pl;
+    CornerkickManager.Club? clb = selected_club == null ? null : CkAppShared.ckMng.ltClubs.Find(c => c.iId == selected_club.iId);
+
+    CornerkickManager.Player plNew = CkAppShared.ckMng.plt.newPlayer(clb);
+    if (plNew == null) return new Player();
+
+    Task<Player?> tkNewPlayer = Task.Run(() => getPlayer(plNew));
+    //Task tkNewPlayer = getPlayer(plNew);
+    //tkNewPlayer.Wait();
+    Player? plRet = tkNewPlayer.Result;
+
+    Task.Run(() => getTableTeam(clb)).Wait();
+
+    return plRet == null ? new Player() : plRet;
+
+    /*
+    return new Player() {
+      iNb = clb == null ? 1 : CornerkickManager.PlayerTool.getNextFreeJerseyNumber(clb.ltPlayer),
+      iHp = 1,
+      iHeight = 180,
+      iWeight = 75,
+      dtBirthday = CkAppShared.ckMng.dtDatum.AddYears(-25),
+      fSkill = 6f,
+      fTalent = 5f,
+      iSkill = new byte[pl.plGame.iSkill.Length]
+      };
+    */
+  }
+
+  private Task deletePlayer(Player pl)
+  {
+    CkDialog.ckDialog.Show(
+      "Spieler wirklich löschen?",
+      "Der Spieler " + pl.sName + " wird gelöscht!",
+      actionOnOk: () => deletePlayerWork(pl)
+    );
+
+    return Task.CompletedTask;
+  }
+  private async Task deletePlayerWork(Player pl)
+  {
+    if (pl == null) return;
+
+    CornerkickManager.Player? plCk = CkAppShared.ckMng.ltPlayer.Find(p => p.plGame.iId == pl.iId);
+    if (plCk == null) return;
+
+    CkAppShared.ckMng.ltPlayer.Remove(plCk);
+    if (plCk.contract?.club != null) plCk.contract.club.ltPlayer.Remove(plCk);
+
+    if (selected_club != null) await getTableTeam(selected_club.iId);
+
+    selected_player = null;
+
+    await InvokeAsync(StateHasChanged);
+  }
+
+  private async Task NextPlayer(int iChange)
+  {
+    if (selected_player == null) return;
+
+    int iPlIx = tableTeam.FindIndex(p => p.iId == selected_player.iId);
+    if (iChange < 0 && iPlIx >=                 - iChange) selectPlayer(tableTeam[iPlIx + iChange]);
+    if (iChange > 0 && iPlIx <  tableTeam.Count - iChange) selectPlayer(tableTeam[iPlIx + iChange]);
+  }
+
+  private async Task setPlayerName(int iPlId, string sName)
+  {
+    CornerkickManager.Player? pl = CkAppShared.ckMng.ltPlayer.Find(p => p.plGame.iId == iPlId);
+    if (pl == null) return;
+
+    pl.plGame.sName = sName;
+    selected_player = await getPlayer(pl);
+  }
+
+  private async Task PlayerNextPortrait(int iChange)
+  {
+    if (selected_player == null) return;
+
+    CornerkickManager.Player? pl = CkAppShared.ckMng.ltPlayer.Find(p => p.plGame.iId == selected_player.iId);
+    if (pl == null) return;
+
+    int iPlPortraitId = Controllers.Member.PlayerController.getPlayerPortraitId(pl) + iChange;
+    const byte iMaxPortraitId = 239;
+    if (iPlPortraitId <              0) iPlPortraitId = iMaxPortraitId;
+    if (iPlPortraitId > iMaxPortraitId) iPlPortraitId = 0;
+    /*
+    if (iPlPortraitId <             0) iPlPortraitId = byte.MaxValue;
+    if (iPlPortraitId > byte.MaxValue) iPlPortraitId = 0;
+    */
+
+            pl.clSkin = Controllers.Member.PlayerController.getSkinFromId((byte)iPlPortraitId);
+
+    selected_player = await getPlayer(pl);
+  }
+
+  private async Task setPlayerNumber(int iPlId, string sNumber)
+  {
+    byte iNb;
+    if (!byte.TryParse(sNumber, out iNb)) return;
+
+    tableTeam.Find(p => p.iId == iPlId).iNb = iNb;
+
+    CornerkickManager.Player? pl = CkAppShared.ckMng.ltPlayer.Find(p => p.plGame.iId == iPlId);
+    if (pl == null) return;
+
+    pl.plGame.iNr = iNb;
+    selected_player = await getPlayer(pl);
+  }
+
+  private async Task setPlayerBirthday(int iPlId, string sBirthday)
+  {
+    DateTime dtBirthday;
+    if (!DateTime.TryParse(sBirthday, out dtBirthday)) return;
+
+    CornerkickManager.Player? pl = CkAppShared.ckMng.ltPlayer.Find(p => p.plGame.iId == iPlId);
+    if (pl == null) return;
+
+    pl.plGame.dtBirthday = dtBirthday;
+    selected_player = await getPlayer(pl);
+
+    //getTableTeam(int.Parse(ltClubs[iClub].Value));
+  }
+
+  private async Task setPlayerNat(int iPlId, string sNatIx)
+  {
+    byte iNat;
+    if (!byte.TryParse(sNatIx, out iNat)) return;
+
+    CornerkickManager.Player? pl = CkAppShared.ckMng.ltPlayer.Find(p => p.plGame.iId == iPlId);
+    if (pl == null) return;
+
+    pl.iNat1 = iNat;
+    selected_player = await getPlayer(pl);
+  }
+
+  private async Task setPlayerHeight(int iPlId, string sHeight)
+  {
+    byte iHeight;
+    if (!byte.TryParse(sHeight, out iHeight)) return;
+
+    CornerkickManager.Player? pl = CkAppShared.ckMng.ltPlayer.Find(p => p.plGame.iId == iPlId);
+    if (pl == null) return;
+
+    pl.plGame.iHeight = iHeight;
+    selected_player = await getPlayer(pl);
+  }
+
+  private async Task setPlayerWeight(int iPlId, string sWeight)
+  {
+    byte iWeight;
+    if (!byte.TryParse(sWeight, out iWeight)) return;
+
+    CornerkickManager.Player? pl = CkAppShared.ckMng.ltPlayer.Find(p => p.plGame.iId == iPlId);
+    if (pl == null) return;
+
+    pl.plGame.iWeight = iWeight;
+    selected_player = await getPlayer(pl);
+  }
+
+  private async Task changePlayerClub(int iClubId)
+  {
+    if (selected_player == null) return;
+
+    CornerkickManager.Player? pl = CkAppShared.ckMng.ltPlayer.Find(p => p.plGame.iId == selected_player.iId);
+    if (pl == null) return;
+
+    CornerkickManager.Club? clb = CkAppShared.ckMng.ltClubs.Find(c => c.iId == iClubId);
+    pl.changeClub(clb, CkAppShared.ckMng.dtDatum, CkAppShared.ckMng.dtSeasonEnd);
+
+    if (selected_club != null) await getTableTeam(selected_club.iId);
+
+    selected_player = await getPlayer(pl);
+  }
+
+  private async Task setPlayerSkill(int iPlId, int iSkillIx, string sSkill)
+  {
+    int iSkill;
+    if (!int.TryParse(sSkill, out iSkill)) return;
+
+    await setPlayerSkill(iPlId, iSkillIx, iSkill);
+  }
+  private async Task setPlayerSkill(int iPlId, int iSkillIx, int iSkill)
+  {
+    if (iSkill < 1) return;
+
+    CornerkickManager.Player? pl = CkAppShared.ckMng.ltPlayer.Find(p => p.plGame.iId == iPlId);
+    if (pl?.plGame?.iSkill == null) return;
+    if (pl.plGame.iSkill.Length <= iSkillIx) return;
+
+    pl.plGame.iSkill[iSkillIx] = (byte)iSkill;
+    selected_player = await getPlayer(pl);
+  }
+
+  private async Task setPlayerTalent(int iPlId, int iTalentIx, string sTalent)
+  {
+    int iTalent;
+    if (!int.TryParse(sTalent, out iTalent)) return;
+
+    await setPlayerTalent(iPlId, iTalentIx, iTalent);
+  }
+  private async Task setPlayerTalent(int iPlId, int iTalentIx, int iTalent)
+  {
+    if (iTalent < 1) return;
+
+    CornerkickManager.Player? pl = CkAppShared.ckMng.ltPlayer.Find(p => p.plGame.iId == iPlId);
+    if (pl?.iTalent == null) return;
+    if (pl.iTalent.Length <= iTalentIx) return;
+
+    pl.iTalent[iTalentIx] = (byte)(iTalent - 1);
+    selected_player = await getPlayer(pl);
+  }
+
+  private async Task setPlayerPosition(int iPlId, int iPosIx, string sPos)
+  {
+    float fPos;
+    if (!float.TryParse(sPos, out fPos)) return;
+
+    await setPlayerPosition(iPlId, iPosIx, fPos);
+  }
+  private async Task setPlayerPosition(int iPlId, int iPosIx, float fPos)
+  {
+    CornerkickManager.Player? pl = CkAppShared.ckMng.ltPlayer.Find(p => p.plGame.iId == iPlId);
+    if (pl?.plGame?.fExperiencePos == null) return;
+    if (pl.plGame.fExperiencePos.Length <= iPosIx) return;
+
+    pl.plGame.fExperiencePos[iPosIx] = Math.Min(Math.Max(fPos, 0f), 1f);
+    selected_player = await getPlayer(pl);
+  }
+
+  private async Task setPlayerCharacter(int iPlId, int iType, string s)
+  {
+    float fChar;
+    if (!float.TryParse(s, out fChar)) return;
+
+    await setPlayerCharacter(iPlId, iType, fChar);
+  }
+  private async Task setPlayerCharacter(int iPlId, int iType, float fChar)
+  {
+    CornerkickManager.Player? pl = CkAppShared.ckMng.ltPlayer.Find(p => p.plGame.iId == iPlId);
+    if (pl?.character == null) return;
+
+    if      (iType == 0) pl.plGame.character.fLeader     = Math.Min(Math.Max(fChar, 0f), 2f);
+    else if (iType == 1) pl.plGame.character.fShoot      = Math.Min(Math.Max(fChar, 0f), 2f);
+    else if (iType == 2) pl.plGame.character.fPass       = Math.Min(Math.Max(fChar, 0f), 2f);
+    else if (iType == 3) pl.plGame.character.fDribbling  = Math.Min(Math.Max(fChar, 0f), 2f);
+    else if (iType == 4) pl.plGame.character.fFlexibel   = Math.Min(Math.Max(fChar, 0f), 2f);
+    else if (iType == 5) pl.plGame.character.fRobustness = Math.Min(Math.Max(fChar, 0f), 2f);
+    else if (iType == 6) pl.plGame.character.fCholeric   = Math.Min(Math.Max(fChar, 0f), 2f);
+    else if (iType == 7) pl.plGame.character.fMoney      = Math.Min(Math.Max(fChar, 0f), 2f);
+
+    selected_player = await getPlayer(pl);
+  }
+
+  private async Task setPlayerFoot(int iPlId, int iFoot, string sFoot)
+  {
+    float fFoot;
+    if (!float.TryParse(sFoot, out fFoot)) return;
+
+    await setPlayerFoot(iPlId, iFoot, fFoot);
+  }
+  private async Task setPlayerFoot(int iPlId, int iFoot, float fFoot)
+  {
+    CornerkickManager.Player? pl = CkAppShared.ckMng.ltPlayer.Find(p => p.plGame.iId == iPlId);
+    if (pl?.plGame == null) return;
+
+    if      (iFoot == 0) pl.plGame.fFootR = Math.Min(Math.Max(fFoot, 0f), 1f);
+    else if (iFoot == 1) pl.plGame.fFootL = Math.Min(Math.Max(fFoot, 0f), 1f);
+    selected_player = await getPlayer(pl);
+  }
+
+  private async Task SearchPlayer()
+  {
+    ltPlayerSearchResult = null;
+
+    if (string.IsNullOrEmpty(sPlayerSearchString)) return;
+
+    ltPlayerSearchResult = new List<Player>();
+
+    List<CornerkickManager.Player> ltPl = CkAppShared.ckMng.ltPlayer.FindAll(p => p.plGame.sName.Contains(sPlayerSearchString));
+    if (ltPl == null) return;
+    if (ltPl.Count < 1) return;
+
+    foreach (CornerkickManager.Player pl in ltPl) {
+      ltPlayerSearchResult.Add(new Player() {
+        iId = pl.plGame.iId,
+        sName = pl.plGame.sName,
+        dtBirthday = pl.plGame.dtBirthday,
+        iHp = pl.plGame.getMainPosition(),
+        sPos = CornerkickManager.PlayerTool.getStrPos(pl),
+        iClubId = pl.contract?.club == null ? -1 : pl.contract.club.iId,
+        iNat = pl.iNat1,
+      });
+    }
+  }
+
+  private async Task saveDatabase()
+  {
+    sClassDisabled = "disabled";
+    await InvokeAsync(StateHasChanged);
+
+    try {
+      DirectoryInfo d = new DirectoryInfo(Path.Combine(CornerkickApp.Controllers.App.getDocumentsDir, "database"));
+      if (!d.Exists) Directory.CreateDirectory(Path.Combine(CornerkickApp.Controllers.App.getDocumentsDir, "database"));
+
+      // Order cups
+      //CkAppShared.ckMng.ltCups = CkAppShared.ckMng.ltCups.OrderBy(c => c.iId2).ThenBy(c => c.iId3).ThenBy(c => c.iId).ToList();
+      CkAppShared.ckMng.ltCups = CkAppShared.ckMng.ltCups.OrderByDescending(c => c.iId).ThenBy(c => c.iId2).ThenBy(c => c.iId3).ToList();
+
+      // Order cup qualis
+      foreach (CornerkickManager.Cup c in CkAppShared.ckMng.ltCups) {
+        if (c.ltQualification != null) {
+          try{
+            c.ltQualification = c.ltQualification.OrderBy(q => q.cup.iId).ThenBy(q => q.cup.iId2).ThenBy(q => q.cup.iId3).ToList();
+          } catch {
+            Console.WriteLine("Error ordering cup qualification for cup: " + c.sName);
+          }
+        }
+      }
+
+      bool bParallel = false;
+      Progress<int[]>? progressIndicatorCount = null;
+      if (!bParallel) {
+        progressIndicatorCount = new Progress<int[]>(ReportProgressSaveDb);
+      }
+      string sFileExt = iFileFormat == 0 ? ".ckdbx" : "";
+      await CkAppShared.ckMng.io.saveAsync(Path.Combine(CornerkickApp.Controllers.App.getDocumentsDir, "database", dbfile2 + sFileExt), bDatabase: true, bParallel: bParallel, progress: progressIndicatorCount);
+      if (MainLayout.ckProgressBar != null) MainLayout.ckProgressBar.stop();
+
+      foreach (CornerkickApp.Services.Emblem ce in ltCupEmblem) {
+        if (ce?.bEmblem == null) continue;
+        string sFileParentDir = Path.Combine(CornerkickApp.Controllers.App.getMediaDir(dbfile2), "images", "cup_emblems");
+        CornerkickApp.Controllers.App.uploadFile(ce.bEmblem, sFileParentDir, ce.iId, iId2: ce.iId2, iId3: ce.iId3);
+      }
+
+      foreach (CornerkickApp.Services.Emblem ce in ltClubEmblem) {
+        if (ce?.bEmblem == null) continue;
+        string sFileParentDir = Path.Combine(CornerkickApp.Controllers.App.getMediaDir(dbfile2), "images", "emblems");
+        CornerkickApp.Controllers.App.uploadFile(ce.bEmblem, sFileParentDir, ce.iId);
+      }
+
+      foreach (CornerkickApp.Services.Emblem pp in ltPlayerPortrait) {
+        if (pp?.bEmblem == null) continue;
+        string sFileParentDir = Path.Combine(CornerkickApp.Controllers.App.getMediaDir(dbfile2), "images", "portraits");
+        CornerkickApp.Controllers.App.uploadFile(pp.bEmblem, sFileParentDir, pp.iId);
+      }
+
+      dbfile = dbfile2 + sFileExt;
+
+      if (MainLayout.ckToast != null) {
+        MainLayout.toastMessage = $"Datenbank: <b>{dbfile2}</b> gespeichert";
+        await MainLayout.ckToast.Show();
+      }
+      //await CommunityToolkit.Maui.Alerts.Toast.Make($"Datenbank: {dbfile2} gespeichert", ToastDuration.Long).Show();
+    } catch (Exception ex) {
+      string sError = "Error saving database: " + dbfile2 + ".ckdbx. Error message: " + ex.Message;
+
+      await CkDialog.ckDialog.Show(
+        "Fehler",
+        sError,
+        sButtonCancelText2: ""
+      );
+    }
+
+    sClassDisabled = "";
+    await InvokeAsync(StateHasChanged);
+  }
+
+  private async Task saveClubXml(Club clb)
+  {
+    await saveClubXml(clb.iId, clb.bNation);
+  }
+  private async Task saveClubXml(int iClubId, bool bNation)
+  {
+    CornerkickManager.Club? clb = CkAppShared.ckMng.ltClubs.Find(c => c.iId == iClubId);
+    if (clb == null) return;
+
+    bool bOk = CornerkickManager.IOXml.save_club(Path.Combine(CornerkickApp.Controllers.App.getDocumentsDir, "database", dbfile2, "Clubs"), clb);
+
+    if (MainLayout.ckToast != null) {
+      if (bOk) MainLayout.toastMessage = "Club <b>" + clb.sName + "</b> als XML gespeichert.";
+      else     MainLayout.toastMessage = "Fehler beim Speichern des Clubs <b>" + clb.sName + "</b> als XML.";
+      MainLayout.ckToast.Show();
+    }
+  }
+
+  private async Task savePlayerXml(int iPlId)
+  {
+    CornerkickManager.Player? pl = CkAppShared.ckMng.ltPlayer.Find(p => p.plGame.iId == iPlId);
+    if (pl == null) return;
+
+    bool bOk = CornerkickManager.IOXml.save_player(Path.Combine(CornerkickApp.Controllers.App.getDocumentsDir, "database", dbfile2, "Players"), pl);
+
+    if (MainLayout.ckToast != null) {
+      if (bOk) MainLayout.toastMessage = "Spieler <b>" + pl.plGame.sName + "</b> als XML gespeichert.";
+      else MainLayout.toastMessage = "Fehler beim Speichern des Spielers <b>" + pl.plGame.sName + "</b> als XML.";
+      MainLayout.ckToast.Show();
+    }
+  }
+
+  private async Task exportDatabaseXML()
+  {
+    string pickResult = await folderPickerService.PickFolderAsync();
+    if (string.IsNullOrEmpty(pickResult)) return;
+
+    bWorking = true;
+    await InvokeAsync(StateHasChanged);
+
+    string SelectedFolder;
+    string SelectedFolderName;
+
+    // Android-implementation liefert aktuell URI (content://...), andere Plattformen liefern Pfad
+    if (pickResult.StartsWith("content://")) {
+      SelectedFolder = pickResult;
+      // robustere Extraktion des letzten Segments
+      var idx = pickResult.LastIndexOf("%2F");
+      SelectedFolderName = idx >= 0 ? pickResult[(idx + 3)..] : pickResult;
+    } else {
+      SelectedFolder = pickResult;
+      SelectedFolderName = Path.GetFileName(SelectedFolder);
+    }
+
+    await CkAppShared.ckMng.io.saveAsync(Path.Combine(SelectedFolder, dbfile2 + ".xml"), bDatabase: true);
+  }
+
+  private async Task importDb(FileChangedEventArgs e)
+  {
+    CancellationTokenSource source = new();
+    CancellationToken token = source.Token;
+
+    bool bUpdateAll = false;
+    bool bUpdatePlayer = false;
+    CornerkickManager.Player? pl_read_xml = null;
+
+    foreach (var file in e.Files) {
+      try {
+        // A stream is going to be the destination stream we're writing to.
+        await using (var stream = new MemoryStream()) {
+          // Here we're telling the FileEdit where to write the upload result
+          await file.WriteToStreamAsync(stream);
+
+          // Once we reach this line it means the file is fully uploaded.
+          // In this case we're going to offset to the beginning of file
+          // so we can read it.
+          stream.Seek(0, SeekOrigin.Begin);
+
+          string sDbTmpDir = Path.Combine(Controllers.App.getDocumentsDir, "database");
+          string sDbFilename = Path.Combine(sDbTmpDir, Path.GetFileName(file.Name));
+          if (!Directory.Exists(sDbTmpDir)) Directory.CreateDirectory(sDbTmpDir);
+          using (FileStream DestinationStream = File.Create(sDbFilename)) {
+            await stream.CopyToAsync(DestinationStream);
+          }
+
+          Progress<int[]> progressIndicator = new Progress<int[]>(ReportProgressImportDb);
+
+          int processCount = await Task.Run<int>(() => {
+            int iCount = 0;
+
+            if (file.Name.StartsWith("Player") && file.Name.EndsWith(".xml")) {
+              CkAppShared.ckMng.io.ioxml.read_player(sDbFilename, out pl_read_xml);
+            } else {
+              CkAppShared.ckMng.io.loadAsync(sDbFilename, bDatabase: true, progress: progressIndicator).Wait();
+            }
+
+            return iCount;
+          });
+
+          // Delete xml format database file after import
+          if (sDbFilename.EndsWith(".xml") || sDbFilename.EndsWith(".xml.zip")) File.Delete(sDbFilename);
+
+          if (file.Name.EndsWith(".ckdbx") || file.Name.EndsWith(".zip")) {
+            bUpdateAll = true;
+          } else if (file.Name.EndsWith(".xml")) {
+            if (file.Name.StartsWith("Player")) bUpdatePlayer = true;
+          }
+        }
+      } catch (Exception ex) {
+        Console.WriteLine(ex.Message);
+
+        string sError = "File: " + file.Name + " Error: " + ex.Message;
+
+        await CkDialog.ckDialog.Show(
+          "Fehler",
+          sError,
+          sButtonCancelText2: ""
+        );
+      }
+    }
+
+    if (MainLayout.ckProgressBar != null) MainLayout.ckProgressBar.stop();
+
+    if (bUpdateAll) {
+      if (string.IsNullOrEmpty(dbfile2)) dbfile2 = CkAppShared.ckMng.sDatabaseName;
+      await update();
+    } else if (pl_read_xml != null) {
+      await selectPlayer(pl_read_xml);
+    }
+    await InvokeAsync(StateHasChanged);
+  }
+  
+  private void ReportProgressImportDb(int[] value)
+  {
+    iProgress = (100 * value[0]) / value[1];
+    if (MainLayout.ckProgressBar != null) MainLayout.ckProgressBar.update(iProgress, "Lade Datenbank ... " + iProgress.ToString("0") + "%");
+
+    //Update the UI to reflect the progress value that is passed back.
+    //StateHasChanged();
+  }
+
+  readonly static string[] progressMessages = new string[] {
+    "General",
+    "User",
+    "Vereine",
+    "Spieler",
+    "Cups",
+    "Transferliste"
+  };
+  private void ReportProgressSaveDb(int[] value)
+  {
+    iProgress = (100 * value[0]) / value[1];
+    if (MainLayout.ckProgressBar != null) MainLayout.ckProgressBar.update(iProgress, "Speichere Datenbank " + progressMessages[2] + " ... " + iProgress.ToString("0") + "%");
+
+    //Update the UI to reflect the progress value that is passed back.
+    //StateHasChanged();
+  }
+
+  private void goBack()
+  {
+    CkAppShared.ckMng = new CornerkickManager.Main();
+    NavigationManager.NavigateTo("/database");
+  }
+
+  void OnWritten(FileWrittenEventArgs e)
+  {
+    Console.WriteLine($"File: {e.File.Name} Position: {e.Position} Data: {Convert.ToBase64String(e.Data)}");
+  }
+
+  void OnProgressed(FileProgressedEventArgs e)
+  {
+    sProgressInfo = $"Importiere Datenbank {e.File.Name.Replace(".ckdbx", "")} ... {e.Percentage.ToString("0.0")}%";
+    Console.WriteLine(sProgressInfo);
+    iProgress = (int)e.Percentage;
+    if (MainLayout.ckProgressBar != null) MainLayout.ckProgressBar.update(iProgress, sProgressInfo);
+  }
+
+  void OnEnded(FileEndedEventArgs e)
+  {
+    Console.WriteLine($"Datenbank {e.File.Name.Replace(".ckdbx", "")} importiert");
+    iProgress = -1;
+    sProgressInfo = "";
+    if (MainLayout.ckProgressBar != null) MainLayout.ckProgressBar.stop();
+  }
+
+}

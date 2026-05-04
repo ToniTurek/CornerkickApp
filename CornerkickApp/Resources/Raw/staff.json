@@ -1,0 +1,138 @@
+{
+  "staff": [
+    {
+      "name": "Med",
+      "doctors": [
+        {
+          "name": "Dr. med. Harry Knochenbrecher",
+          "skill_muscle": 1,
+          "skill_tendons": 2,
+          "skill_fracture": 5,
+          "skill_internist": 0
+        },
+        {
+          "name": "Dr. Acula",
+          "skill_muscle": 4,
+          "skill_tendons": 2,
+          "skill_fracture": 1,
+          "skill_internist": 3
+        },
+        {
+          "name": "Fr. Susanne Kotzübel",
+          "skill_muscle": 3,
+          "skill_tendons": 2,
+          "skill_fracture": 0,
+          "skill_internist": 4
+        },
+        {
+          "name": "Dr. Thomas Magentod",
+          "skill_muscle": 2,
+          "skill_tendons": 3,
+          "skill_fracture": 1,
+          "skill_internist": 2
+        },
+        {
+          "name": "Dr. med. Heiko Fieber",
+          "skill_muscle": 2,
+          "skill_tendons": 1,
+          "skill_fracture": 1,
+          "skill_internist": 5
+        },
+        {
+          "name": "Dr. Jens Sorgenicht",
+          "skill_muscle": 4,
+          "skill_tendons": 5,
+          "skill_fracture": 3,
+          "skill_internist": 4
+        },
+        {
+          "name": "Dr. med. Ulrich von Hinüber",
+          "skill_muscle": 2,
+          "skill_tendons": 2,
+          "skill_fracture": 3,
+          "skill_internist": 1
+        },
+        {
+          "name": "Dr. Achim Krumbein",
+          "skill_muscle": 3,
+          "skill_tendons": 4,
+          "skill_fracture": 4,
+          "skill_internist": 2
+        },
+        {
+          "name": "Dr. med. Viola Wohlauf",
+          "skill_muscle": 4,
+          "skill_tendons": 4,
+          "skill_fracture": 3,
+          "skill_internist": 5
+        },
+        {
+          "name": "Dr. Eufemiano Fuentes",
+          "skill_muscle": 2,
+          "skill_tendons": 1,
+          "skill_fracture": 1,
+          "skill_internist": 3,
+          "doping": true
+        }
+      ]
+    },
+    {
+      "name": "Scout",
+      "scouts": [
+        {
+          "name": "Achim Sehnix",
+          "skill": 1,
+          "skill_data_per_scouting": 11
+        },
+        {
+          "name": "Martin Blind",
+          "skill": 2,
+          "skill_data_per_scouting": 7
+        },
+        {
+          "name": "Jens Star",
+          "skill": 3,
+          "skill_data_per_scouting": 9
+        },
+        {
+          "name": "Sandra Spaeher",
+          "skill": 4,
+          "skill_data_per_scouting": 8
+        },
+        {
+          "name": "Horst Schieler",
+          "skill": 4,
+          "skill_data_per_scouting": 10
+        },
+        {
+          "name": "Jonathan Schnüffler",
+          "skill": 5,
+          "skill_data_per_scouting": 6
+        },
+        {
+          "name": "Monika Sucher",
+          "skill": 6,
+          "skill_data_per_scouting": 4
+        },
+        {
+          "name": "Vincent Adlerauge",
+          "skill": 7,
+          "skill_data_per_scouting": 4
+        },
+        {
+          "name": "Benjamin Brille",
+          "skill": 3,
+          "skill_data_per_scouting": 2,
+          "freelancer": true
+        },
+        {
+          "name": "Daniel Dioptrie",
+          "skill": 6,
+          "skill_data_per_scouting": 3,
+          "freelancer": true
+        }
+      ]
+    }
+
+  ]
+}

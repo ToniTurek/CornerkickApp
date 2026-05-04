@@ -1,0 +1,35 @@
+﻿@if (rfStars != null) {
+  <div title="@sUserRespLvlName">
+    <a href="/member/user">@rfStars</a>
+  </div>
+}
+
+@code {
+  private RenderFragment? rfStars;
+  private string sUserRespLvlName = "unbekannt";
+
+  public async Task updateStars(CornerkickManager.User _usr)
+  {
+    if (_usr == null) return;
+    updateStars(_usr.iResp);
+  }
+  async Task updateStars(int iUserRespLvl)
+  {
+    sUserRespLvlName = iUserRespLvl >= 0 && iUserRespLvl < CornerkickManager.Names.sUserRespLvlNames.Length ? CornerkickManager.Names.sUserRespLvlNames[iUserRespLvl] : "unbekannt";
+    rfStars = Controllers.Tool.createStars(iUserRespLvl, iStarsMax: 4, iStarSizePx: 24, bRound: false);
+    await InvokeAsync(StateHasChanged);
+  }
+  public async Task updateStarsFlicker(int iUserRespLvl)
+  {
+    for (int i = 0; i < 3; i++) {
+      await updateStars(iUserRespLvl);
+      await Task.Delay(500);
+
+      await updateStars(iUserRespLvl - 1);
+      await Task.Delay(500);
+    }
+
+    await updateStars(iUserRespLvl);
+  }
+
+}

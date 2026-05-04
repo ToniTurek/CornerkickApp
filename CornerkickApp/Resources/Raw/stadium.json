@@ -1,0 +1,18 @@
+{
+  "block_type_names": [ "Stehpl.", "Sitzpl.", "Logen" ],
+  "facility": {
+    "video": {
+      "name": "Video",
+      "level_names": [ "keine", "Zifferntafeln", "Kleine digitale Anzeige", "Große digitale Anzeige", "Videoleinwand", "Riesige Videoleinwand", "Riesiger Videowürfel" ],
+      "costs": [ 0, 150000, 400000, 2000000, 10000000, 25000000, 60000000 ],
+      "construct": [ 0, 3, 7, 14, 25, 40, 90 ]
+    },
+    "security": {
+      "name": "Sicherheitsausstattung",
+      "level_names": [ "keine", "Zaun um Anlage", "Videoüberwachung", "Separater Gästeblock", "Metalldetektoren", "Integrierte Polizeiwache" ],
+      "costs": [ 0, 1500000, 4000000, 10000000, 25000000, 60000000 ],
+      "construct": [ 0, 14, 25, 40, 90, 200 ]
+    }
+
+  }
+}

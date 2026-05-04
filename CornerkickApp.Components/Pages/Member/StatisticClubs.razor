@@ -1,0 +1,231 @@
+﻿@page "/member/statisticclubs"
+
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using CornerkickApp.Shared.Models
+@inject IJSRuntime JS
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject Controllers.Shared.MyAuthenticationStateProvider _auth
+
+<PageTitle>Statistik Vereine</PageTitle>
+
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    tfoot {
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+  <h3 style="position: relative; margin-top: 30px">Mannschaftsübersicht</h3>
+  <div style="position: relative; width: fit-content; max-width: 100%">
+    <div style="margin-bottom: 12px; margin-right: 12px; display: flex; flex-wrap: wrap">
+      <Blazorise.Select TValue="int" SelectedValue="@model.iLand" SelectedValueChanged="@setLeagues" Style="width: auto; margin-bottom: 6px; margin-right: 6px">
+        @foreach (LayoutModel.SelectListItem sli in sliCountries) {
+          <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+        }
+      </Blazorise.Select>
+      <Blazorise.Select TValue="int" SelectedValue="@model.iDivision" SelectedValueChanged="getTableClubs" Style="width: auto; margin-bottom: 6px">
+        @foreach (LayoutModel.SelectListItem sli in sliLeagues) {
+          <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+        }
+      </Blazorise.Select>
+    </div>
+
+    <div style="width: 100%; overflow-x: auto; margin-bottom: 4px">
+      <DataGrid @ref="dgClubs"
+                TItem="StatisticModel.TableEntryTeams"
+                Data="@ltClubs"
+                Style="white-space: nowrap; margin: 0"
+                PageSize="100"
+                Narrow
+                Striped
+                Responsive
+                Sortable
+                SortMode="DataGridSortMode.Single">
+        <DataGridAggregates>
+          <DataGridAggregate Field="@nameof(StatisticModel.TableEntryTeams.sTeamName)" Aggregate="DataGridAggregateType.None">
+            <DisplayTemplate>
+              @("Durchschnitt:")
+            </DisplayTemplate>
+          </DataGridAggregate>
+          <DataGridAggregate Field="@nameof(StatisticModel.TableEntryTeams.fTeamAveSkill)"     Aggregate="DataGridAggregateType.Average" DisplayFormat="{0:N1}" />
+          <DataGridAggregate Field="@nameof(StatisticModel.TableEntryTeams.fTeamAveAge)"       Aggregate="DataGridAggregateType.Average" DisplayFormat="{0:N1}" />
+          <DataGridAggregate Field="@nameof(StatisticModel.TableEntryTeams.iTeamValueTotal)"   Aggregate="DataGridAggregateType.Average" DisplayFormat="{0:N0}" />
+          <DataGridAggregate Field="@nameof(StatisticModel.TableEntryTeams.nPlayer)"           Aggregate="DataGridAggregateType.Average" DisplayFormat="{0:N0}" />
+          <DataGridAggregate Field="@nameof(StatisticModel.TableEntryTeams.fTeamAveSkill11)"   Aggregate="DataGridAggregateType.Average" DisplayFormat="{0:N1}" />
+          <DataGridAggregate Field="@nameof(StatisticModel.TableEntryTeams.fTeamAveAge11)"     Aggregate="DataGridAggregateType.Average" DisplayFormat="{0:N1}" />
+          <DataGridAggregate Field="@nameof(StatisticModel.TableEntryTeams.iTeamValueTotal11)" Aggregate="DataGridAggregateType.Average" DisplayFormat="{0:N0}" />
+          <DataGridAggregate Field="@nameof(StatisticModel.TableEntryTeams.fAttrFactor)"       Aggregate="DataGridAggregateType.Average" DisplayFormat="{0:N1}" />
+        </DataGridAggregates>
+        <ChildContent>
+          <DataGridColumn Field="@nameof(StatisticModel.TableEntryTeams.iTeamId)" Sortable="false">
+            <DisplayTemplate>
+              @((MarkupString)context.sEmblem)
+            </DisplayTemplate>
+          </DataGridColumn>
+          <DataGridColumn Field="@nameof(StatisticModel.TableEntryTeams.sTeamName)" Caption="Name" TextAlignment="Blazorise.TextAlignment.Center">
+            <DisplayTemplate>
+              <a href="/member/club/@context.iTeamId" style="text-decoration: none">
+                @((MarkupString)context.sTeamName)
+              </a>
+            </DisplayTemplate>
+          </DataGridColumn>
+          <DataGridColumn Field="@nameof(StatisticModel.TableEntryTeams.fTeamAveSkill)" Caption="∅-Stärke" DisplayFormat="{0:N1}" TextAlignment="Blazorise.TextAlignment.Center" />
+          <DataGridColumn Field="@nameof(StatisticModel.TableEntryTeams.fTeamAveAge)" Caption="∅-Alter" DisplayFormat="{0:N1}" TextAlignment="Blazorise.TextAlignment.Center" />
+          <DataGridColumn Field="@nameof(StatisticModel.TableEntryTeams.iTeamValueTotal)" Caption="∅-MW" DisplayFormat="{0:N0}" TextAlignment="Blazorise.TextAlignment.End" />
+          <DataGridColumn Field="@nameof(StatisticModel.TableEntryTeams.nPlayer)" Caption="Spieler" TextAlignment="Blazorise.TextAlignment.Center" />
+          <DataGridColumn Field="@nameof(StatisticModel.TableEntryTeams.fTeamAveSkill11)" Caption="∅-Stärke Startelf" DisplayFormat="{0:N1}" TextAlignment="Blazorise.TextAlignment.Center" />
+          <DataGridColumn Field="@nameof(StatisticModel.TableEntryTeams.fTeamAveAge11)" Caption="∅-Alter Startelf" DisplayFormat="{0:N1}" TextAlignment="Blazorise.TextAlignment.Center" />
+          <DataGridColumn Field="@nameof(StatisticModel.TableEntryTeams.iTeamValueTotal11)" Caption="∅-MW Startelf" DisplayFormat="{0:N0}" TextAlignment="Blazorise.TextAlignment.End" />
+          <DataGridColumn Field="@nameof(StatisticModel.TableEntryTeams.fAttrFactor)" Caption="Erfolgsfaktor" DisplayFormat="{0:N1}" TextAlignment="Blazorise.TextAlignment.End" />
+          <DataGridColumn Field="@nameof(StatisticModel.TableEntryTeams.sLeague)" Caption="Liga" TextAlignment="Blazorise.TextAlignment.Center" Sortable="false" />
+        </ChildContent>
+        <EmptyTemplate>
+          <div class="box">
+            Keine Vereine ...
+          </div>
+        </EmptyTemplate>
+        <LoadingTemplate>
+          <div class="box">
+            <progress class="progress is-small is-primary" max="100" />
+          </div>
+        </LoadingTemplate>
+      </DataGrid>
+    </div>
+  </div>
+
+  <div style="position: relative">
+    <h3 style="position: relative; margin-top: 30px">Größte Stadien</h3>
+
+    <div style="width: fit-content; max-width: 100%; overflow-x: auto; margin-bottom: 4px">
+      <DataGrid @ref="dgStadiums"
+                TItem="StatisticModel.TableEntryStadiums"
+                Data="@ltStadiums"
+                Style="white-space: nowrap; margin: 0"
+                PageSize="20"
+                Narrow
+                Striped
+                Responsive
+                Sortable
+                SortMode="DataGridSortMode.Single">
+        <ChildContent>
+          <DataGridColumn Field="@nameof(StatisticModel.TableEntryStadiums.iIx)" Caption="#" TextAlignment="Blazorise.TextAlignment.End" />
+          <DataGridColumn Field="@nameof(StatisticModel.TableEntryStadiums.sName)" Caption="Name" TextAlignment="Blazorise.TextAlignment.Center" />
+          <DataGridColumn Field="@nameof(StatisticModel.TableEntryStadiums.iType0)" Caption="Kapazität (im Bau)" TextAlignment="Blazorise.TextAlignment.End">
+            <DisplayTemplate>
+              @(context.iTotal.ToString("N0") + (context.iTotalCtn > 0 ? context.iTotalCtn.ToString(" (N0)") : ""))
+            </DisplayTemplate>
+          </DataGridColumn>
+          <DataGridColumn Field="@nameof(StatisticModel.TableEntryStadiums.iType0)" Caption="Stehpl." TextAlignment="Blazorise.TextAlignment.End">
+            <DisplayTemplate>
+              @(context.iType0.ToString("N0") + (context.iType0Ctn > 0 ? context.iType0Ctn.ToString(" (N0)") : ""))
+            </DisplayTemplate>
+          </DataGridColumn>
+          <DataGridColumn Field="@nameof(StatisticModel.TableEntryStadiums.iType0)" Caption="Sitzpl." TextAlignment="Blazorise.TextAlignment.End">
+            <DisplayTemplate>
+              @(context.iType1.ToString("N0") + (context.iType1Ctn > 0 ? context.iType1Ctn.ToString(" (N0)") : ""))
+            </DisplayTemplate>
+          </DataGridColumn>
+          <DataGridColumn Field="@nameof(StatisticModel.TableEntryStadiums.iType0)" Caption="VIP Pl." TextAlignment="Blazorise.TextAlignment.End">
+            <DisplayTemplate>
+              @(context.iType2.ToString("N0") + (context.iType2Ctn > 0 ? context.iType2Ctn.ToString(" (N0)") : ""))
+            </DisplayTemplate>
+          </DataGridColumn>
+          <DataGridColumn Field="@nameof(StatisticModel.TableEntryStadiums.bTopring)" Caption="Oberring" TextAlignment="Blazorise.TextAlignment.Center">
+            <DisplayTemplate>
+              @((context.bTopring ? "X" : "-"))
+            </DisplayTemplate>
+          </DataGridColumn>
+          <DataGridColumn Field="@nameof(StatisticModel.TableEntryStadiums.sClubName)" Caption="Heimatverein" TextAlignment="Blazorise.TextAlignment.Center" />
+        </ChildContent>
+        <EmptyTemplate>
+          <div class="box">
+            Keine Vereine ...
+          </div>
+        </EmptyTemplate>
+        <LoadingTemplate>
+          <div class="box">
+            <progress class="progress is-small is-primary" max="100" />
+          </div>
+        </LoadingTemplate>
+      </DataGrid>
+    </div>
+  </div>
+</body>
+</html>
+
+@code {
+  private CornerkickManager.User? _usr;
+  private StatisticModel model = new StatisticModel();
+
+  MainLayout.BrowserDimension? bd { get; set; }
+
+  List<LayoutModel.SelectListItem> sliCountries = new List<LayoutModel.SelectListItem>();
+  List<LayoutModel.SelectListItem> sliLeagues = new List<LayoutModel.SelectListItem>();
+
+  private DataGrid<StatisticModel.TableEntryTeams>? dgClubs;
+  List<StatisticModel.TableEntryTeams> ltClubs { get; set; } = new List<StatisticModel.TableEntryTeams>();
+
+  private DataGrid<StatisticModel.TableEntryStadiums>? dgStadiums;
+  List<StatisticModel.TableEntryStadiums> ltStadiums { get; set; } = new List<StatisticModel.TableEntryStadiums>();
+
+  protected override async Task OnInitializedAsync()
+  {
+    await base.OnInitializedAsync();
+
+#if _WebApp
+    //_usr = await Http.GetFromJsonAsync<CornerkickManager.User>("member/Member/ckUser");
+    _usr = Controllers.Member.MemberController.ckUser(await _auth.GetUserId());
+#else
+    _usr = CkAppShared.ckMng.ltUser[CkAppShared.iUserActive];
+#endif
+
+    model = CornerkickApp.Controllers.Member.StatisticController.Get(_usr);
+    if (model != null) {
+      setCountries();
+      getTableClubs(model.iDivision);
+      ltStadiums = Controllers.Member.StatisticController.GetStadiumsTable();
+#if _WebApp
+    } else {
+      NavigationManager.NavigateTo("/authentication/register");
+#endif
+    }
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender) {
+      if (model != null) {
+        MainLayout.BrowserService browserService = new MainLayout.BrowserService(JS);
+        bd = await browserService.GetDimensions();
+
+        if (dgClubs != null) await dgClubs.ApplySorting(new DataGridSortColumnInfo(nameof(StatisticModel.TableEntryTeams.fTeamAveSkill), Blazorise.SortDirection.Descending));
+      }
+    }
+  }
+
+  protected async Task setCountries()
+  {
+    sliCountries = await CornerkickApp.Controllers.Tool.getCountries();
+    await setLeagues(model.iLand);
+  }
+
+  protected async Task setLeagues(int jLand)
+  {
+    model.iLand = jLand;
+    sliLeagues = await CornerkickApp.Controllers.Tool.getLeagues(model.iLand);
+  }
+  
+  protected Task getTableClubs(int jDivision)
+  {
+    model.iDivision = jDivision;
+    ltClubs = Controllers.Member.StatisticController.GetTableTeams(model.iLand, model.iDivision);
+    return Task.CompletedTask;
+  }
+
+}

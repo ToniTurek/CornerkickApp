@@ -1,0 +1,62 @@
+﻿@using CornerkickApp.Shared.Models
+
+@inject DialogService DialogService
+
+<RadzenTemplateForm TItem="CalendarModel.Appointment" Data="@model" Submit=@OnSubmit>
+  <RadzenStack Gap="1rem">
+    <RadzenStack Orientation="Radzen.Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" Gap="0.5rem" class="rz-p-sm-12">
+      <RadzenLabel Text="Bitte auswählen:" Component="DropDownBindValue" />
+      <RadzenDropDown @bind-Value=@selected_option Data=@options Style="width: 100%; max-width: 400px;" Name="DropDownBindValue" />
+    </RadzenStack>
+    <RadzenStack Orientation="Radzen.Orientation.Horizontal" AlignItems="Radzen.AlignItems.Center" Wrap="Radzen.FlexWrap.Wrap">
+      <RadzenLabel Text="Dein Titel" Style="width: 6rem;" />
+      <RadzenTextBox @bind-Value="@model.sTitle" Name="sTitle" Style="width: 12rem;" />
+      <RadzenRequiredValidator Component="sTitle" Text="Title is required" />
+    </RadzenStack>
+    <RadzenStack Orientation="Radzen.Orientation.Horizontal" AlignItems="Radzen.AlignItems.Center" Wrap="Radzen.FlexWrap.Wrap">
+      <RadzenLabel Text="dtStart" Style="width: 6rem;" />
+      <RadzenDatePicker @bind-Value="@model.dtStart" Name="dtStart" ShowTime="true" Style="width: 12rem;" />
+      <RadzenRequiredValidator Component="dtStart" Text="Start is required" />
+    </RadzenStack>
+    <RadzenStack Orientation="Radzen.Orientation.Horizontal" AlignItems="Radzen.AlignItems.Center" Wrap="Radzen.FlexWrap.Wrap">
+      <RadzenLabel Text="dtEnd" Style="width: 6rem;" />
+      <RadzenDatePicker Name="dtEnd" @bind-Value="@model.dtEnd" ShowTime="true" Style="width: 12rem;" />
+      <RadzenRequiredValidator Component="dtEnd" Text="End is required" />
+    </RadzenStack>
+    <RadzenStack Orientation="Radzen.Orientation.Horizontal" JustifyContent="Radzen.JustifyContent.End">
+      <RadzenButton ButtonType="Radzen.ButtonType.Submit" Text="Save" />
+    </RadzenStack>
+  </RadzenStack>
+</RadzenTemplateForm>
+
+@code {
+  [Parameter]
+  public CalendarModel.Appointment Appointment { get; set; }
+
+  CalendarModel.Appointment model = new CalendarModel.Appointment();
+
+  IEnumerable<string> options = new List<string>() {
+      "Testspiel vereinbaren",
+      "Trainingslager planen",
+      "Ereignis planen",
+      "Mit Spieler sprechen"
+    };
+  string selected_option = "";
+
+  protected override async Task OnInitializedAsync()
+  {
+    await base.OnInitializedAsync();
+
+    selected_option = options.First();
+  }
+
+  protected override void OnParametersSet()
+  {
+    model = Appointment;
+  }
+
+  void OnSubmit(CalendarModel.Appointment model)
+  {
+    DialogService.Close(model);
+  }
+}

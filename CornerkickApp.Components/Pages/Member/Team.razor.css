@@ -1,0 +1,143 @@
+#divBody {
+  display: flex;
+  flex-wrap: wrap;
+  width: 100%;
+  height: calc(100vh - 8rem);
+}
+
+#divFieldContainer {
+  height: 100%;
+  min-height: 500px;
+  position: relative;
+  width: min-content;
+  margin-right: 10px;
+  margin-bottom: 10px;
+  overflow: hidden;
+  border-style: ridge;
+  border-width: 4px;
+  border-color: lightgray;
+}
+
+#selectFormationOffenceContainer {
+  position: absolute;
+  top: 5px;
+  width: fit-content;
+  right: 6px;
+  z-index: 3;
+  white-space: nowrap;
+  font-size: 120%;
+  background-color: white;
+  border: 2px solid black;
+  -webkit-border-radius: 10px;
+  -moz-border-radius: 10px;
+}
+
+.position-info {
+  position: absolute;
+  left: 0;
+  top: 0;
+  background-color: white;
+  padding-left: 4px;
+  padding-right: 4px;
+  border-style: outset;
+  border-width: 2px;
+  border-color: lightgray;
+  z-index: 2;
+}
+
+text.kibitzer {
+  color: white;
+  font-size: 140%
+}
+
+.transparent {
+  opacity: 0.5 !important;
+}
+
+span.nboffence {
+  font-weight: bold;
+}
+
+div.substitution-container {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+}
+
+div.substitution-container-buttons {
+  display: flex;
+  flex-direction: column;
+  height: fit-content;
+  gap: 4px;
+}
+
+.vertical_spacer {
+  display: none;
+}
+
+.tutorial-spacer-team {
+  display: none;
+}
+
+@media (max-width: 640.98px) {
+  body {
+    height: calc(100vh - 5rem - 16rem - 1.2rem);
+  }
+
+  #divBody {
+    position: fixed;
+    top: 5rem;
+    left: 0;
+    height: calc(100vh - 5rem);
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  #divFieldContainer {
+    height: auto;
+    margin-right: 0;
+  }
+
+  .position-info {
+    position: fixed;
+    left: 0;
+    top: 5rem;
+  }
+
+  #selectFormationOffenceContainer {
+    top: 0;
+    right: 0;
+    width: min-content;
+    font-size: 100%;
+  }
+
+  span.nboffence {
+    font-weight: normal;
+  }
+
+  div.substitution-container {
+    flex-direction: column;
+  }
+
+  div.substitution-container-buttons {
+    flex-direction: row;
+    margin-top: 4px;
+  }
+
+  .vertical_spacer {
+    display: block;
+    position: relative;
+    height: 20px;
+  }
+
+  .tutorial-spacer-team {
+    display: block;
+    height: 16rem;
+  }
+}
+
+@media (min-width: 640.98px) {
+  div.table_container {
+    min-width: 454px;
+  }
+}

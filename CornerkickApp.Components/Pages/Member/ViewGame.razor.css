@@ -1,0 +1,133 @@
+/*
+div#header {
+  position: absolute;
+  top: 100px;
+}
+
+@media (max-scroll: 100px 0) {
+  div#header {
+    position: fixed;
+    top: 0;
+  }
+}
+*/
+#slider {
+  margin: 10px;
+}
+
+.ui-slider-horizontal {
+  height: calc(20px * var(--ckRelSize));
+  width: 100%;
+}
+
+.ui-slider .ui-slider-handle {
+  height: calc(26px * var(--ckRelSize));
+  width: calc(10px * var(--ckRelSize));
+  padding-left: 0px;
+}
+
+#divTimeline {
+  height: calc((26px * var(--ckRelSize)) + 38px);
+}
+
+#slider-Minute .ui-slider-range {
+  background: orange;
+}
+
+#slider-Minute .ui-slider-handle {
+  border-color: orange;
+}
+
+#body {
+  position: relative;
+  width: 100%;
+}
+
+.emblem {
+  position: absolute;
+  width: 4%;
+  height: 60%;
+  top: 20%;
+}
+
+button.continue {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: larger;
+  margin-top: 4px;
+}
+
+#divContainer {
+  position: relative;
+  width: 100%;
+  max-width: 1200px;
+}
+
+.disabledDiv {
+  pointer-events: none;
+}
+
+.statistictable {
+  margin-right: 12px;
+  margin-bottom: 12px;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow-x: auto;
+}
+/*
+#divPlotStatistics {
+  height: calc(350px * var(--ckRelSize));
+}
+*/
+
+.scouting-row-details {
+  text-align: center;
+  white-space: nowrap;
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: 2px;
+  padding-right: 2px;
+}
+
+th.scouting-row-details {
+  font-size: 100%;
+}
+
+td.scouting-row-details {
+  font-size: 75%;
+}
+
+@media (max-width: 640.98px) {
+  .emblem {
+    height: 40%;
+    top: 0;
+  }
+
+  #body {
+    position: fixed;
+    height: -webkit-fill-available;
+    top: 5.1rem;
+    left: 0;
+    margin: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  button.continue {
+    font-size: medium;
+    padding: 0;
+  }
+
+  th.scouting-row-details {
+    font-size: 90%;
+  }
+
+  td.scouting-row-details {
+    font-size: 60%;
+  }
+
+  span.player-name {
+    display: none;
+  }
+}

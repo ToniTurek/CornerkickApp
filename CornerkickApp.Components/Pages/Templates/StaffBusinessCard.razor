@@ -1,0 +1,375 @@
+﻿@using CornerkickApp.Shared.Models
+@using CornerkickApp.Components.Shared.Components
+@inject IJSRuntime JS
+
+<head>
+  <link rel="stylesheet" href="./_content/CornerkickApp.Components/css/StaffBusinessCard.css" />
+</head>
+
+@if (Doc != null) {
+  getName();
+  plotStaffStars();
+
+  <div class="businesscard">
+    <div class="name">
+      @sFirstname <b>@sSurname</b>
+    </div>
+    @if (Doc.bDoping && Editable && !Free) {
+      <button type="button" class="btn btn-outline-secondary" style="position: absolute; right: 1rem; top: 1rem; width: 38px; height: 38px; padding: 4px; background-image: url(@CkAppShared.sContentDir/Icons/doping.png); background-repeat: no-repeat; background-size: contain" @onclick=ShowModal></button>
+    }
+    <div class="portrait">
+      <img src="@CkAppShared.sContentDir/Images/portraits/doctors/@(Doc.iId.ToString()).png" alt="Portrait" style="width:100%" title="@Doc.sName">
+    </div>
+    <div class="skills">
+      <table>
+        <tbody>
+          <tr>
+            <td class="lblSkill">Muskeln:</td>
+            <td style="white-space: nowrap">@rfStars[0]</td>
+          </tr>
+          <tr>
+            <td class="lblSkill">Bänder/Kn.:</td>
+            <td style="white-space: nowrap">@rfStars[1]</td>
+          </tr>
+          <tr>
+            <td class="lblSkill">Brüche:</td>
+            <td style="white-space: nowrap">@rfStars[2]</td>
+          </tr>
+          <tr>
+            <td class="lblSkill">Internist.:</td>
+            <td style="white-space: nowrap">@rfStars[3]</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    @if (Editable) {
+      <button type="button" class="btn btn-outline-secondary" style="position: absolute; left: 5%; bottom: 3%; width: auto;" @onclick="Free ? hireDr : fireDr">
+        @if (Free) {
+          <img width="26" height="26" style="margin-right: 6px;" src="@CkAppShared.sContentDir/Icons/plus.png">
+          <span>Arzt einstellen</span>
+        } else {
+          <img width="26" height="26" style="margin-right: 6px;" src="@CkAppShared.sContentDir/Icons/minus.png">
+          <span>Arzt kündigen</span>
+        }
+      </button>
+      <div style="position: absolute; bottom: 7%; left: 56%;"><b>Gehalt:</b> @Doc.getSalary().ToString("N0", System.Globalization.CultureInfo.CurrentCulture) €</div>
+    }
+  </div>
+
+  @if (Doc.bDoping) {
+    <Blazorise.Modal @ref="modalDoping">
+      <Blazorise.ModalContent Centered>
+        <Blazorise.ModalHeader>
+          <Blazorise.ModalTitle>Spieler dopen</Blazorise.ModalTitle>
+          <Blazorise.CloseButton />
+        </Blazorise.ModalHeader>
+        <Blazorise.ModalBody>
+          <div>
+            <a href="/usermanual/#h3PlayerDoping" style="position: absolute; top: 0px; right: 4px">?</a>
+            <div style="display: flex; flex-wrap: wrap">
+              <div style="width: 220px">
+                <label>
+                  <b>Spieler:</b>
+                  <Blazorise.Select TValue="int" SelectedValue="@iPlayerDopingSelect" SelectedValueChanged="GetSelectedPlayerDoping" Style="width: 200px">
+                    @foreach (LayoutModel.SelectListItem sli in ltPlayerDoping) {
+                      <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+                    }
+                  </Blazorise.Select>
+                </label>
+                <RadzenRow Style="height:100%">
+                  <RadzenChart Style="height: 280px">
+                    <RadzenStackedColumnSeries Data="@data_CFM" CategoryProperty="X" ValueProperty="Y" Fills="@(new[] { "red", "#00BFFF", "gold" })">
+                      <TooltipTemplate Context="data">
+                        @data.Z
+                      </TooltipTemplate>
+                    </RadzenStackedColumnSeries>
+                    <RadzenStackedColumnSeries Data="@data_CFM_max" CategoryProperty="X" ValueProperty="Y" Fills="@(new[] { "#FFB6C1" })">
+                      <TooltipTemplate Context="data">
+                        @data.Z
+                      </TooltipTemplate>
+                    </RadzenStackedColumnSeries>
+                    <RadzenColumnOptions Radius="5" Width="30" />
+                    <RadzenCategoryAxis Visible="true" Formatter="@FormatAsStr" Step="1" Min="-1" Max="3">
+                      <RadzenGridLines Visible="true" Stroke="#ccc" LineType="Radzen.Blazor.LineType.Dashed" />
+                    </RadzenCategoryAxis>
+                    <RadzenValueAxis FormatString="{0:P0}" Min="0" Step="0.25">
+                      <RadzenGridLines Visible="true" StrokeWidth="2" />
+                    </RadzenValueAxis>
+                    <RadzenLegend Visible="false" />
+                  </RadzenChart>
+                </RadzenRow>
+              </div>
+              <div style="width: 240px">
+                <label>
+                  <b>Dopingmittel:</b>
+                  <Blazorise.Select TValue="int" SelectedValue="@iDopingSelect" SelectedValueChanged="GetDoping" Style="width: 200px">
+                    @foreach (LayoutModel.SelectListItem sli in ltDoping) {
+                      <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+                    }
+                  </Blazorise.Select>
+                </label>
+                @if (doping_selected != null) {
+                  <div style="position: relative; width: 100%; margin-top: 1rem" class="form-group">
+                    <div>
+                      <b>Eigenschaften:</b>
+                      <table class="table table-bordered nowrap" style="margin: 0">
+                        <tbody>
+                          <tr style="white-space: nowrap;">
+                            <td style="padding-right: 4px; text-align: right;">Max. Kondition</td>
+                            <td style="padding-right: 4px; text-align: right;">@(doping_selected.fEffectMax.ToString("+#%;-#%;+0%"))</td>
+                          </tr>
+                          <tr style="white-space: nowrap;">
+                            <td style="padding-right: 4px; text-align: right;">Frischegewinn</td>
+                            <td style="padding-right: 4px; text-align: right;">@(doping_selected.fFreshGain.ToString("+#%;-#%;+0%"))</td>
+                          </tr>
+                          <tr style="white-space: nowrap;">
+                            <td style="padding-right: 4px; text-align: right;">Reduktionsrate</td>
+                            <td style="padding-right: 4px; text-align: right;">@(doping_selected.fReductionRate.ToString("0%")) / d</td>
+                          </tr>
+                          <tr style="white-space: nowrap;">
+                            <td style="padding-right: 4px; text-align: right;">Halbwertszeit</td>
+                            <td style="padding-right: 4px; text-align: right;">@((Math.Log(2.0) / doping_selected.fReductionRate).ToString("0.0")) d</td>
+                          </tr>
+                          <tr style="white-space: nowrap;">
+                            <td style="padding-right: 4px; text-align: right;">Max. Detekt.risiko</td>
+                            <td style="padding-right: 4px; text-align: right;">@(doping_selected.fDetectable.ToString("0%"))</td>
+                          </tr>
+                          <tr style="white-space: nowrap;">
+                            <td style="padding-right: 4px; text-align: right;">Kosten</td>
+                            <td style="padding-right: 4px; text-align: right;">@(doping_selected.iCost.ToString("N0")) €</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                }
+              </div>
+              @*
+              <table>
+                <tr>
+                  <td align="right"><b style="margin-right: 4px">Spieler:</b></td>
+                  <td>
+                    <Blazorise.Select TValue="int" SelectedValue="@iPlayerDopingSelect" SelectedValueChanged="GetSelectedPlayerDoping" Style="width: 100px">
+                      @foreach (LayoutModel.SelectListItem sli in ltPlayerDoping) {
+                        <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+                      }
+                    </Blazorise.Select>
+                  </td>
+                </tr>
+                <tr>
+                  <td align="right"><b style="margin-right: 4px">Dopingmittel:</b></td>
+                  <td>
+                    <Blazorise.Select TValue="int" SelectedValue="@iDopingSelect" SelectedValueChanged="GetDoping" Style="width: 100px">
+                      @foreach (LayoutModel.SelectListItem sli in ltDoping) {
+                        <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+                      }
+                    </Blazorise.Select>
+                  </td>
+                </tr>
+              </table>
+              *@
+            </div>
+            @if (doping_selected != null) {
+              <button type="button" class="btn btn-outline-secondary" style="position: relative; width: 100%; padding: 4px" @onclick=DoDoping>
+                <img width="32" height="32" src="@CkAppShared.sContentDir/Icons/doping.png">
+                <span>Spieler dopen</span>
+              </button>
+            }
+          </div>
+        </Blazorise.ModalBody>
+        @*
+        <Blazorise.ModalFooter>
+          <Blazorise.Div>
+            <Blazorise.Button Color="Blazorise.Color.Secondary" Clicked="HideModal">abbrechen</Blazorise.Button>
+            <Blazorise.Button Color="Blazorise.Color.Primary" Clicked="@(() => ckDialog.CloseModal(0))">@ckDialog.sButtonOkText</Blazorise.Button>
+          </Blazorise.Div>
+        </Blazorise.ModalFooter>
+        *@
+      </Blazorise.ModalContent>
+    </Blazorise.Modal>
+  }
+}
+
+@code {
+  [Parameter] public CornerkickManager.Main.Staff.Doctor? Doc { get; set; }
+  [Parameter] public bool Editable { get; set; }
+  [Parameter] public bool Free { get; set; }
+  [Parameter] public CornerkickManager.User? User { get; set; }
+  [Parameter] public Action? Action { get; set; }
+
+  private string sSurname { get; set; } = "";
+  private string sFirstname { get; set; } = "";
+  private RenderFragment[] rfStars = new RenderFragment[4];
+
+  private static Blazorise.Modal? modalDoping;
+  private List<LayoutModel.SelectListItem> ltDoping = new List<LayoutModel.SelectListItem>()
+  {
+    new LayoutModel.SelectListItem() { Value = "0", Text = "Mittel 1" },
+    new LayoutModel.SelectListItem() { Value = "1", Text = "Mittel 2" },
+    new LayoutModel.SelectListItem() { Value = "2", Text = "Mittel 3" },
+    new LayoutModel.SelectListItem() { Value = "3", Text = "Mittel 4" }
+  };
+  private List<LayoutModel.SelectListItem> ltPlayerDoping = new List<LayoutModel.SelectListItem>();
+  private int iPlayerDopingSelect = 0;
+  private int iDopingSelect = 0;
+  private CornerkickGame.Player.Doping? doping_selected { get; set; }
+
+  CkAppShared.DataPointSD[]? data_CFM;
+  CkAppShared.DataPointSD[]? data_CFM_max;
+
+  protected override async Task OnInitializedAsync()
+  {
+    //await base.OnInitializedAsync();
+
+    // Get list of players for doping
+    if (Doc != null && Doc.bDoping) {
+      GetPlayerDoping();
+      GetSelectedPlayerDoping(iPlayerDopingSelect);
+      GetDoping(iDopingSelect);
+    }
+  }
+
+  private void getName()
+  {
+    if (Doc != null) {
+      string[] sNameSplit = Doc.sName.Split(" ");
+      if (sNameSplit.Length > 1) {
+        sSurname = sNameSplit[sNameSplit.Length - 1];
+        sFirstname = Doc.sName.Replace(sSurname, "").Trim();
+      } else {
+        sSurname = Doc.sName;
+      }
+    }
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender) {
+    }
+  }
+
+  /*
+  protected override bool ShouldRender()
+  {
+    Console.WriteLine("Checking if the component needs to re-render...");
+    return true; // Always re-render
+  }
+  */
+
+  private Task plotStaffStars()
+  {
+    if (Doc == null) return Task.CompletedTask;
+
+    rfStars[0] = Controllers.Tool.createStars(Doc.iSkillMuscle,    iStarsMax: 5, bRound: false);
+    rfStars[1] = Controllers.Tool.createStars(Doc.iSkillTendons,   iStarsMax: 5, bRound: false);
+    rfStars[2] = Controllers.Tool.createStars(Doc.iSkillFracture,  iStarsMax: 5, bRound: false);
+    rfStars[3] = Controllers.Tool.createStars(Doc.iSkillInternist, iStarsMax: 5, bRound: false);
+
+    return Task.CompletedTask;
+  }
+
+  private async Task hireDr()
+  {
+    if (Action != null) Action();
+  }
+
+  private async Task fireDr()
+  {
+    if (Doc == null) return;
+
+    await CkDialog.ckDialog.Show(
+      "Entlassen?",
+      "Möchten Sie Ihren Arzt " + Doc.sName + " wirklich entlassen?<br>Die Abfindung beläuft sich auf " + Doc.getPayOff(CkAppShared.ckMng.dtDatum, CkAppShared.ckMng.dtSeasonEnd).ToString("N0") + " €.",
+      actionOnOk: Action != null ? Action : null);
+  }
+
+  private async Task GetPlayerDoping()
+  {
+    ltPlayerDoping.Clear();
+
+    CornerkickManager.Club? clb = Controllers.Member.MemberController.ckClub(User);
+    if (clb?.ltPlayer != null) {
+      int iPlIx = 0;
+      foreach (CornerkickManager.Player pl in clb.ltPlayer) {
+        ltPlayerDoping.Add(new LayoutModel.SelectListItem() { Value = (iPlIx++).ToString(), Text = pl.plGame.sName });
+      }
+    }
+  }
+
+  private async Task GetSelectedPlayerDoping(int iPlSel)
+  {
+    iPlayerDopingSelect = iPlSel;
+
+    CornerkickManager.Club? clb = Controllers.Member.MemberController.ckClub(User);
+    if (clb?.ltPlayer != null) {
+      CkAppShared.DataPointSD[]? data_CFM_tmp = Controllers.Member.PlayerController.getCFM(clb.ltPlayer[iPlayerDopingSelect].plGame.iId);
+      if (data_CFM_tmp != null) {
+        data_CFM     = new CkAppShared.DataPointSD[] { data_CFM_tmp[1], data_CFM_tmp[2], data_CFM_tmp[3] };
+        data_CFM_max = new CkAppShared.DataPointSD[] { new CkAppShared.DataPointSD(data_CFM_tmp[0].X, (data_CFM_tmp[0].Y - data_CFM_tmp[1].Y).Value, z: data_CFM_tmp[0].Z) };
+      }
+    }
+  }
+
+  private async Task GetDoping(int iDop)
+  {
+    iDopingSelect = iDop;
+
+    doping_selected = CornerkickApp.Controllers.Member.StaffController.GetDoping(iDopingSelect);
+  }
+
+  private Task ShowModal()
+  {
+    if (modalDoping == null) return Task.CompletedTask;
+
+    return modalDoping.Show();
+  }
+
+  private Task HideModal()
+  {
+    if (modalDoping == null) return Task.CompletedTask;
+
+    return modalDoping.Hide();
+  }
+
+  private async Task DoDoping()
+  {
+    if (User == null) return;
+
+    CornerkickManager.Club? clb = Controllers.Member.MemberController.ckClub(User);
+    if (clb == null) return;
+    int iBalanceStart = clb.iBalance;
+    int iBalanceSecretStart = clb.iBalanceSecret;
+
+    string sMsg;
+
+    bool bOk = CornerkickApp.Controllers.Member.StaffController.DoDoping(User, iPlayerDopingSelect, iDopingSelect, out sMsg);
+
+    if (bOk) {
+      GetPlayerDoping();
+      GetSelectedPlayerDoping(iPlayerDopingSelect);
+
+      if (!string.IsNullOrEmpty(sMsg) && MainLayout.ckToast != null) {
+        MainLayout.toastMessage = sMsg;
+        await MainLayout.ckToast.Show();
+      }
+
+      await JS.InvokeAsync<string>("PlaySound", "inject");
+
+      MainLayout.headline.Refresh(iBalanceStart: iBalanceStart, iBalance: clb.iBalance, iBalanceSecretStart: iBalanceSecretStart, clb.iBalanceSecret);
+    } else {
+      CkDialog.ckDialog.Show("Fehler", sMsg, sButtonCancelText2: "");
+    }
+  }
+
+  string FormatAsStr(object value)
+  {
+    string[] sNames = new string[] { "Kond.", "Fri.", "Mor." };
+    if (value != null) {
+      int iVal = Convert.ToInt32(value);
+      if (iVal >= 0 && iVal < sNames.Length) return sNames[iVal];
+    }
+
+    return string.Empty;
+  }
+
+}

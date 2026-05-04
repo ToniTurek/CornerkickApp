@@ -1,0 +1,122 @@
+﻿a.nav-link {
+  color: black;
+}
+a.nav-link.active.show {
+  color: var(--clubcolor2, black);
+  background-color: var(--clubcolor1, white);
+}
+
+.noselect {
+  -webkit-touch-callout: none; /* iOS Safari */
+  -webkit-user-select: none; /* Safari */
+  -khtml-user-select: none; /* Konqueror HTML */
+  -moz-user-select: none; /* Firefox */
+  -ms-user-select: none; /* Internet Explorer/Edge */
+  user-select: none; /* Non-prefixed version, currently
+                                      supported by Chrome and Opera */
+}
+
+.disabled {
+    pointer-events: none;
+    opacity: 0.4;
+}
+
+.hidden {
+  pointer-events: none;
+  display: none;
+}
+
+.pseudo-link {
+  color: #069;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.dataTable thead .sorting {
+  padding-left: 0px !important;
+  padding-right: 0px !important;
+}
+
+/* File styles */
+div.btn-group {
+    border-radius: .25rem;
+}
+
+.btn-group {
+    /*border: 1px solid grey; /* Green border */
+    /*color: white; /* White text */
+    background-color: rgb(31, 158, 69);
+    padding: 10px 16px; /* Some padding */
+    width: 100% !important; /* Set a width if needed */
+    display: block; /* Make the buttons appear below each other */
+    text-align: left;
+    color: black;
+}
+
+.btn-group input:not(:last-child) {
+    border-bottom: none; /* Prevent double borders */
+}
+
+/* Set background color to all buttons */
+.btn-group .btn {
+    border: 2px solid #e6e6e6; /* Gray border */
+    color: black;
+}
+
+/* Set background color of active button */
+.btn-group .btn.active {
+    border: 2px solid white !important; /* White border */
+    color: black !important;
+}
+
+/* Set cursor on hover */
+.btn-group .btn:hover {
+    cursor: pointer;
+}
+
+div.ui-dialog-buttonset {
+  width: 100%;
+}
+
+button.btnDialog.btn.btn-outline-primary {
+  float: right;
+}
+
+button.btnDialog.btn.btn-outline-secondary {
+  float: left;
+}
+
+/* Hide images without source */
+img[src=""] {
+  display: none;
+}
+
+.myPb {
+    height: 14px;
+    background-color: lime;
+    text-align: center; /* To center it horizontally (if you want) */
+    line-height: 14px; /* To center it vertically */
+    color: black;
+    text-shadow: 1px 1px 0 #DCDCDC;
+    -webkit-border-radius: 3px;
+}
+
+.canvasjs-chart-credit {
+  display: none;
+}
+
+/* Mobile view */
+@media (max-width: 640.98px) {
+  .hide-mobile {
+    pointer-events: none;
+    display: none;
+  }
+}
+
+/* Screen view */
+@media (min-width: 641px) {
+  .hide-screen {
+    pointer-events: none;
+    display: none;
+  }
+}

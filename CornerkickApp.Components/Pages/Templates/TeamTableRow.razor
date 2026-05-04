@@ -1,0 +1,96 @@
+﻿@using CornerkickApp.Shared.Models
+
+@if (Player != null) {
+  string sStyleFst = "";
+  if (Player.bSubstituted || Player.bAtNationalTeam) {
+    sStyleFst = "color: rgb(180,180,180);";
+  } else {
+    if (Player.iSuspended < 0) {         // Player has yellow card -->
+      sStyleFst = "color: rgb(220,140,0);"; // --> text color yellow
+    } else if (Player.iSuspended > 0) {  // Player has red card -->
+      sStyleFst = "color: white;";          // --> text color white
+    }
+  }
+  if (Player.iSuspended > 0) {
+    sStyleFst += "background-color: red !important";
+  } else if (Player.iIndex < nPlStart + 1) {
+    sStyleFst += "background-color: rgb(210,230,188) !important";
+  } else if (Player.iIndex < nPlStart + nPlRes + 1) {
+    sStyleFst += "background-color: rgb(192,204,224) !important";
+  } else {
+    sStyleFst += "background-color: rgb(225,225,225) !important";
+  }
+
+  string sStyleRow = "";
+  if (Player.iIndex < nPlStart + 1) {
+    if (Player.iIndex % 2 == 0) {
+      sStyleRow = "background-color: rgb(235,255,235)";
+    } else {
+      sStyleRow = "background-color: rgb(245,255,245)";
+    }
+  } else if (Player.iIndex < nPlStart + nPlRes + 1) {
+    if (Player.iIndex % 2 == 0) {
+      sStyleRow = "background-color: rgb(230,240,255)";
+    } else {
+      sStyleRow = "background-color: rgb(240,250,255)";
+    }
+  } else {
+    if (Player.iIndex % 2 == 0) {
+      sStyleRow = "background-color: rgb(240,240,240)";
+    } else {
+      sStyleRow = "background-color: white";
+    }
+  }
+
+  <tr style="@sStyleRow">
+    <td class="text-center" style="@sStyleFst" data-caption="#">@Player.iIndex</td>
+    <td class="text-center" data-caption="Nr">@Player.iNr</td>
+    <td class="text-center" data-caption="Pos.">@Player.sName</td>
+    @*
+    <td class="text-center" data-caption="Name">
+      <a href="/member/playerdetails/@Player.iId" class="@(Player.bSubstituted ? "substituted" : "")" style="text-decoration: none">
+        @((MarkupString)Player.sName)
+      </a>
+    </td>
+    *@
+    <td class="text-center" data-caption="Pos.">@Player.sPosition</td>
+    <td class="text-center" data-caption="HP">@Player.sHp</td>
+    <td class="text-center" data-caption="Stärke">@Player.fSkill.ToString("0.0")</td>
+    <td class="text-end" data-caption="Kond.">
+      <span style="color: @CornerkickApp.Controllers.Member.PlayerController.getColorFromValue(0, Player.fCondi)">
+        @((Player.fCondi * 100f).ToString("0.0"))
+      </span>
+    </td>
+    <td class="text-end" data-caption="Frische">
+      <span style="color: @CornerkickApp.Controllers.Member.PlayerController.getColorFromValue(1, Player.fFresh)">
+        @((Player.fFresh * 100f).ToString("0.0"))
+      </span>
+    </td>
+    <td class="text-end" data-caption="Moral">
+      <span style="color: @CornerkickApp.Controllers.Member.PlayerController.getColorFromValue(2, Player.fMoral)">
+        @((Player.fMoral * 100f).ToString("0.0"))
+      </span>
+    </td>
+    <td class="text-end" data-caption="Spielpr.">@((Player.fExperience * 100f).ToString("0.0"))</td>
+    <td class="text-center" data-caption="Form">
+      @((MarkupString)Controllers.Tool.getFormIcon(Player.sForm))
+    </td>
+    <td class="text-end" data-caption="FP">@((Player.fLeader * 100f).ToString("0.0"))</td>
+    <td class="text-center" data-caption="Alter">@(Player.fGrade > 0f ? Player.fGrade.ToString("0.0") : "-")</td>
+    <td class="text-center" data-caption="C">@Player.sCaptain</td>
+    <td class="text-center" data-caption="Nat.">
+      @((MarkupString)Controllers.Tool.getNatIcon(Player.sNat))
+    </td>
+  </tr>
+}
+
+@code {
+  [Parameter]
+  public TeamModel.TableTeam? Player { get; set; }
+
+  [Parameter]
+  public byte nPlStart { get; set; }
+
+  [Parameter]
+  public byte nPlRes { get; set; }
+}

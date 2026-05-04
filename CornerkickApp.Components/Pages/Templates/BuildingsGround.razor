@@ -1,0 +1,161 @@
+﻿@using CornerkickApp.Shared.Models
+
+@if (Building != null) {
+  <div id="divGroundAll_0" style="position: relative; flex-shrink: 0; width: 320px; height: 259px;">
+    @{
+      string sImg = "stadium_surrounding.png";
+      string sClBorder = CornerkickApp.Components.Pages.Member.Buildings.ltColorBldCat[Building.iType];
+      string sTextColor = "black";
+      int iTop = 10;
+      if (Building.iType == 0) {
+        sImg = "training_court_" + Building.iLevel.ToString() + ".png";
+        sClBorder = "";
+        sTextColor = "white";
+        iTop = 5;
+      } else if (Building.iType == 1 && Building.iLevel > 0) {
+        sImg = "fitness_" + Building.iLevel.ToString() + ".png";
+        sClBorder = "";
+        sTextColor = "white";
+        iTop = 5;
+      }
+    }
+    <img class="imgGround" style="position: absolute; top: 0px; left: 0px; width: 100%;" src="@CkAppShared.sContentDir/Images/stadium/@sImg" onerror="this.src = @CkAppShared.sContentDir/Images/stadium/stadium_surrounding.png';">
+
+    @if (Building.iType == 6) {  // Carpark
+      int nCarparks = (int)Math.Max(Math.Ceiling(Math.Min(Math.Max(Building.iLevel, Convert.ToInt32(Building.sNameNext)) - (iRep * 750), 750) / 30.0), 1.0);
+
+      <div class="divGround" style="position: absolute; top: 10%; left: 8%; height: 80%; width: 84%; text-align: center;">
+        @if (nCarparks >= 25 || Building.fDaysConstruct < 0.0001) {
+          if (nCarparks > 0) {
+            <img class="imgCarpark" style="position: absolute; top: 0px; left: -13px;" src="@CkAppShared.sContentDir/Images/stadium/carpark_connection_road_in.png">
+            <img class="imgCarpark" style="position: absolute; top: @((84 * (nCarparks / 10)).ToString())px; right: -13px;" src="@CkAppShared.sContentDir/Images/stadium/carpark_connection_road_out.png">
+          }
+          if (nCarparks > 10) {
+            <img class="imgCarpark" style="position: absolute; top: 0px; left: 244px;" src="@CkAppShared.sContentDir/Images/stadium/carpark_connection_right.png">
+            <img class="imgCarpark" style="position: absolute; top: 42px; left: 10px;" src="@CkAppShared.sContentDir/Images/stadium/carpark_connection_left.png">
+          }
+          if (nCarparks > 20) {
+            <img class="imgCarpark" style="position: absolute; top: 84px; left: 244px;" src="@CkAppShared.sContentDir/Images/stadium/carpark_connection_right.png">
+            <img class="imgCarpark" style="position: absolute; top: 126px; left: 10px;" src="@CkAppShared.sContentDir/Images/stadium/carpark_connection_left.png">
+          }
+        }
+        <div style="position: absolute; top: 0px; left: 19px; height: 100%; width: 100%; text-align: left;">
+          @for (int iC = 0; iC < nCarparks; iC++) {
+            string sCpImg = "carpark.png";
+            if (nCarparks < 25 && Building.fDaysConstruct > 0.0) {
+              sCpImg = "carpark_construct.png";
+            }
+            <img class="imgCarpark" style="position: relative;" src="@CkAppShared.sContentDir/Images/stadium/@(sCpImg)">
+          }
+        </div>
+      </div>
+    } else if (Building.iType == 8) {  // Fanshops
+      int nFanshops = (int)Math.Max(Math.Ceiling(Math.Min(Building.iLevel - (iRep * 40), 40) / 2.0), 1.0);
+
+      <div class="divGround" style="position: absolute; top: 10%; left: 8%; height: 80%; width: 84%; text-align: center;">
+        <div style="position: absolute; top: 0px; left: 19px; height: 100%; width: 100%; text-align: left;">
+          @for (int iFs = 0; iFs < nFanshops; iFs++) {
+            string sFsImg = "fanshop.png";
+            if (nFanshops < 20 && Building.fDaysConstruct > 0.0) {
+              sFsImg = "carpark_construct.png";
+            }
+            <img class="imgFanshop" style="position: relative;" width="53" src="@CkAppShared.sContentDir/Images/stadium/@(sFsImg)">
+          }
+        </div>
+      </div>
+    } else if (!string.IsNullOrEmpty(sClBorder)) {
+      <div class="divGround" style="position: absolute; top: 8%; left: 7%; height: 84%; width: 86%; text-align: center; border: 6px solid @sClBorder"></div>
+    }
+
+    <div class="divGround" style="position: absolute; top: @iTop%; left: 8%; height: @(100 - (2*iTop))%; width: 84%; text-align: center;">
+      <b style="position: relative; width: 100%; left: 0px; font-size: 22px; color: @sTextColor">@Building.sCategory</b>
+      @if (!Disabled) {
+        <p style="position: relative; width: 100%; left: 0px; font-size: 18px; margin-top: 4px; margin-bottom: 0px; color: @sTextColor">Akt.: @Building.sName</p>
+        @if (Building.iCostMaintenance > 0) {
+          <p style="position: relative; width: 100%; left: 0px; font-size: 14px; margin-top: 0px; margin-bottom: 2px; color: @sTextColor">Unterhalt: @(Building.iCostMaintenance.ToString("N0")) € / Monat</p>
+        }
+      }
+      @if (Building.bTypeInt) {
+        @if (!Disabled && Building.fDaysConstruct < 0.01) {
+          <div class="divNew" style="position: relative; width: 50%; left: 25%; height: 40px; margin-top: 0.5rem">
+            <text class="txtNew" style="position: absolute; text-align: right; top: 6px; left: 0px; width: 48%; font-size: 16px; text-shadow: white 0px 0px 6px;">Neu:</text>
+            <input class="form-control iptNew" style="position: absolute; top: 0px; width: 48%; left: 52%; height: auto; font-size: 16px; text-align: right" value="@iNew" @onchange=@((i) => SetBuildingButton(i.Value))>
+          </div>
+        }
+      } else {
+        <div style="position: relative; top: 0px; width: 100%; height: 24px; margin-bottom: 0px; font-size: 0px;">
+          @rfStars
+        </div>
+      }
+      @if (!Disabled) {
+        @if (Building.fDaysConstruct < 0.01) {
+          @if (Editable && (Building.iLevelMax == 0 || Building.iLevel < Building.iLevelMax)) {
+            <button type="button" class="btn btn-outline-secondary" style="position: absolute; width: 100%; left: 0px; bottom: 0px; height: auto; max-height: 86px; padding-left: 0px; padding-right: 0px; font-size: 16px; color: @sTextColor" @onclick=BuildBuilding data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="bottom" title="" data-itype="0" data-ilevel="3" data-bs-original-title="Ausbau zu:<br>@(Building.sNameNext)<br>Kosten: @(Building.iCostConstructNext.ToString("N0")) €<br>Dauer: @(Building.nDaysConstructTotal) Tage<br>Unterhalt: @(Building.iCostMaintenanceNext.ToString("N0")) € / Monat">
+              Ausbau zu: @(Building.sNameNext)<br>@(Building.iCostConstructNext.ToString("N0")) € / @(Building.nDaysConstructTotal) Tage
+            </button>
+          }
+        } else {
+          <div style="position: absolute; left: 0; bottom: 0; width: 100%; color: @sTextColor">
+            Ausbau zu: @(Building.sNameNext)<br>@(Building.fDaysConstruct.ToString(Building.fDaysConstruct > 2f ? "0" : "0.0")) Tage
+            <div style="display: flex; align-items: center; justify-content: center">
+              <Blazorise.Progress Value="(int)(Building.nDaysConstructTotal - Building.fDaysConstruct)" Max="Building.nDaysConstructTotal" Animated Striped Color="Blazorise.Color.Success" Style="width: 100%; height: 24px; background-color: white" />
+              <span style="position: absolute">@(((Building.nDaysConstructTotal - Building.fDaysConstruct) / (float)Building.nDaysConstructTotal).ToString("0%"))</span>
+            </div>
+          </div>
+        }
+      }
+    </div>
+  </div>
+}
+
+@code {
+  [Parameter] public StadiumSurroundingsModel.Building? Building { get; set; }
+  [Parameter] public CornerkickManager.User? User { get; set; }
+  [Parameter] public bool Disabled { get; set; }
+  [Parameter] public bool Editable { get; set; } = true;
+  [Parameter] public int iRep { get; set; } = 0;
+  [Parameter] public Action<StadiumSurroundingsModel.Building?, int>? ActBuild { get; set; }
+
+  private RenderFragment? rfStars { get; set; }
+  private int iNew = 1;
+  int[] iCostDaysNumber = new int[2];
+
+  protected override async Task OnInitializedAsync()
+  {
+    if (Building == null) return;
+
+    await base.OnInitializedAsync();
+
+    rfStars = Controllers.Tool.createStars(Building.iLevel, iStarsMax: Building.iLevelMax, iStarSizePx: 24, bRound: false);
+  }
+
+  public async Task update()
+  {
+    await InvokeAsync(StateHasChanged);
+  }
+
+  private async Task BuildBuilding()
+  {
+    if (Building == null) return;
+
+    if (ActBuild != null) ActBuild(Building, iNew);
+    //CornerkickApp.Components.Pages.Member.Buildings.Bu = Building;
+  }
+
+  private async Task SetBuildingButton(object? o)
+  {
+    if (o == null) return;
+    if (Building == null) return;
+    if (User == null) return;
+
+    int iNew;
+    if (!int.TryParse(o.ToString(), out iNew)) return;
+
+    int[]? iCostDaysNumber = CornerkickApp.Controllers.Member.BuildingsController.GetCostDaysNumber(User, Building.iType, Building.iLevel, iNew);
+    if (iCostDaysNumber == null) return;
+
+    Building.sNameNext = (Building.iLevel + iNew).ToString();
+    Building.iCostConstructNext = iCostDaysNumber[0];
+    Building.nDaysConstructTotal = iCostDaysNumber[1];
+  }
+}

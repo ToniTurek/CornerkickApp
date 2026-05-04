@@ -1,0 +1,417 @@
+﻿@using CornerkickApp.Controllers.Member
+@using CornerkickApp.Components.Shared.Components
+@using CornerkickApp.Shared.Models
+
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject Controllers.Shared.MyAuthenticationStateProvider _auth
+
+<style>
+  .diff-text {
+    padding-right: 6px;
+    text-align: right;
+    font-size: 90%;
+    line-height: 90%
+  }
+</style>
+
+<Blazorise.Modal @ref="modalContract">
+  <Blazorise.ModalContent Centered>
+    <Blazorise.ModalHeader Style="color: white; background-color: rgb(31, 158, 69)">
+      <Blazorise.ModalTitle>
+        @{
+          string sTitle = "Vertragsverhandlung";
+          if (iContractTypeLength[0] > 0) {
+            sTitle += " (neuer Vertrag)";
+          } else {
+            sTitle += " (Vertragsverlängerung)";
+          }
+        }
+        @sTitle
+      </Blazorise.ModalTitle>
+      <Blazorise.CloseButton />
+    </Blazorise.ModalHeader>
+    <Blazorise.ModalBody Style="overflow: auto">
+      <div style="width: 100%">
+        <div style="position: relative; width: 100%; display: flex; flex-wrap: wrap; align-items: center">
+          <label class="noselect" style="position: relative; font-weight: bold" for="tbContractYears">
+            @if (iContractTypeLength[0] == 0) {
+              <span>Zusätzl. </span>
+            }
+            Laufzeit [a]:
+          </label>
+          <input class="form-control tbContractYears text-box single-line" style="margin-left: 6px; text-align: right; display: inline; width: 60px" type="number" min="0" max="5" step="1" autocomplete="off" @bind="iContractYears" @bind:after="GetContract">
+        </div>
+        <table style="width: 100%; table-layout: fixed; margin-bottom: 10px;" class="table table-bordered">
+          <thead>
+            <tr style="background-color: gray">
+              <td style="text-align: center; font-weight: bold; color: white"></td>
+              <td style="text-align: center; font-weight: bold; color: white">Gefordert</td>
+              <td style="text-align: center; font-weight: bold; color: white">Ihr Gebot</td>
+              <td style="text-align: center; font-weight: bold; color: white">Diff.</td>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="padding-right: 4px; font-weight: bold; text-align: right;">Gehalt:</td>
+              <td style="padding-right: 6px; text-align: right;">
+                <txt id="txtContractMoney2">@contractReq.iSalary.ToString("N0") €</txt>
+              </td>
+              <td style="text-align: center;">
+                <RadzenNumeric TValue="int" Format="C0" Value="@contractOff.iSalary" ValueChanged="OnChangeSalary" Min="0" Step="@(Controllers.Tool.roundIntBy(contractOff.iSalary, 1).ToString())" TextAlign="TextAlign.Right" />
+              </td>
+              <td class="diff-text" style="color: @(contractOff.iSalary > contractReq.iSalary ? "red" : "green")">
+                @sDiff(contractOff.iSalary,contractReq.iSalary)
+              </td>
+            </tr>
+            <tr>
+              <td style="padding-right: 4px; text-align: right; font-weight: bold;">Auflaufprämie:</td>
+              <td style="padding-right: 6px; text-align: right;">
+                <txt id="txtContractBonusPlay">@contractReq.iPlay.ToString("N0") €</txt>
+              </td>
+              <td style="text-align: center;">
+                <RadzenNumeric TValue="int" Format="C0" Value="@contractOff.iPlay" ValueChanged="OnChangePlay" Min="0" Step="@(Controllers.Tool.roundIntBy(contractOff.iPlay, 1).ToString())" TextAlign="TextAlign.Right" />
+              </td>
+              <td class="diff-text" style="color: @(contractOff.iPlay > contractReq.iPlay ? "red" : "green")">
+                @sDiff(contractOff.iPlay, contractReq.iPlay)
+              </td>
+            </tr>
+            <tr>
+              <td style="padding-right: 4px; text-align: right; font-weight: bold;">Punktprämie:</td>
+              <td style="padding-right: 6px; text-align: right;">
+                <txt id="txtContractBonusPnt">@contractReq.iPoint.ToString("N0") €</txt>
+              </td>
+              <td style="text-align: center;">
+                <RadzenNumeric TValue="int" Format="C0" Value="@contractOff.iPoint" ValueChanged="OnChangePoint" Min="0" Step="@(Controllers.Tool.roundIntBy(contractOff.iPoint, 1).ToString())" TextAlign="TextAlign.Right" />
+              </td>
+              <td class="diff-text" style="color: @(contractOff.iPoint > contractReq.iPoint ? "red" : "green")">
+                @sDiff(contractOff.iPoint, contractReq.iPoint)
+              </td>
+            </tr>
+            <tr>
+              <td style="padding-right: 4px; text-align: right; font-weight: bold;">Torprämie:</td>
+              <td style="padding-right: 6px; text-align: right;">
+                <txt id="txtContractBonusGoal">@contractReq.iGoal.ToString("N0") €</txt>
+              </td>
+              <td style="text-align: center;">
+                <RadzenNumeric TValue="int" Format="C0" Value="@contractOff.iGoal" ValueChanged="OnChangeGoal" Min="0" Step="@(Controllers.Tool.roundIntBy(contractOff.iGoal, 1).ToString())" TextAlign="TextAlign.Right" />
+              </td>
+              <td class="diff-text" style="color: @(contractOff.iGoal > contractReq.iGoal ? "red" : "green")">
+                @sDiff(contractOff.iGoal, contractReq.iGoal)
+              </td>
+            </tr>
+            <tr>
+              <td style="padding-right: 4px; text-align: right; font-weight: bold;">Fixe Ablöse:</td>
+              <td style="padding-right: 6px; text-align: right;">
+                <txt id="txtContractFixedFeeReq">@contractReq.iFixTransferFee.ToString("N0") €</txt>
+              </td>
+              <td style="text-align: center;">
+                <RadzenNumeric TValue="int" Format="C0" Value="@contractOff.iFixTransferFee" ValueChanged="OnChangeFixedFee" Min="0" Step="@(Controllers.Tool.roundIntBy(contractOff.iFixTransferFee, 1).ToString())" TextAlign="TextAlign.Right" />
+              </td>
+              <td class="diff-text" style="color: @(contractOff.iFixTransferFee > contractReq.iFixTransferFee ? "red" : "green")">
+                @sDiff(contractOff.iFixTransferFee, contractReq.iFixTransferFee)
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <txt style="font-weight: bold;">Bonus Platzierung:</txt>
+        <table style="width: 100%; table-layout: fixed;" class="table table-bordered">
+          <thead>
+            <tr style="background-color: gray">
+              <td style="text-align: center; font-weight: bold; color: white">Wettb.</td>
+              <td style="text-align: center; font-weight: bold; color: white">Platzierung</td>
+              <td style="text-align: center; font-weight: bold; color: white">Ihr Gebot</td>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <select class="form-control sctCupBonus" style="width: 100%;">
+                  <option value="0">kein</option>
+                  <option value="1">Liga</option>
+                  <option value="2">Pokal</option>
+                  <option value="3">Gold-Cup</option>
+                  <option value="4">Silver-Cup</option>
+                  <option value="15">Bronze-Cup</option>
+                </select>
+              </td>
+              <td>
+                <input class="form-control iptCupBonusPlace" style="text-align: right; width: 100%;" type="number" min="1" step="1" autocomplete="off" disabled="">
+              </td>
+              <td style="text-align: center;">
+                <input class="form-control iptCupBonusValue" style="width: 100%; text-align: right;" type="tel" min="0" step="1000" autocomplete="off" disabled="" value="0">
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div style="position: relative; width: 96%; left: 2%; margin-top: 20px;" align="center">
+          <b>Geboten/Gefordert: </b>
+          <text>@fContractQuot.ToString("0%")<br></text>
+          <div style="position: relative">
+            <b>Verhandlungsbereitschaft</b>
+            <text style="color: @Controllers.Tool.getColor0_1(contractReq.fMood)">@contractReq.fMood.ToString("0%")</text>
+            <div style="position: absolute; width: 64px; height: 64px; top: -40px; right: 0px; transform: rotate(@(((1f - contractReq.fMood) * 180f).ToString("0"))deg);">
+              <div style="position: absolute; top: 2px; left: 2px; width: 60px; height: 60px">
+                <img src="@CornerkickApp.Shared.Models.CkAppShared.sContentDir/Icons/thumb.png" width="60" style="background-color: @Controllers.Tool.getColor0_1(contractReq.fMood)">
+              </div>
+              <div style="position: absolute; width: 64px; height: 64px; top: 0px; left: 0px; border: 4px solid white"></div>
+            </div>
+          </div>
+          <button class="btn btn-primary" style="position: relative; width: 100%; margin-top: 4px; z-index: 2" @onclick="() => GetContract(true)">verhandeln</button>
+          <div style="position: relative; margin-top: 1rem">
+            <b>Einfluss auf Gehaltszahlungen</b>
+            <table class="table table-bordered" cellpadding="3">
+              <thead>
+                <tr>
+                  <th style="text-align: center; font-weight: bold;">akt. [€]</th>
+                  <th style="text-align: center; font-weight: bold">neu [€]</th>
+                  <th style="text-align: center; font-weight: bold">Diff.</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td align="center">@(iSalaryTotalCurrent.ToString("N0"))</td>
+                  <td align="center">@(iSalaryTotalNew.ToString("N0"))</td>
+                  <td align="center" style="color: @(iSalaryTotalNew > iSalaryTotalCurrent ? "red" : "green")">@sDiff(iSalaryTotalNew, iSalaryTotalCurrent)</td>
+                </tr>
+              </tbody>
+              <tr></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+    </Blazorise.ModalBody>
+    <Blazorise.ModalFooter Flex="Blazorise.Flex.JustifyContent.Between">
+      <Blazorise.Div>
+        <Blazorise.Button Color="Blazorise.Color.Secondary" Clicked="CancelNegotiation">abbrechen</Blazorise.Button>
+      </Blazorise.Div>
+      <Blazorise.Div>
+        <Blazorise.Button Color="Blazorise.Color.Primary" Clicked="AcceptContract">annehmen</Blazorise.Button>
+      </Blazorise.Div>
+    </Blazorise.ModalFooter>
+  </Blazorise.ModalContent>
+</Blazorise.Modal>
+
+@code {
+  private CornerkickManager.User? _usr;
+  private int _iPlayerId { get; set; }
+  private string sPlayerName;
+
+  // Contract dialog
+  private Blazorise.Modal? modalContract { get; set; }
+  int[] iContractTypeLength { get; set; } = new int[2];
+  int iContractYears { get; set; }
+  int iContractSalary { get; set; }
+  int iContractBonusPlay { get; set; }
+  int iContractBonusGoal { get; set; }
+  int iContractBonusPoint { get; set; }
+  int iContractFixedFee { get; set; }
+  CornerkickManager.Player.Contract contractReq { get; set; } = new CornerkickManager.Player.Contract();
+  CornerkickManager.Player.Contract contractOff { get; set; } = new CornerkickManager.Player.Contract();
+  float fContractQuot = 1f;
+  long iSalaryTotalCurrent { get; set; }
+  long iSalaryTotalNew { get; set; }
+
+  private Action? _actionOnOk { get; set; }
+
+  protected override async Task OnInitializedAsync()
+  {
+    //await base.OnInitializedAsync();
+
+#if _WebApp
+    //_usr = await Http.GetFromJsonAsync<CornerkickManager.User>("member/Member/ckUser");
+    _usr = Controllers.Member.MemberController.ckUser(await _auth.GetUserId());
+
+    if (_usr == null) {
+      NavigationManager.NavigateTo("/authentication/register");
+      return;
+    }
+#else
+    _usr = CkAppShared.ckMng.ltUser[CkAppShared.iUserActive];
+#endif
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender) {
+    }
+  }
+
+  public Task Negotiate(int iPlayerId, Action? actionOnOk = null)
+  {
+    _iPlayerId = iPlayerId;
+    _actionOnOk = actionOnOk;
+
+    if (_iPlayerId < 0) return Task.CompletedTask;
+
+    // Get player
+    CornerkickManager.Player? plContract = CkAppShared.ckMng.ltPlayer.Find(p => p.plGame.iId == _iPlayerId);
+    if (plContract == null) return Task.CompletedTask;
+
+    sPlayerName = plContract.plGame.sName;
+
+    // Contract
+    int iGamesPerSeason = 0;
+    CornerkickManager.Club? clb = Controllers.Member.MemberController.ckClub(_usr);
+    if (clb != null) {
+      CornerkickManager.Cup league = CkAppShared.ckMng.tl.getCup(CkAppShared.iCupIdLeague, clb.iLand, clb.iDivision);
+      if (league != null) iGamesPerSeason = league.getMatchdays(clb);
+    }
+
+    bool bOwnPlayer = CornerkickManager.PlayerTool.ownPlayer(clb, plContract);
+
+    if (!bOwnPlayer) {
+      iContractYears = 1;
+    }
+
+    //plModel.sContractHappyFactor = CornerkickManager.PlayerTool.getHappyWithContractFactor(plDetails, App.ckMng.dtDatum, App.ckMng.dtSeasonEnd, iGamesPerSeason: iGamesPerSeason).ToString("0.0%");
+    float fContractHappyFactor = bOwnPlayer ? CornerkickManager.PlayerTool.getHappyWithContractFactor(plContract, CkAppShared.ckMng.dtDatum, CkAppShared.ckMng.dtSeasonEnd, iGamesPerSeason: iGamesPerSeason, user: _usr) : 0f;
+
+    if (plContract.bRetire) {
+      CkDialog.ckDialog.Show("Vertragsverhandlung", "Der Spieler beendet seine Karriere nach Ablauf des Vertrages.", sButtonCancelText2: "");
+    /*} else if ($("#bnContract").text() == "In Profikader übernehmen") {
+      //getDialog(document.body, "Möchten Sie den Spieler " + @Html.Raw(Json.Serialize(player.plGame.sName)) + " wirklich in den Profikader übernehmen?", "Bitte bestätigen...", moveIntoProTeam);
+      CkDialog.ckDialog.Show("Bitte bestätigen...", "Möchten Sie den Spieler " + plContract.plGame.sName + " wirklich in den Profikader übernehmen?", sButtonCancelText2: "", actionOnOk: () => NavigationManager.NavigateTo(NavigationManager.Uri, forceLoad: true));
+    */} else if (fContractHappyFactor > 0.95 && plContract.contract != null && plContract.contract.iLength > 1) {
+      CkDialog.ckDialog.Show("Vertragsverhandlung", "Der Spieler ist im Moment mit seinem Vertrag eigentlich ganz zufrieden...", sButtonCancelText2: "");
+    } else {
+      int[]? iContractTypeLengthTmp = Controllers.Member.PlayerController.GetContractTypeLength(_usr, plContract);
+      if (iContractTypeLengthTmp != null) iContractTypeLength = iContractTypeLengthTmp;
+
+      Show();
+    }
+
+    return Task.CompletedTask;
+  }
+
+  private Task Show()
+  {
+    if (modalContract == null) return Task.CompletedTask;
+
+    GetContract();
+
+    if (contractReq.fMood < 0f) {
+      CkDialog.ckDialog.Show("Vertragsverhandlung", sPlayerName + " möchte nicht mehr mit Ihnen verhandeln.", sButtonCancelText2: "");
+      return Task.CompletedTask;
+    }
+
+    return modalContract.Show();
+  }
+
+  private Task GetContract()
+  {
+    return GetContract(false);
+  }
+  private Task GetContract(bool bNegotiate)
+  {
+    string sMsg;
+    CornerkickManager.Player.Contract[]? contracts = Controllers.Member.PlayerController.GetContract(
+      _usr, _iPlayerId,
+      (byte)iContractYears,
+      contractOff.iSalary,
+      out sMsg,
+      iBonusPlay: contractOff.iPlay,
+      iBonusGoal: contractOff.iGoal,
+      iBonusPoint: contractOff.iPoint,
+      iFixedFee: contractOff.iFixTransferFee,
+      bNegotiate: bNegotiate
+    );
+
+    if (contracts != null) {
+      contractReq = contracts[0];
+      contractOff = contracts[1];
+    }
+
+    if (bNegotiate) {
+      if (contractReq.fMood < 0f) {
+        CkDialog.ckDialog.Show("Vertragsverhandlung", sPlayerName + " hat die Vertragsverhandlungen abgebrochen!", sButtonCancelText2: "");
+        if (modalContract != null) modalContract.Close(Blazorise.CloseReason.UserClosing);
+      }
+    }
+
+    iSalaryTotalCurrent = Controllers.Member.ClubController.GetSalaryTotal(_usr);
+    calculateSalaryTotalNew();
+
+    return Task.CompletedTask;
+  }
+
+  private void calculateSalaryTotalNew()
+  {
+    iSalaryTotalNew = iSalaryTotalCurrent + contractOff.iSalary;
+
+    // Remove current salary if contract extension
+    if (iContractTypeLength[0] == 0) {
+      CornerkickManager.Player? plContract = CkAppShared.ckMng.ltPlayer.Find(p => p.plGame.iId == _iPlayerId);
+      if (plContract != null) iSalaryTotalNew -= plContract.contract.iSalary;
+    }
+  }
+
+  private Task OnChangeSalary(int iSal)
+  {
+    contractOff.iSalary = iSal;
+    calculateSalaryTotalNew();
+    return GetContractQuotientOfferedRequired();
+  }
+  private Task OnChangePlay(int iPly)
+  {
+    contractOff.iPlay = iPly;
+    return GetContractQuotientOfferedRequired();
+  }
+  private Task OnChangePoint(int iPt)
+  {
+    contractOff.iPoint = iPt;
+    return GetContractQuotientOfferedRequired();
+  }
+  private Task OnChangeGoal(int iGl)
+  {
+    contractOff.iGoal = iGl;
+    return GetContractQuotientOfferedRequired();
+  }
+  private Task OnChangeFixedFee(int iFee)
+  {
+    contractOff.iFixTransferFee = iFee;
+    return GetContractQuotientOfferedRequired();
+  }
+
+  private Task GetContractQuotientOfferedRequired()
+  {
+    fContractQuot = Controllers.Member.PlayerController.GetContractQuotientOfferedRequired(_usr, _iPlayerId, contractOff);
+    return Task.CompletedTask;
+  }
+
+  // iTypeOfClose: 0 - ok, 1 - cancel
+  private Task AcceptContract()
+  {
+    ContractsModel.PlayerSalary ps = new ContractsModel.PlayerSalary() {
+      iPlayerId = _iPlayerId,
+      iYears = (byte)iContractYears,
+      iSalary = contractReq.iSalary,
+      iBonusPlay = contractReq.iPlay,
+      iBonusPoint = contractReq.iPoint,
+      iBonusGoal = contractReq.iGoal,
+      iFixedFee = contractReq.iFixTransferFee,
+      ltCupBonus = contractReq.ltCupBonus,
+      fPlayerMood = contractReq.fMood
+    };
+    string sRet = Controllers.Member.PlayerController.NegotiateContract(_usr, ps);
+
+    if (!string.IsNullOrEmpty(sRet)) CkDialog.ckDialog.Show("Vertragsverhandlung", sRet, sButtonCancelText2: "", actionOnOk: _actionOnOk);
+
+    if (modalContract == null) return Task.CompletedTask;
+    return modalContract.Hide();
+  }
+
+  // iTypeOfClose: 0 - ok, 1 - cancel
+  private Task CancelNegotiation()
+  {
+    if (modalContract == null) return Task.CompletedTask;
+    return modalContract.Hide();
+  }
+
+  private string sDiff(long i1, long i2)
+  {
+    string s = (i1 - i2).ToString("+#,#;-#,#;0") + " €";
+    if (i2 > 0 && i1 != i2) s += " (" + (100 * (i1 - i2) / (double)i2).ToString("+0.0;-0.0;0") + "%)";
+    return s;
+  }
+}

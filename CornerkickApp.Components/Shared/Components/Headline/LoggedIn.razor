@@ -1,0 +1,190 @@
+﻿@page "/headline"
+
+@using CornerkickApp.Shared.Models
+@using static CornerkickApp.Shared.Models.CkAppShared
+@inject HttpClient Http
+@inject Controllers.Shared.MyAuthenticationStateProvider _auth
+
+@{
+  if (!string.IsNullOrEmpty(sHeadlineDate)) {
+    <div style="padding-left: 1.5rem">
+      <div style="position: relative; display: flex; align-items: center">
+        @if (ucm != null) {
+          @*
+          <div style="width: 120px; height: 100%; display: flex; align-items: center; justify-content: center" title="Saisonfortschritt">
+            <Blazorise.Progress Value="@ucm.iSeasonProgress" Animated Striped Color="Blazorise.Color.Warning" Style="width: 100%" />
+            <span style="position: absolute">@((ucm.iSeasonProgress / 100f).ToString("0.0%"))</span>
+          </div>
+          *@
+          <div style="position: absolute; left: -1rem; right: 0; height: 100%; display: flex; align-items: center; justify-content: center" title="Saisonfortschritt">
+            <Blazorise.Progress Value="@ucm.iSeasonProgress" Animated Striped Color="Blazorise.Color.Success" Style="width: 100%; opacity: 0.4" />
+          </div>
+        }
+
+        <a href="member/calendar" id="txtDate" style="text-decoration: none; white-space: nowrap; margin-right: 1rem; z-index: 2">@sHeadlineDate</a>
+        <span id="counter" style="color:red"></span>
+      </div>
+    </div>
+  }
+
+  //if (/*UserComponentModel.clb != null && !UserComponentModel.clb.bNation && */!string.IsNullOrEmpty(sHeadlineCash[0])) {
+  if (_usr != null && _usr.iResp >= CkAppShared.iUserRespFinance) {
+    <div style="padding-right: 1.5rem; display: flex; flex-wrap: wrap; justify-content: flex-end">
+      <a href="/member/finance" id="txtBalance" style="text-decoration:none">
+        <span style="color: @(iCash[0] < 0 ? "red" : "")">@(iCash[0].ToString("N0")) €</span>
+      </a>
+      <a href="/member/finance" id="txtBalanceSecret" style="text-decoration:none; margin-left: 0.5rem">
+        <span style="color: grey">@(iCash[1].ToString("N0")) €</span>
+      </a>
+    </div>
+  }
+  //}
+}
+
+@code {
+  private CornerkickManager.User? _usr;
+  string sHeadlineDate = "";
+  int[] iCash = new int[2];
+  //string[] sHeadlineCash = new string[2];
+  UserComponentModel? ucm;
+
+  protected override async Task OnInitializedAsync()
+  {
+    //await base.OnInitializedAsync();
+
+    UpdatePage();
+  }
+
+#if _WebApp
+  protected async Task UpdatePage(bool bUpdateBalance = true)
+#else
+  protected void UpdatePage(bool bUpdateBalance = true)
+#endif
+  {
+#if _WebApp
+    _usr = Controllers.Member.MemberController.ckUser(_auth.GetUserId().Result);
+#else
+    _usr = CkAppShared.ckMng.ltUser[CkAppShared.iUserActive];
+#endif
+
+    ucm = CornerkickApp.Controllers.Shared.Components.Headline.HeadlineController.Get(_usr);
+
+    if (ucm != null && _usr != null) {
+      sHeadlineDate = ucm.sHeadlineDate;
+
+      if (bUpdateBalance && _usr.iResp >= CkAppShared.iUserRespFinance) {
+        //sHeadlineCash = getHeadlineString(ucm.iHeadlineBalance, ucm.iHeadlineBalanceSecret);
+        iCash[0] = ucm.iHeadlineBalance;
+        iCash[1] = ucm.iHeadlineBalanceSecret;
+      }
+    }
+  }
+
+  /*
+  private static string[] getHeadlineString(int iBalance, int iBalanceSecret)
+  {
+    string[] sRet = new string[2];
+
+    string sStyle = iBalance < 0 ? " style=\"color: red\"" : "";
+    if (iBalance != 0) sRet = "<span" + sStyle + ">" + iBalance.ToString("N0");
+    if (iBalanceSecret != 0) sRet += " (" + iBalanceSecret.ToString("N0") + ")";
+    if (!string.IsNullOrEmpty(sRet)) sRet += " €</span>";
+
+    return sRet;
+  }
+  */
+
+  public async Task Refresh()
+  {
+    UpdatePage(bUpdateBalance: false);
+    await InvokeAsync(StateHasChanged);
+  }
+
+  public async Task Refresh(CornerkickManager.Club? clb, int? iBalanceStart = null, int? iBalanceSecretStart = null)
+  {
+    if (clb == null) return;
+
+    Refresh(iBalanceStart.HasValue ? iBalanceStart.Value : clb.iBalance, clb.iBalance, iBalanceSecretStart.HasValue ? iBalanceSecretStart.Value : clb.iBalanceSecret, clb.iBalanceSecret);
+  }
+
+  public async Task Refresh(int iBalanceStart, int iBalance, int iBalanceSecretStart, int iBalanceSec)
+  {
+    UpdatePage(bUpdateBalance: iBalanceStart != iBalance || iBalanceSecretStart != iBalanceSec);
+    await InvokeAsync(StateHasChanged);
+
+    if (iBalanceStart != iBalance || iBalanceSecretStart != iBalanceSec) {
+      await incrementBalance(iBalanceStart, iBalance, iBalanceSecretStart, iBalanceSec);
+    }
+  }
+
+  private async Task incrementBalance(int iBalanceStart, int iBalancePost, int iBalanceSecStart, int iBalanceSecPost)
+  {
+    int iBal = iBalanceStart;
+    int iDiffIni = iBalanceStart - iBalancePost;
+
+    int iBalSec = iBalanceSecStart;
+    int iDiffSecIni = iBalanceSecStart - iBalanceSecPost;
+
+    while (iBal != iBalancePost || iBalSec != iBalanceSecPost) {
+      if (iBal != iBalancePost) {
+        int iDiff = 1;
+        if        (Math.Abs(iBal - iBalancePost) > 1111111) {
+          iDiff = 333333;
+        } else if (Math.Abs(iBal - iBalancePost) > 111111) {
+          iDiff = 33333;
+        } else if (Math.Abs(iBal - iBalancePost) > 11111) {
+          iDiff = 3333;
+        } else if (Math.Abs(iBal - iBalancePost) > 1111) {
+          iDiff = 333;
+        } else if (Math.Abs(iBal - iBalancePost) > 111) {
+          iDiff = 33;
+        } else if (Math.Abs(iBal - iBalancePost) > 11) {
+          iDiff = 3;
+        }
+
+        if (iDiffIni > 0) iBal = iBal - iDiff;
+        else              iBal = iBal + iDiff;
+      }
+
+      // Secred balance
+      if (iBalSec != iBalanceSecPost) {
+        int iDiffSec = 1;
+        if        (Math.Abs(iBalSec - iBalanceSecPost) > 1111111) {
+          iDiffSec = 333333;
+        } else if (Math.Abs(iBalSec - iBalanceSecPost) > 111111) {
+          iDiffSec = 33333;
+        } else if (Math.Abs(iBalSec - iBalanceSecPost) > 11111) {
+          iDiffSec = 3333;
+        } else if (Math.Abs(iBalSec - iBalanceSecPost) > 1111) {
+          iDiffSec = 333;
+        } else if (Math.Abs(iBalSec - iBalanceSecPost) > 111) {
+          iDiffSec = 33;
+        } else if (Math.Abs(iBalSec - iBalanceSecPost) > 11) {
+          iDiffSec = 3;
+        }
+
+        if (iDiffSecIni > 0) iBalSec = iBalSec - iDiffSec;
+        else                 iBalSec = iBalSec + iDiffSec;
+      }
+
+      //setBalance(iBalancePre, iBalanceSec);
+      //UpdatePage(iBalanceStart: iBalancePre);
+      //sHeadlineCash = getHeadlineString(iBal, iBalSec);
+      iCash[0] = iBal;
+      iCash[1] = iBalSec;
+
+      await InvokeAsync(StateHasChanged);
+      await wait(10);
+      //setTimeout(function() { incrementBalance(iBalancePre, iBalancePost, iBalanceSec, iDiffIni); }, 200000 / iDiffIni);
+    }
+  }
+
+  public static async Task wait(int iDuration)
+  {
+    if (iDuration <= 0) return;
+
+    Task tkDelay = Task.Delay(iDuration);
+    await tkDelay.ConfigureAwait(false);
+    tkDelay.Dispose();
+  }
+}

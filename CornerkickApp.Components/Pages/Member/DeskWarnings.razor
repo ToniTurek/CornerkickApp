@@ -1,0 +1,82 @@
+@using Microsoft.JSInterop
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using CornerkickApp.Components.Shared.Components
+@using CornerkickApp.Controllers.Member
+@using CornerkickApp.Shared.Models
+
+<div id="divWarningContainer">
+  @{
+    if (_usr != null && _warnings != null) {
+      if (_warnings.bNoTrainingWarning) {
+        <div style="position: relative; width: 100%; text-align: center">
+          <a href="/member/training" style="color:red; text-decoration: none">ACHTUNG: Sie haben für die nächste Woche noch kein Training eingestellt!</a>
+        </div>
+      }
+
+      if (_warnings.bNoStaffWarning) {
+        <div style="position: relative; width: 100%; text-align: center">
+          <a href="/member/staff" style="color:red; text-decoration: none">ACHTUNG: Sie haben noch kein Personal eingestellt!</a>
+        </div>
+      }
+
+      if (_warnings.iCaptainId < 0) {
+        <div style="position: relative; width: 100%; text-align: center">
+          <a href="/member/team" style="color:orange; text-decoration: none">Sie haben noch keinen Kapitän benannt!</a>
+        </div>
+      }
+
+      if (_warnings.bInjuredPlayerNoDoctorWarning) {
+        <div style="position: relative; width: 100%; text-align: center">
+          <a href="/member/staff/2" style="color:orange; text-decoration: none">Sie haben verletzte Spieler denen noch kein Arzt zugewiesen ist!</a>
+        </div>
+      }
+
+      if (_warnings.iSponsorId == 0 && !_warnings.bNation && _usr.iResp >= CkAppShared.iUserRespSponsors) {
+        <div style="position: relative; width: 100%; text-align: center">
+          <a href="/member/sponsors" style="color:orange; text-decoration: none">Sie haben noch keinen Trikotsponsor</a>
+        </div>
+      }
+
+      if (_warnings.bNoMerchandisingWarning) {
+        <div style="position: relative; width: 100%; text-align: center">
+          <a href="/member/merchandising" style="color:orange; text-decoration: none">Sie haben noch keinen Merchandisingvermarkter</a>
+        </div>
+      }
+
+  #if _WebApp
+      if (!_warnings.bEmblemExist && !_warnings.bNation) {
+        <div style="position: relative; width: 100%; text-align: center">
+          <a href="/member/club?id=@iClubId" style="color:orange; text-decoration: none">Sie haben noch kein Wappen für Ihren Verein ausgewählt</a>
+        </div>
+      }
+  #endif
+
+      if (_warnings.fSkillPointsFree >= 1f) {
+        <div style="position: relative; width: 100%; text-align: center">
+          <a href="/member/user" style="color:blue; text-decoration: none">Sie haben genug Fähigkeitspunkte um diese einsetzen zu können!</a>
+        </div>
+      }
+    }
+  }
+</div>
+
+@code {
+  CornerkickManager.User? _usr { get; set; } = null;
+  private DeskWarningsModel? _warnings { get; set; } = null;
+
+  int iClubId = -1;
+
+  public async Task updateAsync(CornerkickManager.User? usr)
+  {
+    _usr = usr;
+
+    _warnings = Controllers.Member.DeskController.GetWarnings(_usr);
+
+    if (_warnings.bAny && _usr != null) {
+      iClubId = _usr.club.iId;
+      await InvokeAsync(StateHasChanged);
+    }
+  }
+
+}

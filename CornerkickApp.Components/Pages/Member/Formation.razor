@@ -1,0 +1,76 @@
+﻿@using CornerkickApp.Shared.Models
+
+@if (TeamData != null) {
+  int iPl = 0;
+  @foreach (TeamModel.Player pl in TeamData.ltPlayer2) {
+    string sPlName = pl.sName;
+    string[] sNameSplit = sPlName.Split(" ");
+    string sSurname = sPlName;
+    if (sNameSplit.Length > 1) {
+      sSurname = sNameSplit[sNameSplit.Length - 1];
+      sPlName = sNameSplit[0][0] + ". " + sSurname;
+    }
+    if (sSurname.Length > 8) sPlName = sSurname;
+    if (sPlName.Length > 11) sPlName = sPlName.Substring(0, 11);
+
+    bool bDetails = pl.iPos > 0 || !string.IsNullOrEmpty(pl.sSkillAve) || !string.IsNullOrEmpty(pl.sAge);
+
+    double fTop = 1f - (pl.ptPos.x / (fHeightTot * fScale));
+    double fLeft = (pl.ptPos.y + 25f) / 50f;
+    /*
+    if (bOpponentTeam) {
+      iTop = 100 - iTop;
+      iLeft = 100 - iLeft;
+    }
+    */
+
+    const float fBoxWidth = 0.16f;
+    const float fAspectRatio = 3.3f;
+    fTop -= (fBoxWidth / 2f) / fAspectRatio;
+    fLeft -= (fBoxWidth / 2f);
+
+    /*
+    if (iPl == iSelectedPlayer) {
+      fTop += offsetY;
+      fLeft += offsetX;
+    }
+    */
+    int jPl = iPl;
+    //TeamModel.Player pl = teamData.ltPlayer2[0];
+    <div draggable="true" @ondrag="OnDrag" @ondragover="OnDragOver" @ondragend="OnDragEnd" @ondragstart="(d) => OnDragStart(d, jPl)" style="position: absolute; width: @fBoxWidth.ToString("0.0%", System.Globalization.CultureInfo.InvariantCulture); aspect-ratio: 3.3; min-height: 16px; top: @fTop.ToString("0.0%", System.Globalization.CultureInfo.InvariantCulture); left: @fLeft.ToString("0.0%", System.Globalization.CultureInfo.InvariantCulture); cursor: pointer; box-shadow: rgba(0, 0, 0, 0.3) 0px 0px 4px 4px; z-index: 90; background-color: white; border: 2px solid black; text-align: center; vertical-align: middle;">
+      <div name="imgPortrait" style="position: absolute; bottom: 100%; left: 35%; width: 50%; border: 2px solid black;">
+        @((MarkupString)pl.sPortrait)
+      </div>
+      <div style="position: absolute; width: 30%; height: 39px; bottom: 100%; left: 5%; display: flex; justify-content: center; align-items: center; background-color: black; color: white; font-size: 31px;">
+        @pl.iNb.ToString()
+      </div>
+      <div style="position: absolute; width: 15%; min-width: 6px; display: flex; top: 1px; right: 1px">
+        @((MarkupString)Controllers.Tool.getNatIcon(pl.sNat, sStyle: "width: 100%"))
+      </div>
+      <div class="txtPosName" style="position: absolute; width: 25%; height: 35%; min-height: 8px; bottom: 1px; left: 0px; display: flex; justify-content: center; align-items: center; color: black; background-color: white; word-break: break-word; font-size: 12px;">
+        @sPos[pl.iPos]
+      </div>
+      <div style="position: absolute; width: 25%; height: 35%; min-height: 8px; bottom: 1px; left: 25%; display: flex; justify-content: center; align-items: center; color: black; background-color: white; word-break: break-word; font-size: 12px;">
+        @pl.sSkillAve
+      </div>
+      <div class="txtPosition" style="position: absolute; width: 50%; height: 35%; min-height: 8px; bottom: 1px; left: 50%; display: flex; justify-content: center; align-items: center; color: black; background-color: white; word-break: break-word; font-size: 12px;">
+        @(pl.ptPos != null ? pl.ptPos.y.ToString() + "/" + pl.ptPos.x.ToString() : "?/?")
+      </div>
+      <div style="position: absolute; width: 100%; height: 65%; top: 0px; left: 0px; display: flex; justify-content: center; align-items: center; color: black; overflow: clip; white-space: nowrap; word-break: break-word; font-size: 19px;">
+        @sPlName
+      </div>
+    </div>
+
+    ++iPl;
+  }
+
+  <div style="background-color: white">
+    <p>selected player: @iSelectedPlayer</p>
+    <p>@offsetY</p>
+    <p>@offsetX</p>
+  </div>
+}
+
+@code {
+
+}

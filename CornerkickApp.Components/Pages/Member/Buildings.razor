@@ -1,0 +1,224 @@
+﻿@page "/member/buildings"
+
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using CornerkickApp.Shared.Models
+@using CornerkickApp.Components.Shared.Components
+
+@inject IJSRuntime JS
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject Controllers.Shared.MyAuthenticationStateProvider _auth
+
+<PageTitle>Stadionumgebung</PageTitle>
+
+<!DOCTYPE html>
+<html>
+<head>
+</head>
+
+<body>
+  @if (model != null) {
+    <div id="divGroundContainer" style="position: relative; display: flex; flex-wrap: wrap">
+      @if (buildings != null && _usr != null) {
+        int iBld = 0;
+        for (int iB = 0; iB < buildings.iGround; iB++) {
+          if (iB == Math.Ceiling((buildings.iGround - 1f) / 2f)) {
+            <div style="position: relative; flex-shrink: 0; width: 320px; height: 259px"><img style="position: absolute; top: 0px; left: 0px; width: 100%;" src="@CkAppShared.sContentDir/Images/stadium/stadium_S.png"></div>
+          }
+
+          if (iBld < buildings.ltBuildings.Count) {
+            // Ground with building
+            int iRpt = 0;
+            for (iRpt = 0; iRpt < buildings.ltBuildings[iBld].nRepeat - 1; iRpt++) {
+              <CornerkickApp.Components.Pages.Templates.BuildingsGround Building="buildings.ltBuildings[iBld]" iRep="iRpt" Disabled></CornerkickApp.Components.Pages.Templates.BuildingsGround>
+              iB++;
+            }
+            <CornerkickApp.Components.Pages.Templates.BuildingsGround Building="buildings.ltBuildings[iBld]" iRep="iRpt" Editable="_usr.iResp >= CkAppShared.iUserRespBuildings" User="_usr" ActBuild="(bdg, j) => BuildBuilding(bdg, j)"></CornerkickApp.Components.Pages.Templates.BuildingsGround>
+          } else {
+            // Ground without building
+            <div style="position: relative; flex-shrink: 0; width: 320px; height: 259px;">
+              <img class="imgGround" style="position: absolute; top: 0px; left: 0px; width: 100%;" src="@CkAppShared.sContentDir/Images/stadium/stadium_surrounding.png">
+              <div class="divGround" style="position: absolute; top: 8%; left: 7%; height: 84%; width: 86%; text-align: center; border: 6px solid @(bdgNew != null ? ltColorBldCat[bdgNew.iType] : "black")"></div>
+              <div class="divGround" style="position: absolute; top: 10%; left: 8%; height: 80%; width: 84%; text-align: center;" id="divGround_4">
+                <Blazorise.Select TValue="int" SelectedValue="@iNewBuildingIx" SelectedValueChanged="@SetNewGroundBuildButton">
+                  @for (int i = 0; i < buildings.ltBuildingsFree.Count; i++) {
+                    int j = i;
+                    <Blazorise.SelectItem Value="@j">@buildings.ltBuildingsFree[j].sCategory</Blazorise.SelectItem>
+                  }
+                </Blazorise.Select>
+                @if (bdgNew != null) {
+                  @if (bdgNew.bTypeInt) {
+                    <div class="divNew" style="position: relative; width: 50%; left: 25%; height: 40px; margin-top: 0.5rem">
+                      <text class="txtNew" style="position: absolute; text-align: right; top: 8px; left: 0px; width: 48%; font-size: 16px; text-shadow: white 0px 0px 6px;">Neu:</text>
+                      <input class="form-control iptNew" style="position: absolute; top: 0px; width: 48%; left: 52%; height: auto; font-size: 18px; text-align: right" value="@iNew" @onchange=@((i) => SetBuildingButton(i.Value))>
+                    </div>
+                  }
+                  <button type="button" class="btn btn-outline-secondary" style="position: absolute; width: 100%; left: 0px; bottom: 0px; height: auto; max-height: 86px; padding-left: 0px; padding-right: 0px; font-size: 16px;" @onclick=BuildBuilding title="Ausbau zu: @(bdgNew.sNameNext), Kosten:@(bdgNew.iCostConstructNext.ToString("N0")), Dauer: @(bdgNew.nDaysConstructTotal) Tage, Unterhalt: @(bdgNew.iCostMaintenanceNext.ToString("N0")) € / Monat">
+                    Ausbau zu: @bdgNew.sNameNext<br>@(bdgNew.iCostConstructNext.ToString("N0")) € / @(bdgNew.nDaysConstructTotal.ToString()) Tage
+                    @*
+                    <div>
+                      <div class="tooltip-arrow"></div>
+                      <div class="tooltip-inner">Ausbau zu:<br>@bdgNew.sNameNext<br>Kosten: @(bdgNew.iCostConstructNext.ToString("N0")) €<br>Dauer: @(bdgNew.nDaysConstructTotal) Tage<br>Unterhalt: @(bdgNew.iCostMaintenanceNext.ToString("N0")) € / Monat</div>
+                    </div>
+                    *@
+                  </button>
+                }
+              </div>
+            </div>
+          }
+
+          iBld++;
+        }
+
+        @if (buildings.ltBuildingsFree != null && buildings.ltBuildingsFree.Count > 0) {
+          <div style="position: relative; flex-shrink: 0; width: 320px; height: 259px;">
+            <img class="imgGround" style="position: absolute; top: 0px; left: 0px; width: 100%; opacity: 0.5;" src="@CkAppShared.sContentDir/Images/stadium/stadium_surrounding.png">
+            <div class="divGround" style="position: absolute; top: 10%; left: 8%; height: 80%; width: 84%; text-align: left;">
+              <div style="position: absolute; top: 0px; width: 100%; text-align: left;">
+                <u style="position: relative; font-size: 16px;">Verbleibende Gebäudetypen:</u>
+                <div style="position: relative; height: 145px; overflow: auto">
+                  <ul style="position: relative; font-size: 16px;">
+                    @foreach (StadiumSurroundingsModel.Building bdgFree in buildings.ltBuildingsFree) {
+                      <li>@bdgFree.sCategory</li>
+                    }
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <button type="button" class="btn btn-outline-secondary" style="position: absolute; width: 90%; height: auto; left: 5%; top: 78%; font-size: 16px;" @onclick=BuyGround>Grundstück kaufen: @(buildings.sCostBuyGround) €</button>
+          </div>
+        }
+      }
+    </div>
+    <p style="font-size: 1.2rem; margin-top: 10px">Unterhaltskosten total: @model.sMainanenceCostTotal</p>
+  }
+</body>
+</html>
+
+@code {
+  private CornerkickManager.User? _usr;
+  private StadiumSurroundingsModel? model;
+  private IJSObjectReference? module;
+
+  StadiumSurroundingsModel.Buildings? buildings;
+  public static readonly string[] ltColorBldCat = ["#3ADF00", "#F78181", "#00ffff", "#FFBF00", "#819FF7", "#DA81F5", "", "#00ffbf", "", "#ffff00"];
+
+  int iNewBuildingIx = 0;
+  StadiumSurroundingsModel.Building? bdgNew { get; set; }
+  private int iNew = 1;
+
+  protected override async Task OnInitializedAsync()
+  {
+    //await base.OnInitializedAsync();
+
+#if _WebApp
+    //_usr = await Http.GetFromJsonAsync<CornerkickManager.User>("member/Member/ckUser");
+    _usr = Controllers.Member.MemberController.ckUser(await _auth.GetUserId());
+
+    if (_usr == null) {
+      NavigationManager.NavigateTo("/authentication/register");
+      return;
+    }
+#else
+    _usr = CkAppShared.ckMng.ltUser[CkAppShared.iUserActive];
+#endif
+
+    model = CornerkickApp.Controllers.Member.BuildingsController.Model(_usr);
+
+    if (model != null) {
+      GetBuildings();
+    }
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender) {
+    }
+  }
+
+  private async Task GetBuildings()
+  {
+    buildings = Controllers.Member.BuildingsController.GetBuildings(_usr);
+  }
+
+  private async Task SetNewGroundBuildButton(int iIx)
+  {
+    iNewBuildingIx = iIx;
+
+    if (buildings?.ltBuildingsFree.Count > iIx) bdgNew = buildings.ltBuildingsFree[iIx];
+    //bdgNew = Controllers.Member.BuildingsController.GetTypeNumber(_usr, iType, 1, 0);
+  }
+
+  private async Task BuyGround()
+  {
+    CornerkickManager.Club? clb = Controllers.Member.MemberController.ckClub(_usr);
+    if (clb == null) return;
+    int iBalanceStart = clb.iBalance;
+
+    bool bOk = Controllers.Member.BuildingsController.BuyGround(_usr);
+
+    if (bOk) {
+      GetBuildings();
+      if (buildings?.ltBuildings.Count > 0) SetNewGroundBuildButton(buildings.ltBuildings[0].iType);
+      //InvokeAsync(StateHasChanged);
+
+      await JS.InvokeAsync<string>("PlaySound", "cash");
+      MainLayout.headline.Refresh(clb, iBalanceStart: iBalanceStart);
+    }
+  }
+
+  protected Task BuildBuilding(StadiumSurroundingsModel.Building? bdg, int jNew)
+  {
+    iNew = jNew;
+    bdgNew = bdg;
+    BuildBuilding();
+    return Task.CompletedTask;
+  }
+  private async Task BuildBuilding()
+  {
+    if (bdgNew == null) return;
+
+    CornerkickManager.Club? clb = Controllers.Member.MemberController.ckClub(_usr);
+    if (clb == null) return;
+    int iBalanceStart = clb.iBalance;
+
+    //if (!bdgNew.bTypeInt) bdgNew.iLevel++;
+    bdgNew.iLevel += iNew;
+
+    string sRet;
+    bool bOk = Controllers.Member.BuildingsController.BuildBuilding(_usr, bdgNew.iType, bdgNew.iLevel, out sRet);
+
+    if (bOk) {
+      //if (!string.IsNullOrEmpty(sRet)) await CkDialog.ckDialog.Show("Gebäudebau", sRet, sButtonCancelText2: "");
+      if (!string.IsNullOrEmpty(sRet) && MainLayout.ckToast != null) {
+        MainLayout.toastMessage = sRet;
+        await MainLayout.ckToast.Show();
+      }
+
+      GetBuildings();
+      InvokeAsync(StateHasChanged);
+
+      await JS.InvokeAsync<string>("PlaySound", "construction");
+      MainLayout.headline.Refresh(clb, iBalanceStart: iBalanceStart);
+    }
+  }
+
+  private async Task SetBuildingButton(object? o)
+  {
+    if (o == null) return;
+    if (bdgNew == null) return;
+    if (_usr == null) return;
+
+    int iNew;
+    if (!int.TryParse(o.ToString(), out iNew)) return;
+
+    int[]? iCostDaysNumber = CornerkickApp.Controllers.Member.BuildingsController.GetCostDaysNumber(_usr, bdgNew.iType, bdgNew.iLevel, iNew);
+    if (iCostDaysNumber == null) return;
+
+    bdgNew.sNameNext = (bdgNew.iLevel + iNew).ToString();
+    bdgNew.iCostConstructNext = iCostDaysNumber[0];
+    bdgNew.nDaysConstructTotal = iCostDaysNumber[1];
+  }
+
+}

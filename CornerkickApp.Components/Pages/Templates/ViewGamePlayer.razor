@@ -1,0 +1,172 @@
+﻿@using CornerkickApp.Shared.Models
+@using CornerkickApp.Components.Pages.Member
+
+@if (ltPlayer != null) {
+  foreach (ViewGameModel.Player pl in ltPlayer) {
+    if (pl.iCard < 2 || pl.bShowCard || GameFinished) {
+      string sBorderColor = pl.bKeeper ? ViewGameModel.sBorderColorsKeeper[pl.bHome ? 0 : 1] : sJerseyColors[pl.bHome ? 0 : 1][1 + (pl.bHome ? ViewGame.iClIxH : ViewGame.iClIxA)];
+      <div class="divPlayer" title="@(pl.iNo.ToString() + " - " + pl.sName)"
+            style="position: absolute;
+                   width: @(fPlWidth.ToString("0.0%", System.Globalization.CultureInfo.InvariantCulture));
+                   aspect-ratio: 1;
+                   min-width: 12px; min-height: 12px;
+                   top:  @((pl.pos.y - (fPlHeight / 2f)).ToString("0.0%", System.Globalization.CultureInfo.InvariantCulture));
+                   left: @((pl.pos.x - (fPlWidth  / 2f)).ToString("0.0%", System.Globalization.CultureInfo.InvariantCulture));
+                   border: @((2 * fSizeFactor).ToString("0"))px solid; border-radius: 50%; z-index: 6; display: flex; justify-content: center; align-items: center;
+                   background-color: @sJerseyColors[pl.bHome ? 0 : 1][0 + (pl.bHome ? ViewGame.iClIxH : ViewGame.iClIxA)];
+                   border-color: @sBorderColor;
+                   color: @(sJerseyColors[pl.bHome ? 0 : 1][2 + (pl.bHome ? ViewGame.iClIxH : ViewGame.iClIxA)]);
+                   font-size: @(Math.Sqrt(fSizeFactor).ToString("0%"))">
+        @pl.iNo.ToString()
+        @*<div style="position: absolute; width: 30%; height: 30%; top: 35%; right: -15%; background-color: black; border-radius: 50%; z-index: 7; display: none;"></div>*@
+        @if (pl.fMoralChange != 0f) {
+          <div class="changelabel"
+               style="top: @((pl.fMoralChange < 0f ? iEventCounter : -iEventCounter) * 4)px;
+                      @*opacity: @(((10 - iEventCounter) / 10f).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture))*@">
+            <span style="color: @(pl.fMoralChange < 0f ? "red" : "green"); text-shadow: 0 0 4px @(pl.fMoralChange < 0f ? "black" : "white")">@pl.fMoralChange.ToString("+0.00%;-0.00%", System.Globalization.CultureInfo.InvariantCulture)</span>
+          </div>
+        }
+        @if (pl.fLeaderChange != 0f) {
+          <div class="changelabel"
+               style="top: @(((pl.fLeaderChange < 0f ? iEventCounter : -iEventCounter) * 4) + 20)px;
+                      @*opacity: @(((10 - iEventCounter) / 10f).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture))*@">
+            <span style="color: @(pl.fLeaderChange < 0f ? "red" : "green"); text-shadow: 0 0 4px @(pl.fMoralChange < 0f ? "black" : "white")">@pl.fLeaderChange.ToString("+0.0e0;-0.0e0", System.Globalization.CultureInfo.InvariantCulture)</span>
+          </div>
+        }
+
+        @if (pl.iCard > 0 && pl.bShowCard) {
+          <div style="position: absolute;
+                      top: -16px;
+                      right: -8px;
+                      z-index: 9">
+            <img src="@CkAppShared.sContentDir/Icons/@(pl.iCard == 3 ? "rCard" : (pl.iCard == 1 ? "yCard" : "yrCard")).png" />
+          </div>
+        }
+      </div>
+    }
+  }
+}
+@{
+  if (sPlActive != null && sPlActive.Length > 1 && !string.IsNullOrEmpty(sPlActive[0])) {
+    <div id="divPlActiveDetails">
+      <div style="display: flex; flex-direction: column">
+        <div style="position: absolute; left: 0px; top: -30px; height: 30px; white-space: nowrap">
+          <h4 id="txtPlActiveName">@sPlActive[0]</h4>
+        </div>
+        @if (!string.IsNullOrEmpty(sPlActive[1])) {
+          <div id="divplActivePortrait" style="position: relative; top: 0px; left: 0px; height: 160px; width: fit-content; border-style: outset; border-width: 3px; border-color: lightgray">
+            @*<img id="imgPlActivePortrait" style="height: 100%; object-fit: contain" src="@sPlActive[1]">*@
+            @((MarkupString)sPlActive[1])
+          </div>
+        }
+
+        @if (AppConstants.IS_DEBUG && playerchances != null && playerchances.Length > 3) {
+          <RadzenChart Style="width: 160px; min-height: 200px">
+              <RadzenStackedColumnSeries Data="@playerchances[0]" Title="Schuss" Fill="red" ValueProperty="fChance">
+                <RadzenSeriesDataLabels Visible="true" />
+              </RadzenStackedColumnSeries>
+              <RadzenStackedColumnSeries Data="@playerchances[1]" Title="Pass" Fill="blue" ValueProperty="fChance">
+                <RadzenSeriesDataLabels Visible="true" />
+              </RadzenStackedColumnSeries>
+              <RadzenStackedColumnSeries Data="@playerchances[2]" Title="Dribbling" Fill="yellow" ValueProperty="fChance">
+                <RadzenSeriesDataLabels Visible="true" />
+              </RadzenStackedColumnSeries>
+              <RadzenStackedColumnSeries Data="@playerchances[3]" Title="Warten" Fill="grey" ValueProperty="fChance">
+                <RadzenSeriesDataLabels Visible="true" />
+              </RadzenStackedColumnSeries>
+              <RadzenValueAxis Min="0" Max="1" Formatter="@FormatAsPercent" Visible="false">
+                <RadzenGridLines Visible="true" />
+              </RadzenValueAxis>
+              <RadzenColumnOptions Radius="5" Width="40" />
+              <RadzenLegend Position="LegendPosition.Right" />
+          </RadzenChart>
+        }
+      </div>
+    </div>
+  }
+}
+@*
+<div style="position: absolute; left: 5%; bottom: 0px; text-align: left">
+  <text id="txtReferee" style="display: block;">Schiedsr.: 90,0% / 100,0%<br>Fehlentscheidungen: 0,0%</text>
+</div>
+*@
+
+@code {
+  [Parameter]
+  public System.Drawing.Point ptPitch { get; set; }
+
+  [Parameter]
+  public bool GameFinished { get; set; }
+
+  private float fPlHeight = 0.03f;
+  private float fPlWidth = 0.02f;
+  private float fSizeFactor = 1f;
+
+  private string[][] sJerseyColors { get; set; } = new string[2][];
+  private List<ViewGameModel.Player>? ltPlayer;
+  private string[]? sPlActive { get; set; } = new string[2];
+  PlayerAction[][]? playerchances { get; set; }
+  private int iEventCounter = 0;
+
+  class PlayerAction
+  {
+    public string sType { get; set; } = "";
+    public float fChance { get; set; }
+  }
+
+  public static class AppConstants
+  {
+#if DEBUG
+    public const bool IS_DEBUG = true;
+#else
+    public const bool IS_DEBUG = false;
+#endif
+  }
+
+  protected override async Task OnInitializedAsync()
+  {
+    await base.OnInitializedAsync();
+
+    fSizeFactor = CornerkickGame.Game.ptPitch100.X / (float)ptPitch.X;
+
+    fPlWidth *= fSizeFactor;
+    fPlHeight = fPlWidth * (2f / 3f) * (ptPitch.X / (2f * ptPitch.Y));
+  }
+
+  public async Task update(List<ViewGameModel.Player> _ltPlayer, string[][] _sJerseyColors, string[]? _sPlActive = null, float[]? _fPlAction = null, int _iEventCounter = 0)
+  {
+    sJerseyColors = _sJerseyColors;
+    ltPlayer = _ltPlayer;
+    sPlActive = _sPlActive;
+    iEventCounter = _iEventCounter;
+
+    if (_fPlAction != null && _fPlAction.Length > 3 && _fPlAction.Sum() > 0f) {
+      playerchances = new PlayerAction[][] {
+        new PlayerAction[] { new PlayerAction() { sType = "Schuss",    fChance = _fPlAction[0] } },
+        new PlayerAction[] { new PlayerAction() { sType = "Pass",      fChance = _fPlAction[1] } },
+        new PlayerAction[] { new PlayerAction() { sType = "Dribbling", fChance = _fPlAction[2] } },
+        new PlayerAction[] { new PlayerAction() { sType = "Warten",    fChance = _fPlAction[3] } }
+      };
+    } else {
+      playerchances = null;
+    }
+
+    await InvokeAsync(StateHasChanged);
+  }
+
+  public Task clear()
+  {
+    ltPlayer = null;
+    StateHasChanged();
+    return Task.CompletedTask;
+  }
+
+  string FormatAsPercent(object value)
+  {
+    double fValue = (double)value;
+
+    if (fValue < 0.001) return "";
+
+    return fValue.ToString("P1");
+  }
+}

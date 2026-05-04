@@ -1,0 +1,914 @@
+﻿@page "/member/training"
+
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using CornerkickApp.Controllers.Member
+@using CornerkickApp.Components.Shared.Components
+@using CornerkickApp.Shared.Models
+
+@inject IJSRuntime JS
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject DialogService DialogService
+@inject Controllers.Shared.MyAuthenticationStateProvider _auth
+
+<PageTitle>Training</PageTitle>
+
+<!DOCTYPE html>
+<html>
+<head>
+</head>
+
+<body>
+  <div id="divBody" style="position: relative; height: 100%; max-width: 1200px; display: flex; flex-wrap: wrap">
+    @*
+    <RadzenButton Text="Show confirm dialog" Click=@(args => DialogService.Confirm("Are you sure?", "MyTitle", new ConfirmOptions() { OkButtonText = "Yes", CancelButtonText = "No" })) />
+    *@
+
+    <h3 class="scroll-anchor" id="header_training_plan">Trainingsplan</h3>
+    <div style="position: relative; width: 100%; height: auto; margin-bottom: 2%; overflow: auto">
+      <div id="divTrainingPlanContainer" style="width: fit-content">
+        <div style="position: relative; width: 100%; display: flex; flex-wrap: nowrap; justify-content: space-between">
+          <a class="noselect" style="cursor: pointer" @onclick="(() => changeWeek(-1))">&#60;&#60; vorh. Woche</a>
+          <a class="noselect" style="cursor: pointer" @onclick="(() => changeWeek(0))">akt. Woche</a>
+          <a class="noselect scroll-anchor" id="aNextWeek" style="cursor: pointer" @onclick="(() => changeWeek(+1))">nä. Woche &#62;&#62;</a>
+        </div>
+        @if (trPlan != null) {
+          <table id="tblTrainingPlan" class="table table-bordered" cellpadding="4" style="position: relative; width: 100%; margin-top: 6px">
+            <thead>
+              <tr>
+                <th></th>
+                @for (int iD = 0; iD < trPlan.Length; iD++) {
+                  <th class="@(trPlan[iD][0].dt.Date.Equals(CkAppShared.ckMng.dtDatum.Date) ? "today" : "")" style="text-align: center; font-weight: bold; background-color: @ltColor[iD] !important">@trPlan[iD][0].dt.ToString("ddd., dd.MM.")</th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (int iIxDay = 0; iIxDay < trPlan[0].Length; iIxDay++) {
+                <tr>
+                  <td style="text-align: right; font-weight: bold;">@sTrainingTimes[iIxDay]</td>
+                  @for (int iD = 0; iD < trPlan.Length; iD++) {
+                    Cl? cl = ltCls.Find(c => c.iId == (trPlan[iD][iIxDay].iType < 0 ? -(trPlan[iD][iIxDay].iType + 1) : trPlan[iD][iIxDay].iType));
+                    string sOpac = trPlan[iD][iIxDay].iType < 0 ? "opacity: 0.4" : "opacity: 0.75";
+                    string sBgCl = "";
+                    if (cl != null) {
+                      if (string.IsNullOrEmpty(cl.sCl2)) sBgCl = "background-color: " + cl.sCl + ")";
+                      else                               sBgCl = "background-image: linear-gradient(to right, " + cl.sCl + "," + cl.sCl2 + ")";
+                    }
+                    <td style="text-align: center; @sBgCl !important; @sOpac">
+                      @if (trPlan[iD][iIxDay].iType > 100) {
+                        if (trPlan[iD][iIxDay].iType == 101) {
+                          <span>Spiel</span>
+                        } else if (trPlan[iD][iIxDay].iType == 102) {
+                          <span>Reise</span>
+                        } else if (trPlan[iD][iIxDay].iType == 103) {
+                          <span>Ereignis</span>
+                        } else {
+                          <span>?</span>
+                        }
+                      } else {
+                        bool bSctDisabled = false;
+                        @if (trPlan[iD][iIxDay].iType < 0) {
+                          bSctDisabled = true;
+                        } else {
+                          bDisableTemplateBtns = false;
+                        }
+                        int jD = iD;
+                        int jIxDay = iIxDay;
+                        <select class="form-control" style="width: 90%; min-width: 60px" @onchange="(e) => setTraining(e, jD, jIxDay)" disabled="@bSctDisabled">
+                          @for (int iT = 0; iT < sTrainingNames.Length; iT++) {
+                            bool bSelected = false;
+                            @if (trPlan[iD][iIxDay].iType < 0) {
+                              bSelected = iT == -(trPlan[iD][iIxDay].iType + 1);
+                            } else {
+                              bSelected = iT == trPlan[iD][iIxDay].iType;
+                            }
+                            <option value="@iT" selected="@bSelected">@sTrainingNames[iT]</option>
+                          }
+                        </select>
+                      }
+                    </td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+
+        <div id="chartContainerParent" style="position: relative; width: 100%; display: @displaychart">
+          @if (ltTeamData != null && ltTeamData.Length > 0 && ltTeamData[0].Length > 0 && ltTeamData[0][0] != null && ltTeamData[0][0].Count > 1) {
+            <div id="divTeamDataChartContainer" style="height: 300px; width: 100%">
+              <RadzenChart Style="height:100%">
+                @{
+                  string[] sFillColors = new string[] { "red", "#00BFFF", "gold" };
+                  foreach (List<CkAppShared.DataPointTD>[] ltdp0 in ltTeamData) {
+                    if (ltdp0 == null) continue;
+
+                    int i = 0;
+                    foreach (List<CkAppShared.DataPointTD> ltlg in ltdp0) {
+                      if (ltlg != null && ltlg.Count > 0) {
+                        string sFillCl = sFillColors[i++];
+                        <RadzenLineSeries Data="@ltlg" CategoryProperty="X" ValueProperty="Y" Stroke="@sFillCl" StrokeWidth="1">
+                          <TooltipTemplate Context="data">
+                            @if (data.X.HasValue && data.Y.HasValue) {
+                              <u>@(data.X.Value.ToString("dd.MM HH:mm"))</u>
+                              <br />
+                              @(String.Format("{0:P2}", data.Y))
+                            }
+                            @if (!string.IsNullOrEmpty(data.Z)) {
+                              @((MarkupString)(" - " + data.Z))
+                            }
+                          </TooltipTemplate>
+                          <ChildContent>
+                            <RadzenMarkers MarkerType="MarkerType.Circle" Size="6" Fill="@sFillCl" StrokeWidth="0" />
+                          </ChildContent>
+                        </RadzenLineSeries>
+                      }
+                    }
+                  }
+                }
+                <RadzenCategoryAxis Visible="true" Formatter="@FormatAsDate" Step="TimeSpan.FromDays(1)">
+                  <RadzenGridLines Visible="true" Stroke="#ccc" LineType="Radzen.Blazor.LineType.Dashed" />
+                </RadzenCategoryAxis>
+                <RadzenValueAxis FormatString="{0:P0}">
+                  <RadzenGridLines Visible="true" Stroke="#ccc" LineType="Radzen.Blazor.LineType.Dashed" />
+                </RadzenValueAxis>
+                <RadzenLegend Visible="false" />
+              </RadzenChart>
+            </div>
+
+            <label id="lbPlotExpected" style="position: absolute; top: 0px; right: 0px">
+              <input type="checkbox" id="cbPlotExpected" name="cbPlotExpected" @oninput="GetTeamDevelopmentData" style="margin-left: 4px">
+              Vorschau
+            </label>
+            <select name="Camp" id="selectCamp" @onchange="GetTeamDevelopmentData" style="position: absolute; top: 20px; right: 0px; width: 80px; display: none">
+              <option value="0">aus</option>
+              @{
+                foreach (CornerkickManager.TrainingCamp.Camp camp in CkAppShared.ckMng.tcp.ltCamps) {
+                  <option value="@camp.iId.ToString()">@camp.sName</option>
+                }
+              }
+            </select>
+          }
+        </div>
+      </div>
+    </div>
+
+    <div class="scroll-anchor" id="training_templates" style="width: 100%; margin-bottom: 2rem">
+      <h4>Vorlagen Trainingswoche</h4>
+      <div id="divTrainingTemplatesContainer" style="position: relative; width: 100%; display: flex; flex-wrap: wrap; justify-content: space-between">
+        <button id="bnTrainingWeekTemplate3" class="btn btn-outline-secondary btnTrainingWeekTemplate" @onclick="@(() => setTrainingTemplate(2))" disabled="@bDisableTemplateBtns">Ausgeglichen</button>
+        <button id="bnTrainingWeekTemplate1" class="btn btn-outline-secondary btnTrainingWeekTemplate" @onclick="@(() => setTrainingTemplate(0))" disabled="@bDisableTemplateBtns">Kondition</button>
+        <button id="bnTrainingWeekTemplate2" class="btn btn-outline-secondary btnTrainingWeekTemplate" @onclick="@(() => setTrainingTemplate(1))" disabled="@bDisableTemplateBtns">Regeneration</button>
+        <button id="bnTrainingWeekTemplate4" class="btn btn-outline-secondary btnTrainingWeekTemplate" @onclick="@(() => setTrainingTemplate(3))" disabled="disabled">Mentaltraining</button>
+        <button id="bnTrainingWeekTemplate5" class="btn btn-outline-secondary btnTrainingWeekTemplate" @onclick="@(() => setTrainingTemplate(4))" disabled="@bDisableTemplateBtns">Zweikampf</button>
+        <button id="bnTrainingWeekTemplate6" class="btn btn-outline-secondary btnTrainingWeekTemplate" @onclick="@(() => setTrainingTemplate(5))" disabled="@bDisableTemplateBtns">Abschluss</button>
+        <button id="bnCopyWeek" class="btn btn-outline-secondary" @onclick="copyTrainingWeek" style="position: relative; width: 100%; margin-top: 4px">Aktuelle Trainingswoche bis Saisonende fortführen</button>
+      </div>
+    </div>
+
+    <div style="position: relative; display: flex; flex-wrap: wrap; max-width: 100%">
+      <div style="position: relative; margin-right: 20px">
+        <h3>Bisherige Trainings</h3>
+
+        <div style="position: relative; float: left; margin-right: 10px; margin-bottom: 4%">
+          <table class="table table-bordered" cellpadding="4">
+            <thead>
+              <tr>
+                <th style="font-size: 18px; color: blue; text-align: center" colspan="3">Konditionelles Training</th>
+              </tr>
+              <tr>
+                <th style="text-align: center">Art</th>
+                <th style="text-align: center">Anzahl</th>
+                <th style="text-align: center">Anteil</th>
+              </tr>
+            </thead>
+            <tbody>
+              @{
+                foreach (CornerkickManager.PlayerTool.Training tr in CkAppShared.ckMng.plt.ltTraining) {
+                  if (tr.iId > 0 && tr.iId < model.iTrainingCount.Length && tr.fCondi > 0f) {
+                    <tr>
+                      <td style="text-align: center">@tr.sName</td>
+                      <td style="text-align: center">@model.iTrainingCount[tr.iId].ToString()</td>
+                      <td style="text-align: right">@model.sTrainingCountRel[tr.iId]</td>
+                    </tr>
+                  }
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <div style="position: relative; float: left; margin-bottom: 4%">
+          <table class="table table-bordered" border="1" cellpadding="4">
+            <thead>
+              <tr>
+                <th style="font-size: 18px; color: green; text-align: center" colspan="3">Regeneratives Training</th>
+              </tr>
+              <tr>
+                <th style="text-align: center">Art</th>
+                <th style="text-align: center">Anzahl</th>
+                <th style="text-align: center">Anteil</th>
+              </tr>
+            </thead>
+            <tbody>
+              @{
+                foreach (CornerkickManager.PlayerTool.Training tr in CkAppShared.ckMng.plt.ltTraining) {
+                  if (tr.iId > 0 && tr.iId < model.iTrainingCount.Length && tr.fCondi < 0f) {
+                    <tr>
+                      <td style="text-align: center">@tr.sName</td>
+                      <td style="text-align: center">@model.iTrainingCount[tr.iId].ToString()</td>
+                      <td style="text-align: right">@model.sTrainingCountRel[tr.iId]</td>
+                    </tr>
+                  }
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      @if (model?.tripts != null) {
+        <div style="position: relative; margin-bottom: 4%; max-width: 100%; overflow-x: auto">
+          <h3>Sondertraining</h3>
+          <table id="tblTrainingRules" cellpadding="2">
+            @{
+              int i = 0;
+              foreach (TrainingRulesInput tri in model.tripts) {
+                int j = i;
+                <tr data-row=@j.ToString()>
+                  <td style="text-align: right">
+                    <b style="color: @(((tri.iTrainingRulesSmGr < 0 && tri.fTrainingRulesValue < 0.01) || (tri.iTrainingRulesSmGr > 0 && tri.fTrainingRulesValue > 0.99)) ? "grey" : "black")">@(j + 1).&nbsp;Regel:</b> Wenn
+                  </td>
+                  <td class="contain-select" style="text-align: center">
+                    @*@Html.DropDownListFor(m => m.tripts[j].iTrainingRulesCFM, model.tripts[j].sliTrainingRulesCFM, new { @class = "form-horizontal ctrTrainingRules sctTrainingRulesCFM", @onchange = "setTrainingRules(" + j + ")", @disabled = "disabled" })*@
+                    <Blazorise.Select class="form-horizontal ctrTrainingRules sctTrainingRulesCFM" SelectedValue="@tri.iTrainingRulesCFM" SelectedValueChanged="@(e => setTrainingRulesCFM(j, e))" TValue="int" Disabled="@bTrRuleDisabled[j]">
+                      @foreach (LayoutModel.SelectListItem sli in tri.sliTrainingRulesCFM) {
+                        <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+                      }
+                    </Blazorise.Select>
+                  </td>
+                  <td class="contain-select">
+                    @*@Html.DropDownListFor(m => m.tripts[j].iTrainingRulesSmGr, model.tripts[j].sliTrainingRulesSmGr, new { @class = "form-horizontal ctrTrainingRules sctTrainingRulesSmGr", @onchange = "setTrainingRules(" + j + ")", @disabled = "disabled" })*@
+                    <Blazorise.Select class="form-horizontal ctrTrainingRules sctTrainingRulesSmGr" SelectedValue="@tri.iTrainingRulesSmGr" SelectedValueChanged="@(e => setTrainingRulesSmGr(j, e))" TValue="int" Disabled="@bTrRuleDisabled[j]">
+                      @foreach (LayoutModel.SelectListItem sli in tri.sliTrainingRulesSmGr) {
+                        <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+                      }
+                    </Blazorise.Select>
+                  </td>
+                  <td>
+                    @*@Html.EditorFor(Model => Model.tripts[j].fTrainingRulesValue, new { htmlAttributes = new { @class = "ctrTrainingRules iptTrainingRulesValue", @type = "tel", @style = "width: 40px; text-align: right", @onchange = "setTrainingRules(" + j + ")", @disabled = "disabled" } })*@
+                    <input type="tel" style="width: 40px; text-align: right" @bind-value:event="onchange" @oninput="(e => setTrainingRulesValue(j, e))" @bind-value="tri.fTrainingRulesValue" disabled="@bTrRuleDisabled[j]">
+                  </td>
+                  <td>
+                    %&nbsp;trainiere
+                  </td>
+                  <td class="contain-select">
+                    @*@Html.DropDownListFor(m => m.tripts[j].iTrainingRulesType, model.tripts[j].sliTrainingRulesType, new { @class = "form-horizontal ctrTrainingRules sctTrainingRulesType", @onchange = "setTrainingRules(" + j + ")", @onkeyup = "setTrainingRules(" + j + ")", @disabled = "disabled" })*@
+                    <Blazorise.Select class="form-horizontal ctrTrainingRules sctTrainingRulesType" SelectedValue="@tri.iTrainingRulesType" SelectedValueChanged="@(e => setTrainingRulesType(j, e))" TValue="int" Disabled="@bTrRuleDisabled[j]">
+                      @foreach (LayoutModel.SelectListItem sli in tri.sliTrainingRulesType) {
+                        <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+                      }
+                    </Blazorise.Select>
+                  </td>
+                </tr>
+
+                i++;
+              }
+            }
+          </table>
+        </div>
+      }
+    </div>
+
+    @*
+    <div>
+      <h3>Trainingsbonus</h3>
+      <div style="height: 400px; width: 100%; margin-bottom: 4%">
+        <div id="chartContainerFAve" style="height: 100%; width: 100%"></div>
+      </div>
+    </div>
+    *@
+
+    <div id="teamlist" style="width: 100%">
+      <h3>Kaderliste</h3>
+      <div style="overflow: auto">
+        <table class="b-table table table-striped table-sm b-datagrid table-bordered" style="white-space:nowrap">
+          <thead>
+            @if (bShowIndTr) {
+              <tr style="font-size: 120%; color: gray">
+                <th colspan="12" class="cursor-pointer text-center" style="border: 1px solid gray">Allgemeines</th>
+                <th colspan="3" class="cursor-pointer text-center" style="border: 1px solid gray">Individuelles Training</th>
+              </tr>
+            }
+            <tr>
+              <th scope="col" class="cursor-pointer text-center" style="border-left: 1px solid gray">Nr</th>
+              <th scope="col" class="cursor-pointer text-center"><div class="d-inline-flex">Name</div></th>
+              <th scope="col" class="cursor-pointer text-center"><div class="d-inline-flex">HP</div></th>
+              <th scope="col" class="cursor-pointer text-center"><div class="d-inline-flex">St.</div></th>
+              <th scope="col" class="cursor-pointer text-center"><div class="d-inline-flex">Kondi.</div></th>
+              <th scope="col" class="cursor-pointer text-center"><div class="d-inline-flex">Frische</div></th>
+              <th scope="col" class="cursor-pointer text-center"><div class="d-inline-flex">Moral</div></th>
+              <th scope="col" class="cursor-pointer text-center"><div class="d-inline-flex">Alter</div></th>
+              <th scope="col" class="cursor-pointer text-center"><div class="d-inline-flex">Tal.</div></th>
+              <th scope="col" class="cursor-pointer text-center"><div class="d-inline-flex">letztes Tr.</div></th>
+              <th scope="col" class="cursor-pointer text-center"><div class="d-inline-flex">Hist.</div></th>
+              <th scope="col" class="cursor-pointer text-center" style="border-right: 1px solid gray"><div class="d-inline-flex">Nat.</div></th>
+              @if (bShowIndTr) {
+                <th scope="col" class="cursor-pointer text-center"><div class="d-inline-flex">Typ</div></th>
+                <th scope="col" class="cursor-pointer text-center"><div class="d-inline-flex"></div></th>
+                <th scope="col" class="cursor-pointer text-center" style="border-right: 1px solid gray"><div class="d-inline-flex">Tal.</div></th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @if (ltTableTeam != null) {
+              ltPlayerskillbuttons = new Templates.PlayerSkill[ltTableTeam.Count];
+              int j = 0;
+              foreach (TrainingModel.TableItem ti in ltTableTeam) {
+                Templates.PlayerSkill psb = new Templates.PlayerSkill();
+                psb.iPlayerId = ti.iId;
+                <tr class="table-row-selectable">
+                  <td hidden>@ti.iId</td>
+                  <td style="text-align: end; border-left: 1px solid gray">@ti.iNb</td>
+                  <td style="text-align: center">
+                    <a href="/member/playerdetails/@ti.iId" style="text-decoration: none">@((MarkupString)ti.sName)</a>
+                  </td>
+                  <td style="text-align: center">@ti.sPosition</td>
+                  <td style="text-align: center">@(ti.fSkill > 0f ? ti.fSkill.ToString("0.0") : "?")</td>
+                  <td style="text-align: end">
+                    <span style="color: @CornerkickApp.Controllers.Member.PlayerController.getColorFromValue(0, ti.fCondi)">
+                      @((ti.fCondi * 100f).ToString("0.0"))
+                    </span>
+                  </td>
+                  <td style="text-align: end">
+                    <span style="color: @CornerkickApp.Controllers.Member.PlayerController.getColorFromValue(1, ti.fFresh)">
+                      @((ti.fFresh * 100f).ToString("0.0"))
+                    </span>
+                  </td>
+                  <td style="text-align: end">
+                    <span style="color: @CornerkickApp.Controllers.Member.PlayerController.getColorFromValue(2, ti.fMoral)">
+                      @((ti.fMoral * 100f).ToString("0.0"))
+                    </span>
+                  </td>
+                  <td style="text-align: center">@ti.iAge</td>
+                  <td style="text-align: center">@ti.fTalent.ToString("0.0")</td>
+                  <td style="text-align: center">@ti.sTrLast</td>
+                  <td>
+                    <Blazorise.Button class="btn btn-outline-secondary" Clicked="@(() => showTrainingHist(ti.iId, ti.sName))">
+                      <Blazorise.Icon Name="Blazorise.IconName.List" />
+                    </Blazorise.Button>
+                  </td>
+                  <td style="text-align: center; border-right: 1px solid gray">@((MarkupString)Controllers.Tool.getNatIcon(ti.sNat))</td>
+                  @if (bShowIndTr) {
+                    <td>
+                      <Blazorise.Select class="form-horizontal ctrTrainingRules sctTrainingRulesCFM" SelectedValue="@(ti.iIndTr)" SelectedValueChanged="@(i => setIndTraining(ti.iId, i))" TValue="int">
+                        @foreach (LayoutModel.SelectListItem sli in CornerkickApp.Controllers.Member.PlayerController.getIndSkillsSelectList(ti.iId)) {
+                          <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+                        }
+                      </Blazorise.Select>
+                    </td>
+                    <td>
+                      @* Referenz mittels Lambda in die Liste schreiben *@
+                      <CornerkickApp.Components.Pages.Templates.PlayerSkill @ref="ltPlayerskillbuttons[j++]"
+                        usr="_usr" 
+                        iPlayerId="ti.iId" 
+                        iSkillIx="ti.iIndTr">
+                      </CornerkickApp.Components.Pages.Templates.PlayerSkill>
+                    </td>
+                    <td style="text-align: center; border-right: 1px solid gray">@ti.iTalentIndTr</td>
+                  }
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+        @*
+        <DataGrid @ref="dgTraining"
+                  TItem="TrainingModel.TableItem"
+                  Data="@ltTableTeam"
+                  Style="white-space:nowrap"
+                  PageSize="100"
+                  Striped
+                  RowSelectable=@((x) => false)
+                  Narrow>
+           <ChildContent>
+             <DataGridColumn Field="@nameof(TrainingModel.TableItem.iId)" Sortable="false" Displayable="false" />
+             <DataGridColumn Field="@nameof(TrainingModel.TableItem.iNb)" Caption="Nr" TextAlignment="Blazorise.TextAlignment.End" />
+             <DataGridColumn Field="@nameof(TrainingModel.TableItem.sName)" Caption="Name" TextAlignment="Blazorise.TextAlignment.Center">
+               <DisplayTemplate>
+                <a href="/member/playerdetails/@context.iId" style="text-decoration: none">
+                   @{
+                    @((MarkupString)context.sName)
+                  }
+                </a>
+              </DisplayTemplate>
+            </DataGridColumn>
+            <DataGridColumn Field="@nameof(TrainingModel.TableItem.sPosition)" Caption="HP" TextAlignment="Blazorise.TextAlignment.Center" />
+            <DataGridColumn Field="@nameof(TrainingModel.TableItem.fSkill)" Caption="St." DisplayFormat="{0:N1}" TextAlignment="Blazorise.TextAlignment.Center">
+              <DisplayTemplate>
+                @{
+                  @(context.fSkill > 0f ? context.fSkill.ToString("0.0") : "?")
+                }
+              </DisplayTemplate>
+            </DataGridColumn>
+            <DataGridColumn Field="@nameof(TrainingModel.TableItem.fCondi)" Caption="Kondi." TextAlignment="Blazorise.TextAlignment.End">
+              <DisplayTemplate>
+                <span style="color: @CornerkickApp.Controllers.Member.PlayerController.getColorFromValue(0, context.fCondi)">
+                  @((context.fCondi * 100f).ToString("0.0"))
+                </span>
+              </DisplayTemplate>
+            </DataGridColumn>
+            <DataGridColumn Field="@nameof(TrainingModel.TableItem.fFresh)" Caption="Frische" TextAlignment="Blazorise.TextAlignment.End">
+              <DisplayTemplate>
+                <span style="color: @CornerkickApp.Controllers.Member.PlayerController.getColorFromValue(1, context.fFresh)">
+                  @((context.fFresh * 100f).ToString("0.0"))
+                </span>
+              </DisplayTemplate>
+            </DataGridColumn>
+            <DataGridColumn Field="@nameof(TrainingModel.TableItem.fMoral)" Caption="Moral" TextAlignment="Blazorise.TextAlignment.End">
+              <DisplayTemplate>
+                <span style="color: @CornerkickApp.Controllers.Member.PlayerController.getColorFromValue(2, context.fMoral)">
+                  @((context.fMoral * 100f).ToString("0.0"))
+                </span>
+              </DisplayTemplate>
+            </DataGridColumn>
+            <DataGridColumn Field="@nameof(TrainingModel.TableItem.iAge)" Caption="Alter" TextAlignment="Blazorise.TextAlignment.End" />
+            <DataGridColumn Field="@nameof(TrainingModel.TableItem.fTalent)" Caption="Tal." DisplayFormat="{0:N1}" TextAlignment="Blazorise.TextAlignment.End" />
+            <DataGridColumn Field="@nameof(TrainingModel.TableItem.sTrLast)" Caption="letztes Tr." TextAlignment="Blazorise.TextAlignment.End" />
+            <DataGridColumn Field="" Caption="Hist.">
+              <DisplayTemplate>
+                <Blazorise.Button class="btn btn-outline-secondary" Clicked="@(() => showTrainingHist(context.iId, context.sName))">
+                  <Blazorise.Icon Name="Blazorise.IconName.List" />
+                </Blazorise.Button>
+              </DisplayTemplate>
+            </DataGridColumn>
+            @if (_usr.iResp >= CkAppShared.iUserRespPlayerIndTraining) {
+              <DataGridColumn Field="@nameof(TrainingModel.TableItem.iIndTr)" Caption="Ind. Training" TextAlignment="Blazorise.TextAlignment.Center">
+                <DisplayTemplate>
+                  @{
+                    <Blazorise.Select class="form-horizontal ctrTrainingRules sctTrainingRulesCFM" SelectedValue="@((context.iIndTr))" SelectedValueChanged="@(i => setIndTraining(context.iId, i))" TValue="int">
+                      @foreach (LayoutModel.SelectListItem sli in CornerkickApp.Controllers.Member.PlayerController.getIndSkillsSelectList()) {
+                        <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+                      }
+                    </Blazorise.Select>
+                  }
+                </DisplayTemplate>
+              </DataGridColumn>
+              <DataGridColumn Field="@nameof(TrainingModel.TableItem.iIndTr)" TextAlignment="Blazorise.TextAlignment.Center">
+                <DisplayTemplate>
+                  @{
+                    <CornerkickApp.Components.Pages.Templates.PlayerSkill usr="_usr" iPlayerId="context.iId" iSkillIx="context.iIndTr" Silent></CornerkickApp.Components.Pages.Templates.PlayerSkill>
+                  }
+                </DisplayTemplate>
+              </DataGridColumn>
+              <DataGridColumn Field="@nameof(TrainingModel.TableItem.iTalentIndTr)" Caption="Tal." TextAlignment="Blazorise.TextAlignment.End" />
+            }
+            <DataGridColumn Field="@nameof(TrainingModel.TableItem.sNat)" Caption="Nat." TextAlignment="Blazorise.TextAlignment.Center">
+              <DisplayTemplate>
+                @{
+                  @((MarkupString)Controllers.Tool.getNatIcon(context.sNat))
+                }
+              </DisplayTemplate>
+            </DataGridColumn>
+          </ChildContent>
+          <EmptyTemplate>
+            <div class="box">
+              Keine Spieler ...
+            </div>
+          </EmptyTemplate>
+          <LoadingTemplate>
+            <div class="box">
+              <progress class="progress is-small is-primary" max="100" />
+            </div>
+          </LoadingTemplate>
+        </DataGrid>
+        *@
+      </div>
+    </div>
+  </div>
+
+  <Blazorise.Modal @ref="modalRef">
+    <Blazorise.ModalContent Centered Size="Blazorise.ModalSize.Large">
+      <Blazorise.ModalHeader>
+        <Blazorise.ModalTitle>Trainingshistorie für <b>@sPlNameTrHist</b> </Blazorise.ModalTitle>
+        <Blazorise.CloseButton />
+      </Blazorise.ModalHeader>
+      <Blazorise.ModalBody id="trHistContainer">
+        <CornerkickApp.Components.Pages.Templates.PlayerTrainingHistoryTable @ref=playerTrainingHistoryTable></CornerkickApp.Components.Pages.Templates.PlayerTrainingHistoryTable>
+      </Blazorise.ModalBody>
+      @*
+      <Blazorise.ModalFooter>
+        <Blazorise.Button Color="Blazorise.Color.Secondary" Clicked="@HideModal">Close</Blazorise.Button>
+        <Blazorise.Button Color="Blazorise.Color.Primary" Clicked="@HideModal">Save Changes</Blazorise.Button>
+      </Blazorise.ModalFooter>
+      *@
+    </Blazorise.ModalContent>
+  </Blazorise.Modal>
+  
+  <script src="./_content/CornerkickApp.Components/js/Player.js"></script>
+</body>
+</html>
+
+@code {
+  private CornerkickManager.User? _usr;
+  private TrainingModel? model;
+  private IJSObjectReference? module;
+
+  private DataGrid<TrainingModel.TableItem>? dgTraining;
+
+  private static int iWeekGlobal = 0;
+  private CornerkickManager.Main.TrainingPlan.Unit[][]? trPlan { get; set; }
+  string[] sTrainingTimes = new string[] { "9:30", "12:00", "16:30" };
+  string[] sTrainingNames = new string[] { "Frei", "Regeneration", "Kondition", "Spritzigkeit", "Zweikämpfe", "5 gegen 2", "Torschüsse", "Flanken/Abschluss", "Standardsituationen", "Trainingsspiel", "Fussballtennis", "Kopfballpendel", "Yoga", "Elfmeterschießen" };
+  string[] ltColor = new string[] { "white", "#819FF7", "#3ADF00", "#FFBF00", "#F78181", "#DA81F5", "#D8D8D8" };
+  string displaychart = "block";
+  bool bDisableTemplateBtns = false;
+  bool bShowIndTr;
+
+  class Cl {
+    public int iId { get; set; }
+    public string sCl { get; set; } = "";
+    public string sCl2 { get; set; } = "";
+  }
+  List<Cl> ltCls { get; set; } = new List<Cl>();
+
+  protected List<TrainingModel.TableItem>? ltTableTeam;
+
+  List<CkAppShared.DataPointTD>[][]? ltTeamData;
+  private bool bTeamDataExpected {
+    get { return false; }
+    set {
+      GetTeamDevelopmentData();
+    }
+  }
+
+  private bool[] bTrRuleDisabled = new bool[] { false, true, true };
+  CornerkickApp.Components.Pages.Templates.PlayerTrainingHistoryTable? playerTrainingHistoryTable { get; set; }
+  private Blazorise.Modal? modalRef;
+  private string sPlNameTrHist { get; set; } = "";
+
+  // Liste von nullable Component-Referenzen
+  private CornerkickApp.Components.Pages.Templates.PlayerSkill[] ltPlayerskillbuttons { get; set; }
+
+  protected override async Task OnInitializedAsync()
+  {
+    //await base.OnInitializedAsync();
+
+#if _WebApp
+    //_usr = await Http.GetFromJsonAsync<CornerkickManager.User>("member/Member/ckUser");
+    _usr = Controllers.Member.MemberController.ckUser(await _auth.GetUserId());
+#else
+    _usr = CkAppShared.ckMng.ltUser[CkAppShared.iUserActive];
+#endif
+
+    model = CornerkickApp.Controllers.Member.TrainingController.Model(_usr);
+    if (model != null) {
+      iWeekGlobal = model.iWeekIni;
+
+      bShowIndTr = _usr != null && _usr.iResp >= CkAppShared.iUserRespPlayerIndTraining;
+
+      float fCondiMin = 1f;
+      float fCondiMax = 0f;
+      float fFreshMin = 1f;
+      float fFreshMax = 0f;
+      float fMoralMin = 1f;
+      float fMoralMax = 0f;
+      foreach (CornerkickManager.PlayerTool.Training tr in CkAppShared.ckMng.plt.ltTraining) {
+        if (tr.iId < 0) continue;
+
+        if (tr.fCondi > 0f) fCondiMin = Math.Min(fCondiMin, tr.fCondi);
+        fCondiMax = Math.Max(fCondiMax, tr.fCondi);
+        fFreshMin = Math.Min(fFreshMin, tr.fFresh);
+        fFreshMax = Math.Max(fFreshMax, tr.fFresh);
+        fMoralMin = Math.Min(fMoralMin, tr.fMoral);
+        fMoralMax = Math.Max(fMoralMax, tr.fMoral);
+      }
+
+      foreach (CornerkickManager.PlayerTool.Training tr in CkAppShared.ckMng.plt.ltTraining) {
+        if (tr.iId < 0) continue;
+
+        Cl cl = new Cl() { iId = tr.iId };
+        if (tr.fCondi > 0f) {
+          int iCl = (int)((192 * (tr.fCondi - fCondiMin)) / (fCondiMax - fCondiMin));
+          cl.sCl = "rgb(255," + iCl.ToString() + "," + iCl.ToString() + ")";
+        } else {
+          int iCl = (int)((128 * (tr.fFresh - fFreshMin)) / (fFreshMax - fFreshMin));
+          cl.sCl = "rgb(" + (128 - iCl).ToString() + "," + (128 - iCl).ToString() + ",255)";
+        }
+
+        int iCl2 = (int)((128 * (tr.fMoral - fMoralMin)) / (fMoralMax - fMoralMin));
+        cl.sCl2 = "rgb(255," + (128 + iCl2).ToString() + ",0)";
+
+        ltCls.Add(cl);
+      }
+
+      await GetTrainingPlan(model.iWeekIni);
+      if (model.iWeekIni == 0) await GetTeamDevelopmentData();
+      await GetTableTeam();
+      await enableTrainingRules();
+#if _WebApp
+    } else {
+      NavigationManager.NavigateTo("/authentication/register");
+#endif
+    }
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender) {
+      module = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/CornerkickApp.Components/Pages/Member/Training.razor.js");
+
+      if (dgTraining != null) await dgTraining.ApplySorting(new DataGridSortColumnInfo(nameof(TrainingModel.TableItem.iNb), Blazorise.SortDirection.Ascending));
+
+      await ShowTutorial();
+    }
+  }
+
+  protected async Task changeWeek(int iDeltaWeek)
+  {
+    if (iDeltaWeek == 0) iWeekGlobal = 0;
+    else                 iWeekGlobal += iDeltaWeek;
+
+    displaychart = iWeekGlobal == 0 ? "block" : "none";
+    bDisableTemplateBtns = iWeekGlobal < 0;
+
+    await GetTrainingPlan(iWeekGlobal);
+
+    await ShowTutorial();
+  }
+
+  protected async Task GetTrainingPlan(int iWeek)
+  {
+    trPlan = await CornerkickApp.Controllers.Member.TrainingController.getTrainingPlan(_usr, iWeek);
+  }
+
+  protected async Task setTraining(ChangeEventArgs e, int iDay, int iTimeOfDay)
+  {
+    if (_usr == null) return;
+    if (e.Value == null) return;
+
+    int iType;
+    if (!int.TryParse(e.Value.ToString(), out iType)) return;
+
+    CornerkickApp.Controllers.Member.TrainingController.setTraining(_usr, iType, iDay + (iWeekGlobal * 7), iTimeOfDay);
+    await GetTrainingPlan(iWeekGlobal);
+
+    //await ShowTutorial(iTrType: iType);
+  }
+
+  protected async Task setTrainingTemplate(int iType)
+  {
+    if (_usr == null) return;
+
+    //const iTbl = checkWeekEmpty();
+    int iTbl = 0;
+
+    if (iTbl == 0) {
+      CornerkickApp.Controllers.Member.TrainingController.setTrainingWeekTemplate(_usr, iWeekGlobal, iType);
+      await GetTrainingPlan(iWeekGlobal);
+      await InvokeAsync(StateHasChanged);
+    } else if (iTbl > 0) {
+      //getDialog(document.body, "Achtung:<br>Bereits festgelegte Trainingseinheiten in dieser Woche werden überschrieben!", "Vorlage Trainingsplan", function() { setTrainingTemplateAjax(iType) });
+    }
+
+    await ShowTutorial(iTrType: iType);
+  }
+
+  protected async Task copyTrainingWeek()
+  {
+    CornerkickApp.Controllers.Member.TrainingController.copyTrainingPlan(_usr, iWeekGlobal);
+
+    await ShowTutorial();
+  }
+
+  protected async Task setTrainingRulesCFM(int i, int iCFM)
+  {
+    if (model == null) return;
+    model.tripts[i].iTrainingRulesCFM = iCFM;
+    await setTrainingRules(i, model.tripts[i].iTrainingRulesCFM, model.tripts[i].iTrainingRulesSmGr, model.tripts[i].fTrainingRulesValue, model.tripts[i].iTrainingRulesType);
+  }
+
+  protected async Task setTrainingRulesSmGr(int i, int iSmGr)
+  {
+    if (model == null) return;
+    model.tripts[i].iTrainingRulesSmGr = iSmGr;
+    await setTrainingRules(i, model.tripts[i].iTrainingRulesCFM, model.tripts[i].iTrainingRulesSmGr, model.tripts[i].fTrainingRulesValue, model.tripts[i].iTrainingRulesType);
+  }
+
+  protected async Task setTrainingRulesValue(int i, ChangeEventArgs args)
+  {
+    if (model == null) return;
+    if (args.Value == null) return;
+    float fValue;
+    if (!float.TryParse(args.Value.ToString(), out fValue)) return;
+    model.tripts[i].fTrainingRulesValue = fValue;
+    await setTrainingRules(i, model.tripts[i].iTrainingRulesCFM, model.tripts[i].iTrainingRulesSmGr, model.tripts[i].fTrainingRulesValue, model.tripts[i].iTrainingRulesType);
+  }
+
+  protected async Task setTrainingRulesType(int i, int iType)
+  {
+    if (model == null) return;
+    model.tripts[i].iTrainingRulesType = iType;
+    await setTrainingRules(i, model.tripts[i].iTrainingRulesCFM, model.tripts[i].iTrainingRulesSmGr, model.tripts[i].fTrainingRulesValue, model.tripts[i].iTrainingRulesType);
+  }
+
+  protected async Task setTrainingRules(int i, int iCFM, int iSmGr, float fValue, int iType)
+  {
+    CornerkickApp.Controllers.Member.TrainingController.TrainingSetTrainingRule(_usr, i, iCFM, iSmGr, fValue, iType);
+    await enableTrainingRules();
+  }
+
+  private async Task enableTrainingRules()
+  {
+    if (model == null) return;
+    for (int i = 0; i < bTrRuleDisabled.Length - 1; i++) {
+      bTrRuleDisabled[i + 1] = model.tripts[i].fTrainingRulesValue < 0.001f;
+    }
+  }
+
+  protected async Task GetTeamDevelopmentData(ChangeEventArgs? e = null)
+  {
+    ltTeamData = CornerkickApp.Controllers.Member.MemberController.GetTeamDevelopmentData(_usr, bExpected: e != null ? (bool)e.Value : false, iWeek: iWeekGlobal);
+  }
+
+  protected async Task GetTableTeam()
+  {
+    if (_usr != null) {
+      ltTableTeam = CornerkickApp.Controllers.Member.TrainingController.getTableTeam(_usr);
+    }
+  }
+
+  protected async Task showTrainingHist(int iPlayerId, string sPlName)
+  {
+    sPlNameTrHist = sPlName;
+    if (playerTrainingHistoryTable != null) await playerTrainingHistoryTable.draw(iPlayerId);
+    if (modalRef != null) await modalRef.Show();
+  }
+
+  private Task HideModal()
+  {
+    return modalRef.Hide();
+  }
+
+  protected async Task setIndTraining(int iPlayerId, int iIndTr)
+  {
+    //ltTableTeam.Find(i => i.iId == iPlayerId).iId = iIndTr;
+    CornerkickApp.Controllers.Member.PlayerController.setIndTraining(iPlayerId, iIndTr);
+    ltTableTeam = CornerkickApp.Controllers.Member.TrainingController.getTableTeam(_usr);
+
+    if (ltPlayerskillbuttons != null) {
+      var playerskillbutton = Array.Find(ltPlayerskillbuttons, p => p?.iPlayerId == iPlayerId);
+      if (playerskillbutton != null) {
+        CornerkickManager.Club? clb = Controllers.Member.MemberController.ckClub(_usr);
+        CornerkickManager.Player? pl = clb != null ? clb.ltPlayer.Find(p => p.plGame.iId == iPlayerId) : null;
+        await playerskillbutton.update(pl, iIndTr, Controllers.Member.ClubController.getClubStaff(clb));
+      }
+    }
+    //await InvokeAsync(StateHasChanged);
+  }
+
+  string FormatAsDate(object value)
+  {
+    if (value != null) {
+      return Convert.ToDateTime(value).ToString("dd.MM");
+    }
+
+    return string.Empty;
+  }
+
+  private static void ShowTutorial(CornerkickManager.User _usr, TrainingModel md, NavigationManager navmng, int iTrType = -1)
+  {
+    if (md?.tutorial == null) return;
+    if (MainLayout.tutorial == null) return;
+
+    CkAppShared.Tutorial tt = md.tutorial;
+
+    if (_usr != null && tt != null && tt.bShow) {
+      //if (tt.iLevel == (TutorialController.iTtMainLevelUser * 10) + 3) tt.iLevel = TutorialController.iTtMainLevelTraining * 10;
+      if (TutorialController.IsLastSubLevel(tt.iLevel, TutorialController.iTtMainLevelUser)) tt.iLevel = TutorialController.iTtMainLevelTraining * 10;
+
+      if (tt.iLevel == (TutorialController.iTtMainLevelTraining * 10) + 2 && iTrType == 0 && iWeekGlobal == 0) {
+        tt.iLevel++;
+
+        TutorialController.TutorialReturn ttr = TutorialController.getTutorial(
+          _usr,
+          tt.iLevel,
+          /*
+          [
+            new Tt_highlight((iTtMainLevelTraining * 10) + 3, document.getElementById("aNextWeek"))
+          ]*/
+          _usr.bScouting
+        );
+
+        MainLayout.tutorial.Show(ttr, usr: _usr, iLevel: tt.iLevel, actionOnOk: () => ShowTutorial(_usr, md, navmng), actionOnCancel: () => ShowTutorial(_usr, md, navmng), actionOn3: () => navmng.NavigateTo("/member/desk", forceLoad: true));
+        //CkDialog.ckDialog.Show(ttr, usr: _usr, iLevel: tt.iLevel, actionOnOk: () => ShowTutorial(_usr, md, navmng), actionOnCancel: () => ShowTutorial(_usr, md, navmng), actionOn3: () => navmng.NavigateTo("/member/desk", forceLoad: true));
+      } else if (tt.iLevel == (TutorialController.iTtMainLevelTraining * 10) + 3 && iWeekGlobal == 1) {
+        tt.iLevel++;
+
+        TutorialController.TutorialReturn ttr = TutorialController.getTutorial(
+          _usr,
+          tt.iLevel,
+          /*
+          [
+            new Tt_highlight((iTtMainLevelTraining * 10) + 3, document.getElementById("aNextWeek"))
+          ]*/
+          _usr.bScouting
+        );
+
+        MainLayout.tutorial.Show(ttr, usr: _usr, iLevel: tt.iLevel, actionOnOk: () => ShowTutorial(_usr, md, navmng), actionOnCancel: () => ShowTutorial(_usr, md, navmng), actionOn3: () => navmng.NavigateTo("/member/desk", forceLoad: true));
+        //CkDialog.ckDialog.Show(ttr, usr: _usr, iLevel: tt.iLevel, actionOnOk: () => ShowTutorial(_usr, md, navmng), actionOnCancel: () => ShowTutorial(_usr, md, navmng), actionOn3: () => navmng.NavigateTo("/member/desk", forceLoad: true));
+      } else if (tt.iLevel == (TutorialController.iTtMainLevelTraining * 10) + 4 && iWeekGlobal == 1 && iTrType == 0) {
+        tt.iLevel++;
+
+        TutorialController.TutorialReturn ttr = TutorialController.getTutorial(
+          _usr,
+          tt.iLevel,
+          /*
+          [
+            new Tt_highlight((iTtMainLevelTraining * 10) + 3, document.getElementById("aNextWeek"))
+          ]*/
+          _usr.bScouting
+        );
+
+        MainLayout.tutorial.Show(ttr, usr: _usr, iLevel: tt.iLevel, actionOnOk: () => ShowTutorial(_usr, md, navmng), actionOnCancel: () => ShowTutorial(_usr, md, navmng), actionOn3: () => navmng.NavigateTo("/member/desk", forceLoad: true));
+        //CkDialog.ckDialog.Show(ttr, usr: _usr, iLevel: tt.iLevel, actionOnOk: () => ShowTutorial(_usr, md, navmng), actionOnCancel: () => ShowTutorial(_usr, md, navmng), actionOn3: () => navmng.NavigateTo("/member/desk", forceLoad: true));
+      } else if (tt.iLevel == (TutorialController.iTtMainLevelTraining * 10) + 5 && iWeekGlobal == 2) {
+        tt.iLevel++;
+
+        TutorialController.TutorialReturn ttr = TutorialController.getTutorial(
+          _usr,
+          tt.iLevel,
+          /*
+          [
+            new Tt_highlight((iTtMainLevelTraining * 10) + 3, document.getElementById("aNextWeek"))
+          ]*/
+          _usr.bScouting
+        );
+
+        MainLayout.tutorial.Show(ttr, usr: _usr, iLevel: tt.iLevel, actionOnOk: () => ShowTutorial(_usr, md, navmng), actionOnCancel: () => ShowTutorial(_usr, md, navmng), actionOn3: () => navmng.NavigateTo("/member/desk", forceLoad: true));
+        //CkDialog.ckDialog.Show(ttr, usr: _usr, iLevel: tt.iLevel, actionOnOk: () => ShowTutorial(_usr, md, navmng), actionOnCancel: () => ShowTutorial(_usr, md, navmng), actionOn3: () => navmng.NavigateTo("/member/desk", forceLoad: true));
+      } else if (tt.iLevel == (TutorialController.iTtMainLevelTraining * 10) + 6 && iWeekGlobal == 2 && iTrType == 2) {
+        tt.iLevel++;
+
+        TutorialController.TutorialReturn ttr = TutorialController.getTutorial(
+          _usr,
+          tt.iLevel,
+          /*
+          [
+            new Tt_highlight((iTtMainLevelTraining * 10) + 3, document.getElementById("aNextWeek"))
+          ]*/
+          _usr.bScouting
+        );
+
+        MainLayout.tutorial.Show(ttr, usr: _usr, iLevel: tt.iLevel, actionOnOk: () => ShowTutorial(_usr, md, navmng), actionOnCancel: () => ShowTutorial(_usr, md, navmng), actionOn3: () => navmng.NavigateTo("/member/desk", forceLoad: true));
+        //CkDialog.ckDialog.Show(ttr, usr: _usr, iLevel: tt.iLevel, actionOnOk: () => ShowTutorial(_usr, md, navmng), actionOnCancel: () => ShowTutorial(_usr, md, navmng), actionOn3: () => navmng.NavigateTo("/member/desk", forceLoad: true));
+      } else if (tt.iLevel == (TutorialController.iTtMainLevelTraining * 10) + 7) {
+        tt.iLevel++;
+
+        TutorialController.TutorialReturn ttr = TutorialController.getTutorial(
+          _usr,
+          tt.iLevel,
+          /*
+          [
+            new Tt_highlight((iTtMainLevelTraining * 10) + 3, document.getElementById("aNextWeek"))
+          ]*/
+          _usr.bScouting
+        );
+
+        MainLayout.tutorial.Show(ttr, usr: _usr, iLevel: tt.iLevel, actionOnOk: () => ShowTutorial(_usr, md, navmng), actionOnCancel: () => ShowTutorial(_usr, md, navmng), actionOn3: () => navmng.NavigateTo("/member/desk", forceLoad: true));
+        //CkDialog.ckDialog.Show(ttr, usr: _usr, iLevel: tt.iLevel, actionOnOk: () => ShowTutorial(_usr, md, navmng), actionOnCancel: () => ShowTutorial(_usr, md, navmng), actionOn3: () => navmng.NavigateTo("/member/desk", forceLoad: true));
+      } else if ((tt.iLevel / 10) == TutorialController.iTtMainLevelTraining) {
+        TutorialController.TutorialReturn ttr = TutorialController.getTutorial(
+          _usr,
+          tt.iLevel,
+          /*
+          [
+            new Tt_highlight((iTtMainLevelTraining * 10) + 0, document.getElementById("divTrainingPlanContainer")),
+            new Tt_highlight((iTtMainLevelTraining * 10) + 1, document.getElementById("divTrainingTemplatesContainer")),
+            new Tt_highlight((iTtMainLevelTraining * 10) + 2, document.getElementById("bnTrainingWeekTemplate1")),
+            new Tt_highlight((iTtMainLevelTraining * 10) + 3, document.getElementById("aNextWeek")),
+            new Tt_highlight((iTtMainLevelTraining * 10) + 4, document.getElementById("bnTrainingWeekTemplate1")),
+            new Tt_highlight((iTtMainLevelTraining * 10) + 5, document.getElementById("aNextWeek")),
+            new Tt_highlight((iTtMainLevelTraining * 10) + 6, document.getElementById("divTtTrainingGameday")),
+            new Tt_highlight((iTtMainLevelTraining * 10) + 6, document.getElementById("bnTrainingWeekTemplate3")),
+            new Tt_highlight((iTtMainLevelTraining * 10) + 7, document.getElementById("bnCopyWeek")),
+            new Tt_highlight((iTtMainLevelTraining * 10) + 8, document.getElementById("navbarDropdownClub")),
+            new Tt_highlight((iTtMainLevelTraining * 10) + 8, document.getElementById("aMenuClubStaff"))
+          ]*/
+          _usr.bScouting
+        );
+
+        MainLayout.tutorial.Show(ttr, usr: _usr, iLevel: tt.iLevel, actionOnOk: () => ShowTutorial(_usr, md, navmng), actionOnCancel: () => ShowTutorial(_usr, md, navmng), actionOn3: () => navmng.NavigateTo("/member/desk", forceLoad: true));
+        //CkDialog.ckDialog.Show(ttr, usr: _usr, iLevel: tt.iLevel, actionOnOk: () => ShowTutorial(_usr, md, navmng), actionOnCancel: () => ShowTutorial(_usr, md, navmng), actionOn3: () => navmng.NavigateTo("/member/desk", forceLoad: true));
+      }
+    }
+  }
+
+  protected async Task ShowTutorial(int iTrType = -1)
+  {
+    if (_usr != null && model?.tutorial != null) {
+      await Task.Run(() => ShowTutorial(_usr, model, NavigationManager, iTrType: iTrType));
+    }
+  }
+}

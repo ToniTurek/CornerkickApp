@@ -1,0 +1,243 @@
+﻿@using CornerkickApp.Shared.Models
+
+@inject Controllers.Shared.MyAuthenticationStateProvider _auth
+
+<head>
+  <style>
+    div.row {
+      margin-right: 0 !important;
+    }
+
+    a.page-link {
+      font-size: 0.9rem;
+    }
+
+    ul.pagination {
+      margin-bottom: 0;
+    }
+  </style>
+</head>
+
+@if (ltKeeper != null) {
+  <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center">
+    <h4>Torhüter</h4>
+    @if (ltKeeper.Count > 0) {
+      <label>
+        <input type="checkbox" value="@bInteractive" @onchange="(o) => OnCheckboxChange(o.Value)" />
+        interaktiv
+      </label>
+    }
+  </div>
+@*
+<Blazorise.Accordion>
+  <Blazorise.AccordionItem Style="background-color: transparent" VisibleChanged="OnAccordionVisibleChange">
+    <Blazorise.AccordionHeader>
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center">
+        <Blazorise.Heading Size="Blazorise.HeadingSize.Is5">
+          <Blazorise.AccordionToggle Style="width: 100%; background-color: transparent">Torhüter</Blazorise.AccordionToggle>
+        </Blazorise.Heading>
+        @if (bVisible) {
+          <label>
+            <input type="checkbox" value="@bInteractive" @onchange="(o) => OnCheckboxChange(o.Value)" />
+            interaktiv
+          </label>
+        }
+      </div>
+    </Blazorise.AccordionHeader>
+    <Blazorise.AccordionBody>
+*@
+  if (bInteractive) {
+    <div style="width: 100%; overflow: auto">
+      <div style="width: fit-content; font-size: 90%">
+        <DataGrid TItem="LeagueModel.KeeperItem"
+                  Data="@ltKeeper"
+                  Virtualize
+                  VirtualizeOptions="@(new() { DataGridHeight = "21rem"})"
+                  Style="white-space: nowrap; margin-bottom: 0"
+                  Striped
+                  Narrow
+                  RowStyling="OnRowStyling"
+                  Sortable
+                  SortMode="DataGridSortMode.Single">
+          <ChildContent>
+            <DataGridColumn Field="@nameof(LeagueModel.KeeperItem.iId)" Sortable="false" Displayable="false" />
+            <DataGridColumn Field="@nameof(LeagueModel.KeeperItem.iIx)"
+                            Caption=""
+                            TextAlignment="Blazorise.TextAlignment.End" />
+            <DataGridColumn Field="@nameof(LeagueModel.KeeperItem.sPlName)" Caption="Spieler">
+              <DisplayTemplate>
+                <a href="/member/playerdetails/@context.iId.ToString()" style="text-decoration: none">@context.sPlName</a>
+              </DisplayTemplate>
+            </DataGridColumn>
+            <DataGridColumn Field="@nameof(LeagueModel.KeeperItem.fSaves)" Caption="geh." TextAlignment="Blazorise.TextAlignment.Center">
+              <DisplayTemplate>
+                @(context.fSaves.ToString("0.0%"))
+              </DisplayTemplate>
+            </DataGridColumn>
+            <DataGridColumn Field="@nameof(LeagueModel.KeeperItem.iGamesNoGoal)" Caption="Sp o Ggt" TextAlignment="Blazorise.TextAlignment.Center" />
+            <DataGridColumn Field="@nameof(LeagueModel.KeeperItem.iMinNoGoal)" Caption="Min o Ggt" TextAlignment="Blazorise.TextAlignment.Center" />
+            <DataGridColumn Field="@nameof(LeagueModel.KeeperItem.sClubName)" Caption="Verein" TextAlignment="Blazorise.TextAlignment.Center">
+              <DisplayTemplate>
+                @((MarkupString)context.sClubEmblem)
+              </DisplayTemplate>
+            </DataGridColumn>
+          </ChildContent>
+          <EmptyTemplate>
+            <div class="box">
+              Noch keine Torhüter ...
+            </div>
+          </EmptyTemplate>
+          <LoadingTemplate>
+            <div class="box">
+              <progress class="progress is-small is-primary" max="100" />
+            </div>
+          </LoadingTemplate>
+        </DataGrid>
+      </div>
+    </div>
+  } else {
+    if (ltKeeper.Count > 0) {
+      <div class="table-fixed-header" style="width: fit-content; max-width: 100%; height: 22rem; max-height: 500px; overflow: auto; font-size: 90%;">
+        <table class="b-table table table-striped table-sm b-datagrid" style="white-space: nowrap; margin-bottom: 0">
+          <thead>
+            <tr>
+              <th scope="col" class="cursor-pointer text-end">
+                <div class="d-inline-flex"></div>
+              </th>
+              <th scope="col" class="cursor-pointer">
+                <div class="d-inline-flex">Spieler</div>
+              </th>
+              <th scope="col" class="cursor-pointer text-center">
+                <div class="d-inline-flex">geh.</div>
+              </th>
+              <th scope="col" class="cursor-pointer text-center">
+                <div class="d-inline-flex">Sp o Ggt</div>
+              </th>
+              <th scope="col" class="cursor-pointer text-center">
+                <div class="d-inline-flex">Min o Ggt</div>
+              </th>
+              <th scope="col" class="cursor-pointer text-center">
+                <div class="d-inline-flex">Verein</div>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            @foreach (LeagueModel.KeeperItem ki in ltKeeper) {
+              <tr class="table-row-selectable" style="font-weight: @(ki.bBold ? "bold" : "normal")">
+                <td class="text-end">@ki.iIx</td>
+                <td data-caption="Spieler">
+                  <a href="/member/playerdetails/@ki.iId" style="text-decoration: none">@ki.sPlName</a>
+                </td>
+                <td class="text-center" data-caption="Tore">@ki.fSaves.ToString("0.0%")</td>
+                <td class="text-center" data-caption="Vorl.">@ki.iGamesNoGoal</td>
+                <td class="text-center" data-caption="Sc.">@(ki.iMinNoGoal)</td>
+                <td class="text-center" data-caption="Verein">
+                  @((MarkupString)ki.sClubEmblem)
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } else {
+      <div class="box">
+        Noch keine Torhüter ...
+      </div>
+    }
+  }
+  @if (fElapsedTime > 0.0 && AppConstants.IS_DEBUG) {
+    <div>
+      Elapsed time: @(fElapsedTime.ToString("0.000")) s
+    </div>
+  }
+}
+@*
+    </Blazorise.AccordionBody>
+  </Blazorise.AccordionItem>
+</Blazorise.Accordion>
+*@
+
+@code {
+  [Parameter]
+  public int iCupId1 { get; set; }
+
+  [Parameter]
+  public int iCupId2 { get; set; }
+
+  [Parameter]
+  public int iCupId3 { get; set; }
+
+  private List<LeagueModel.KeeperItem>? ltKeeper { get; set; }
+  private CornerkickManager.User? _usr;
+
+  bool bInteractive = false;
+  bool bVisible = false;
+
+  System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
+  double fElapsedTime = 0.0;
+
+  public static class AppConstants
+  {
+#if DEBUG
+    public const bool IS_DEBUG = true;
+#else
+    public const bool IS_DEBUG = false;
+#endif
+  }
+
+  protected override async Task OnInitializedAsync()
+  {
+    await base.OnInitializedAsync();
+
+#if _WebApp
+    _usr = Controllers.Member.MemberController.ckUser(await _auth.GetUserId());
+#else
+    _usr = CkAppShared.ckMng.ltUser[CkAppShared.iUserActive];
+#endif
+
+    GetKeeper();
+  }
+
+  public async Task Refresh(int _iCupId1, int _iCupId2, int _iCupId3)
+  {
+    iCupId1 = _iCupId1;
+    iCupId2 = _iCupId2;
+    iCupId3 = _iCupId3;
+
+    ltKeeper = null;
+    await GetKeeper();
+  }
+
+  private async Task GetKeeper()
+  {
+    sw.Restart();
+
+    if (ltKeeper == null) ltKeeper = CornerkickApp.Controllers.Member.MemberController.getKeeperTable(iCupId1, iCupId2, iCupId3, clb: Controllers.Member.MemberController.ckClub(_usr));
+    if (!bInteractive) ltKeeper = ltKeeper?.Take(50).ToList();
+
+    bool bRefresh = sw.IsRunning;
+    sw.Stop();
+    fElapsedTime = sw.ElapsedMilliseconds / 1000.0;
+    if (bRefresh) InvokeAsync(StateHasChanged);
+  }
+
+  private async Task OnCheckboxChange(object o)
+  {
+    if (!bool.TryParse(o.ToString(), out bInteractive)) return;
+
+    GetKeeper();
+  }
+
+  private async Task OnAccordionVisibleChange(bool b)
+  {
+    bVisible = b;
+    if (bVisible) GetKeeper();
+  }
+
+  private void OnRowStyling(LeagueModel.KeeperItem pl, DataGridRowStyling styling)
+  {
+    if (pl.bBold) {
+      styling.Style = "font-weight: bold";
+    }
+  }
+}

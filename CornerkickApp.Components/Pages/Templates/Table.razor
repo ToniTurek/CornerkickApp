@@ -1,0 +1,64 @@
+﻿@using CornerkickApp.Shared.Models
+
+@if (_ltNews.Count > 0) {
+  <div style="max-width: 100%; overflow-x: auto">
+    <table>
+      <thead>
+        <tr>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @foreach (DeskModel.DatatableNews n in _ltNews) {
+          <tr style="color: @(n.bOld ? "grey" : "black")">
+            <td hidden>@n.iId</td>
+            <td>@((MarkupString)Controllers.Tool.getNewsIcon(n.iType))</td>
+            <td>@n.sDate</td>
+            <td>
+              @{
+                bool bPromNews = false;
+                byte iRspLvl = 0;
+                foreach (string sRespLvlName in CornerkickManager.Names.sUserRespLvlNames) {
+                  if (n.sText.Contains(sRespLvlName)) {
+                    string[] sN = n.sText.Split(sRespLvlName);
+                    bPromNews = true;
+
+                    <span>@(sN[0])</span>
+
+                    <span style="color: #0366d6; cursor: pointer" @onclick="@(() => MainLayout.showPromotionInfo(n.sText.Trim(), iRspLvl))">@sRespLvlName</span>
+
+                    <span>@(sN[1])</span>
+
+                    break;
+                  }
+
+                  iRspLvl++;
+                }
+
+                if (!bPromNews) {
+                  @((MarkupString)n.sText)
+                }
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}
+
+@code {
+  private List<DeskModel.DatatableNews> _ltNews { get; set; } = new List<DeskModel.DatatableNews>();
+
+  public async Task print(List<DeskModel.DatatableNews> ltNews, bool bForce = false)
+  {
+    if (ltNews.Count < 1) return;
+
+    bool bUpdate = bForce || _ltNews.Count < 1 || !_ltNews[0].sText.Equals(ltNews[0].sText) || !_ltNews[0].sDate.Equals(ltNews[0].sDate);
+
+    if (bUpdate) {
+      _ltNews = ltNews;
+      await InvokeAsync(StateHasChanged);
+    }
+  }
+}

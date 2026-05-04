@@ -1,0 +1,150 @@
+﻿@using CornerkickApp.Controllers.Member
+
+<Blazorise.Modal @ref="ckDialog.modalRef" Closing="@ckDialog.OnModalClosing">
+  <Blazorise.ModalContent Centered>
+    <Blazorise.ModalHeader Style="color: white; background-color: rgb(31, 158, 69)">
+      <Blazorise.ModalTitle>
+        @{
+          string sTitle = ckDialog.sTitle;
+        }
+        @if (ckDialog.iStep > 0) {
+          sTitle += " (" + ckDialog.iStep.ToString();
+          //string sStep = ckDialog.iStep.ToString();
+          if (ckDialog.nSteps > 0) {
+            sTitle += " / " + @ckDialog.nSteps.ToString();
+          }
+          sTitle += ")";
+        }
+        @sTitle
+      </Blazorise.ModalTitle>
+      <Blazorise.CloseButton />
+    </Blazorise.ModalHeader>
+    <Blazorise.ModalBody Style="overflow: auto">
+      @((MarkupString)ckDialog.sText)
+    </Blazorise.ModalBody>
+    <Blazorise.ModalFooter Flex="Blazorise.Flex.JustifyContent.Between">
+      <Blazorise.Div>
+        @if (!string.IsNullOrEmpty(ckDialog.sButton3Text)) {
+          <Blazorise.Button Color="Blazorise.Color.Secondary" Clicked="@(() => ckDialog.CloseModal(2))" Style="margin-right: 4px">@ckDialog.sButton3Text</Blazorise.Button>
+        }
+        @if (!string.IsNullOrEmpty(ckDialog.sButtonCancelText)) {
+          <Blazorise.Button Color="Blazorise.Color.Secondary" Clicked="@(() => ckDialog.CloseModal(1))">@ckDialog.sButtonCancelText</Blazorise.Button>
+        }
+      </Blazorise.Div>
+      <Blazorise.Div>
+        @if (!string.IsNullOrEmpty(ckDialog.sButtonOkText)) {
+          <Blazorise.Button Color="Blazorise.Color.Primary" Clicked="@(() => ckDialog.CloseModal(0))">@ckDialog.sButtonOkText</Blazorise.Button>
+        }
+      </Blazorise.Div>
+    </Blazorise.ModalFooter>
+  </Blazorise.ModalContent>
+</Blazorise.Modal>
+
+@code {
+  public static Dialog ckDialog = new Dialog();
+
+  // reference to the modal component
+  public class Dialog
+  {
+    public Blazorise.Modal? modalRef { get; set; }
+    public string sTitle { get; set; } = "";
+    public string sText { get; set; } = "";
+    public bool cancelClose { get; set; }
+    private Action? actionOnOk { get; set; }
+    private Action? actionOnCancel { get; set; }
+    private Action? actionOn3 { get; set; }
+    internal string sButtonOkText { get; set; } = "Ok";
+    internal string sButtonCancelText { get; set; } = "Abbrechen";
+    internal string sButton3Text { get; set; } = "";
+    internal int iStep { get; set; }
+    internal int nSteps { get; set; }
+    internal bool bKeepOpen { get; set; } = false;
+
+    public Task Show(string sTitle2, string sText2, string sButtonOkText2 = "Ok", string sButtonCancelText2 = "Abbrechen", string sButton3Text2 = "",
+                     Action? actionOnOk = null, Action? actionOnCancel = null, Action? actionOn3 = null,
+                     int iStep2 = 0, int nSteps2 = 0,
+                     bool bKeepOpen2 = false)
+    {
+      sTitle = sTitle2;
+      sText = sText2;
+
+      sButtonOkText     = sButtonOkText2;
+      sButtonCancelText = sButtonCancelText2;
+      sButton3Text      = sButton3Text2;
+
+      ckDialog.actionOnOk     = null;
+      ckDialog.actionOnCancel = null;
+      ckDialog.actionOn3      = null;
+      if (actionOnOk     != null) ckDialog.actionOnOk     = actionOnOk;
+      if (actionOnCancel != null) ckDialog.actionOnCancel = actionOnCancel;
+      if (actionOn3      != null) ckDialog.actionOn3      = actionOn3;
+
+      iStep = iStep2;
+      nSteps = nSteps2;
+
+      bKeepOpen = bKeepOpen2;
+
+      //await ckDialog.modalRef.Show();
+      return ckDialog.modalRef.Show();
+    }
+
+    /*
+    public Task Show(TutorialController.TutorialReturn ttr, CornerkickManager.User? usr = null, int iLevel = -1, Action? actionOnOk = null, Action? actionOnCancel = null, Action? actionOn3 = null)
+    {
+      return Show(
+          ttr.sHeader,
+          ttr.sText,
+          sButtonOkText2:     ttr.sButtonNextText,
+          sButtonCancelText2: ttr.sButtonBackText,
+          sButton3Text2:      ttr.sButton3Text,
+          actionOnOk:     usr != null && iLevel >= 0 ? () => TutorialController.setTutorialLvl(usr, true,       iLevel + 1, action: actionOnOk)     : null,
+          actionOnCancel: usr != null && iLevel >= 0 ? () => TutorialController.setTutorialLvl(usr, true,       iLevel - 1, action: actionOnCancel) : null,
+          actionOn3:      usr != null && iLevel >= 0 ? () => TutorialController.setTutorialLvl(usr, iLevel > 0,          0, action: actionOn3)      : null,
+          iStep2: ttr.iStep,
+          nSteps2: ttr.nSteps,
+          bKeepOpen2: true
+        );
+    }
+    */
+
+    // iTypeOfClose: 0 - ok, 1 - cancel
+    public Task CloseModal(int iTypeOfClose = -1)
+    {
+      ckDialog.cancelClose = false;
+
+      // Store bKeepOpen in case it's been changed in actions
+      bool bKeepOpen2 = bKeepOpen;
+
+      if (iTypeOfClose == 0 && actionOnOk != null) {
+        actionOnOk();
+        if (bKeepOpen2) return Task.CompletedTask;
+      } else if (iTypeOfClose == 1 && actionOnCancel != null) {
+        actionOnCancel();
+        if (bKeepOpen2) return Task.CompletedTask;
+      } else if (iTypeOfClose == 2 && actionOn3 != null) {
+        actionOn3();
+        if (bKeepOpen2) return Task.CompletedTask;
+      }
+
+      return ckDialog.modalRef.Hide();
+    }
+
+    public Task TryCloseModal()
+    {
+      ckDialog.cancelClose = true;
+
+      return ckDialog.modalRef.Hide();
+    }
+
+    public Task OnModalClosing(Blazorise.ModalClosingEventArgs e)
+    {
+      /*
+      // just set Cancel to prevent modal from closing
+      e.Cancel = ckDialog.cancelClose
+          || e.CloseReason != Blazorise.CloseReason.UserClosing;
+          */
+
+      return Task.CompletedTask;
+    }
+  }
+}

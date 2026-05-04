@@ -1,0 +1,308 @@
+﻿@page "/member/league"
+
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using CornerkickApp.Controllers.Member
+@using CornerkickApp.Components.Pages.Templates
+@using CornerkickApp.Shared.Models
+
+@inject IJSRuntime JS
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject Controllers.Shared.MyAuthenticationStateProvider _auth
+
+<PageTitle>Liga</PageTitle>
+
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    label {
+      margin-right: 10px;
+    }
+  </style>
+</head>
+
+<body>
+  @if (model != null) {
+    <div id="divBody">
+      <div style="width: min-content; max-width: 100%; margin-bottom: 20px; margin-right: 20px">
+        <div style="position: relative; width: 100%; margin-bottom: 20px; display: flex; flex-direction: row">
+          @* Cup emblem *@
+          <div style="width: 96px; margin-right: 10px">
+            @{
+              string sErrorImg = CkAppShared.sContentDir + "/Images/cup_emblems/" + CkAppShared.iCupIdLeague.ToString() + "_-1_-1.png";
+            }
+            <img id="imgLeagueEmblem" style="width: 100%; object-fit: contain" src="@model.sCupEmblem" onerror="this.onerror=null;this.src='@sErrorImg'" />
+          </div>
+
+          <div style="display: flex; flex-wrap: wrap">
+            <label>
+              Saison:
+              <select class="form-horizontal" @onchange="updateSeason">
+                @foreach (LayoutModel.SelectListItem sli in model.ddlSeason) {
+                  <option value="@sli.Value" selected="@sli.Selected">@sli.Text</option>
+                }
+              </select>
+            </label>
+            <label>
+              Land:
+              <select class="form-horizontal" @onchange="updateLand">
+                @foreach (LayoutModel.SelectListItem sli in model.ddlLand) {
+                  <option value="@sli.Value" selected="@sli.Selected">@sli.Text</option>
+                }
+              </select>
+            </label>
+            @if (model.ddlDivision != null && model.ddlDivision.Count > 1) {
+              <label>
+                Liga:
+                <select class="form-horizontal" @onchange="updateDivision">
+                  @foreach (LayoutModel.SelectListItem sli in model.ddlDivision) {
+                    <option value="@sli.Value" selected="@sli.Selected">@sli.Text</option>
+                  }
+                </select>
+              </label>
+            }
+            <label>
+              Spieltag:
+              <a class="noselect" style="cursor: pointer; text-decoration: none" @onclick="() => updateMatchday(model.iMatchday - 1)" disabled="@(model.iMatchday < 1)">&nbsp;&lt;&nbsp;</a>
+              <select class="form-horizontal" @onchange="updateMatchday">
+                @foreach (LayoutModel.SelectListItem sli in model.ddlMatchdays) {
+                  <option value="@sli.Value" selected="@sli.Selected">@sli.Text</option>
+                }
+              </select>
+              <a class="noselect" style="cursor: pointer; text-decoration: none" @onclick="() => updateMatchday(model.iMatchday + 1)">&nbsp;&gt;&nbsp;</a>
+            </label>
+            @*
+            <Blazorise.Label>
+              Saison:
+              <Blazorise.Select TValue="int" SelectedValue="@model.iSeason" SelectedValueChanged="@updateSeason">
+                @foreach (LayoutModel.SelectListItem sli in model.ddlSeason) {
+                  <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+                }
+              </Blazorise.Select>
+            </Blazorise.Label>
+            <Blazorise.Label>
+              Land:
+              <Blazorise.Select TValue="int" SelectedValue="@model.iLand" SelectedValueChanged="@updateLand">
+                @foreach (LayoutModel.SelectListItem sli in model.ddlLand) {
+                  <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+                }
+              </Blazorise.Select>
+            </Blazorise.Label>
+            <Blazorise.Label>
+              Spielklasse:
+              <Blazorise.Select TValue="int" SelectedValue="@model.iDivision" SelectedValueChanged="@updateDivision">
+                @foreach (LayoutModel.SelectListItem sli in model.ddlDivision) {
+                  <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+                }
+              </Blazorise.Select>
+            </Blazorise.Label>
+            <Blazorise.Label>
+              Spieltag:
+              <Blazorise.Select TValue="int" SelectedValue="@model.iMatchday" SelectedValueChanged="@updateMatchday">
+                @foreach (LayoutModel.SelectListItem sli in model.ddlMatchdays) {
+                  <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+                }
+              </Blazorise.Select>
+            </Blazorise.Label>
+            *@
+          </div>
+        </div>
+        <div style="margin-bottom: 20px">
+          <h4>Begegnungen</h4>
+          <LeagueFixtures ltGameInfos="@ltGameInfos"></LeagueFixtures>
+        </div>
+
+        <div>
+          <h4 style="margin: 0">Tabelle</h4>
+          <LeagueTable ltClubs="@ltClubs" iClubUserId="model.iClubId"></LeagueTable>
+        </div>
+      </div>
+      @if (model.iSeason == CkAppShared.ckMng.iSeason) {
+        if (model.iMatchday == model.iMatchdayCurrent) {
+          <div style="position: relative; width: 40em; height: fit-content; margin-bottom: 20px; margin-right: 20px" hidden="@(!bBest11Visible)">
+            <h4>Elf des Spieltages</h4>
+            <CornerkickApp.Components.Pages.Templates.Best11 @ref="best11"></CornerkickApp.Components.Pages.Templates.Best11>
+          </div>
+        }
+        <div style="max-width: 100%">
+          <div style="width: fit-content; max-width: 100%; margin-bottom: 20px; margin-right: 20px">
+            <ScorerTable iCupId="CkAppShared.iCupIdLeague" iCupId2="model.iLand" iCupId3="model.iDivision"></ScorerTable>
+          </div>
+          <div style="width: fit-content; max-width: 100%; margin-bottom: 20px; margin-right: 20px">
+            <KeeperTable iCupId="CkAppShared.iCupIdLeague" iCupId2="model.iLand" iCupId3="model.iDivision"></KeeperTable>
+          </div>
+        </div>
+      }
+    </div>
+  }
+  @if (fElapsedTime > 0.0) {
+    <environment include="DEBUG">
+      <div>
+        Elapsed time: @(fElapsedTime.ToString("0.000")) s
+      </div>
+    </environment>
+  }
+</body>
+</html>
+
+@code {
+  private CornerkickManager.User? _usr;
+  private IJSObjectReference? moduleSite;
+  private LeagueModel? model;
+  private List<LeagueModel.TableItem>? ltClubs { get; set; }
+  private List<LeagueModel.GameInfo>? ltGameInfos { get; set; }
+  //private List<LeagueModel.ScorerItem>? ltScorer { get; set; }
+  //private List<LeagueModel.KeeperItem>? ltKeeper { get; set; }
+
+  MainLayout.BrowserDimension? bd { get; set; }
+
+  private int iClubUserId = -1;
+  CornerkickApp.Components.Pages.Templates.Best11? best11 { get; set; }
+  bool bBest11Visible = false;
+
+  System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
+  double fElapsedTime = 0.0;
+
+  protected override async Task OnInitializedAsync()
+  {
+    sw.Restart();
+
+    await base.OnInitializedAsync();
+
+#if _WebApp
+    //_usr = await Http.GetFromJsonAsync<CornerkickManager.User>("member/Member/ckUser");
+    _usr = Controllers.Member.MemberController.ckUser(await _auth.GetUserId());
+#else
+    _usr = CkAppShared.ckMng.ltUser[CkAppShared.iUserActive];
+#endif
+
+    model = CornerkickApp.Controllers.Member.LeagueController.Get(_usr);
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender) {
+      moduleSite = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/CornerkickApp.Components/js/site.js");
+
+      if (moduleSite != null) {
+        MainLayout.BrowserService browserService = new MainLayout.BrowserService(JS);
+        bd = await browserService.GetDimensions();
+      }
+
+      Task tkUpdate = update(iWindowWidth: bd != null ? bd.Width : 0);
+      //tkUpdate.Wait();
+
+      //await InvokeAsync(StateHasChanged);
+    }
+
+    sw.Stop();
+    fElapsedTime = sw.ElapsedMilliseconds / 1000.0;
+  }
+
+  private async Task update(int iWindowWidth = 0)
+  {
+    if (model == null) return;
+
+    if (model.iMatchday < 0) model.iMatchday = CupController.getCupMatchday(model.iSeason, CkAppShared.iCupIdLeague, model.iLand, model.iDivision, clb: _usr != null ? _usr.club : null) - 1;
+
+    model.ddlDivision = Controllers.Member.LeagueController.getDdlDivisions(model.iLand);
+    model.ddlMatchdays = Controllers.Member.LeagueController.getDdlMatchdays(model.iSeason, model.iLand, model.iDivision, iMdSelected: model.iMatchday);
+
+    //CornerkickManager.Cup league = CkAppShared.ckMng.tl.getCup(CkAppShared.iCupIdLeague, model.iLand, model.iDivision);
+    CornerkickManager.Cup? league = Controllers.Member.MemberController.getCup(model.iSeason, CkAppShared.iCupIdLeague, model.iLand, model.iDivision);
+    if (league != null) {
+      model.sCupName = league.sName;
+      //model.sCupEmblem = MemberController.getCupEmblem(league);
+    }
+
+    if (model.iMatchday <= model.iMatchdayCurrent || model.iSeason < CkAppShared.ckMng.iSeason) ltClubs = CornerkickApp.Controllers.Member.LeagueController.getTable(model.iSeason, CkAppShared.iCupIdLeague, model.iLand, model.iDivision, model.iMatchday);
+    ltGameInfos = CornerkickApp.Controllers.Member.LeagueController.getGameInfos(model.iSeason, model.iLand, model.iDivision, model.iMatchday, usr: _usr, bCompact: iWindowWidth < 600);
+    await InvokeAsync(StateHasChanged);
+    await InvokeAsync(StateHasChanged);
+
+    if (model.iSeason == CkAppShared.ckMng.iSeason && model.iMatchday == model.iMatchdayCurrent) {
+      //ltScorer = CornerkickApp.Controllers.Member.MemberController.getScorerTable(CkAppShared.iCupIdLeague, model.iLand, model.iDivision, clb: MemberController.ckClub(_usr));
+      //ltKeeper = CornerkickApp.Controllers.Member.MemberController.getKeeperTable(CkAppShared.iCupIdLeague, model.iLand, model.iDivision, clb: MemberController.ckClub(_usr));
+      drawBest11();
+    }
+
+    InvokeAsync(StateHasChanged);
+  }
+
+  private Task updateSeason(ChangeEventArgs e)
+  {
+    if (e.Value == null) return Task.CompletedTask;
+    return updateSeason(Convert.ToInt32(e.Value));
+  }
+  private Task updateSeason(int j)
+  {
+    if (model == null) return Task.CompletedTask;
+
+    model.iSeason = j;
+    model.iMatchday = -1;
+
+    update();
+
+    return Task.CompletedTask;
+  }
+
+  private Task updateLand(ChangeEventArgs e)
+  {
+    if (e.Value == null) return Task.CompletedTask;
+    return updateLand(Convert.ToInt32(e.Value));
+  }
+  private Task updateLand(int j)
+  {
+    if (model == null) return Task.CompletedTask;
+
+    model.iLand = j;
+    update();
+
+    return Task.CompletedTask;
+  }
+
+  private Task updateDivision(ChangeEventArgs e)
+  {
+    if (e.Value == null) return Task.CompletedTask;
+    return updateDivision(Convert.ToInt32(e.Value));
+  }
+  private Task updateDivision(int j)
+  {
+    if (model == null) return Task.CompletedTask;
+
+    model.iDivision = j;
+    update();
+
+    return Task.CompletedTask;
+  }
+
+  private Task updateMatchday(ChangeEventArgs e)
+  {
+    if (e.Value == null) return Task.CompletedTask;
+    return updateMatchday(Convert.ToInt32(e.Value));
+  }
+  private Task updateMatchday(int j)
+  {
+    if (model == null) return Task.CompletedTask;
+    if (j < 0) return Task.CompletedTask;
+
+    model.iMatchday = j;
+    update();
+
+    return Task.CompletedTask;
+  }
+
+  protected async Task drawBest11()
+  {
+    if (model == null) return;
+    if (best11 == null) return;
+
+    TeamModel.TeamData? tD = Controllers.Member.CupController.GetMatchdayTeam(CkAppShared.iCupIdLeague, model.iLand, model.iDivision);
+    best11.draw(tD);
+    bBest11Visible = true;
+    //await JS.InvokeVoidAsync("drawPlayerBest", JsonSerializer.Serialize(tD), erPlayerBest11Container, bd.Width < 600);
+  }
+
+}

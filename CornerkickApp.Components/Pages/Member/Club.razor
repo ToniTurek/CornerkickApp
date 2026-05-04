@@ -1,0 +1,278 @@
+﻿@page "/member/club/{id:int?}"
+
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using CornerkickApp.Shared.Models
+
+@inject IJSRuntime JS
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject Controllers.Shared.MyAuthenticationStateProvider _auth
+
+<PageTitle>Clubname</PageTitle>
+
+<!DOCTYPE html>
+<html style="height: 100%; min-height: 100%">
+<head>
+</head>
+
+<body style="width: 100%">
+  <div id="divBody" style="width: 100%">
+    @if (model != null) {
+      <h3>@model.sClubName</h3>
+      <div id="divEmblemClub" style="position: absolute; width: 10%; min-width: 60px; height: fit-content; top: 0px; right: 0px; text-align: center; border-style: outset; border-width: 3px; border-color: lightgray; background-color: white; z-index: 9">
+        @((MarkupString)model.sEmblem)
+      </div>
+
+      <div style="position: relative; width: 100%; margin-bottom: 20px; display: flex; flex-wrap: wrap">
+        <div style="position: relative; margin-bottom: 20px">
+          <div>
+            <h4>Allgemeines</h4>
+            <table cellpadding="3" style="width: auto">
+              <tbody>
+                <tr>
+                  <td align="right">Manager:</td>
+                  <td align="left"><a class="nav-link" asp-area="" asp-controller="Member" asp-action="Mail">@model.sUserName</a></td>
+                </tr>
+                <tr>
+                  <td></td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td></td>
+                  <td></td>
+                </tr>
+                @if (!model.bNation) {
+                  <tr>
+                    <td align="right">Land:</td>
+                    <td align="left">@model.sLand</td>
+                  </tr>
+                  <tr>
+                    <td align="right">Liga:</td>
+                    <td align="left">@model.sDivision</td>
+                  </tr>
+                  <tr>
+                    <td align="right">akt. Tabellenplatz:</td>
+                    <td align="left">@model.sPlace</td>
+                  </tr>
+                  <tr>
+                    <td></td>
+                    <td></td>
+                  </tr>
+                  <tr>
+                    <td></td>
+                    <td></td>
+                  </tr>
+                }
+                <tr>
+                  <td align="right">Anzahl Spieler:</td>
+                  <td align="left">@model.ltPlayer.Count</td>
+                </tr>
+                <tr>
+                  <td align="right">Durchschnittstärke:</td>
+                  <td align="left">@(model.fAveStrength > 0f ? model.fAveStrength.ToString("0.00") : "?")</td>
+                </tr>
+                <tr>
+                  <td align="right">Durchschnittsalter:</td>
+                  <td align="left">@model.fAveAge.ToString("0.0")</td>
+                </tr>
+                @if (!model.bNation) {
+                  <tr>
+                    <td align="right">Anzahl Jugendspieler:</td>
+                    <td align="left">@model.iPlayerJouth.ToString()</td>
+                  </tr>
+                  <tr>
+                    <td></td>
+                    <td></td>
+                  </tr>
+                  <tr>
+                    <td align="right">Stadion:</td>
+                    <td align="left">@model.sStadium<br />@model.sStadiumSeats</td>
+                  </tr>
+                  <tr>
+                    <td align="right">Erfolgsfaktor:</td>
+                    <td align="left">@model.fAttrFc.ToString("0.0")</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          @*
+          <div style="position: relative; height: 100%; width: 60%; min-width: 320px; margin-bottom: 10px">
+            <h4>Tabellenplatzentwicklung</h4>
+            <div id="divChartPlaceHistory" style="position: relative; height: 400px; width: 100%"></div>
+          </div>
+          *@
+        </div>
+
+        <div style="position: relative; width: auto; margin-bottom: 20px; margin-right: 30px">
+          <h4>Erfolge</h4>
+          @if (model.ltSuccess.Count == 0) {
+            <p>keine</p>
+          } else {
+            foreach (ClubModel.Success suc in model.ltSuccess) {
+              /*
+              string sAttcFcCup = "";
+              for (int iS = 0; iS < success.ltCupPlace.Count; iS++) {
+              if (iS > 0) {
+              sAttcFcCup += " / ";
+              }
+              sAttcFcCup += CornerkickManager.Club.getAttractionFactor(success.ltCupPlace[iS][0], success.cup.settings.fAttraction, App.ckMng.iSeason - success.ltCupPlace[iS][1]).ToString("0.0") + " (" + success.ltCupPlace[iS][1].ToString() + "/" + success.ltCupPlace[iS][0].ToString() + ")";
+              }
+              */
+
+              <b style="margin-right: 6px">@suc.sCupName</b>
+              foreach (int[] iCp in suc.ltCupPlace) {
+                if (iCp[0] == 1) {
+                  <Icon Name="Blazorise.Icons.FontAwesome.FontAwesomeIcons.Trophy" style="margin-left: 4px" title="@CornerkickApp.Controllers.Tool.getSeasonString(iCp[1])" />
+                }
+              }
+
+              string sWDD = "S/U/N: " + suc.iWin.ToString() + "/" + suc.iDraw.ToString() + "/" + suc.iDefeat.ToString();
+              <p>@sWDD</p>
+
+              <p style="margin: 0">Höchster Sieg    (H): @suc.sRecordGames[0]</p>
+              <p style="margin: 0">Höchster Sieg    (A): @suc.sRecordGames[1]</p>
+              <p style="margin: 0">Höchste Niederl. (H): @suc.sRecordGames[2]</p>
+              <p>Höchste Niederl. (A): @suc.sRecordGames[3]</p>
+
+              @*
+              if (success.ltCupPlace.Count > 0) {
+              <p>Anteil Erfolgsfaktor (Saison/Pl.):<br />@sAttcFcCup</p>
+              }
+              *@
+            }
+
+            @if (ltClubAttrFac != null) {
+              <div style="height: fit-content; width: 100%; min-width: 320px; margin-top: 10px">
+                <h5 style="margin: 0">Historie Erfolgsfaktor</h5>
+                <RadzenChart Style="height: 600px">
+                  @foreach (List<CkAppShared.DataPointSD> ltDt in ltClubAttrFac) {
+                    if (ltDt != null && ltDt.Count > 0) {
+                      //ltDt = ltDt.RemoveAll(d => d.y < 1);
+                      <RadzenStackedColumnSeries Data="@ltDt" CategoryProperty="X" ValueProperty="Y" Title="Z" Fill="@ltDt[0].sColor" Stroke="black" StrokeWidth="1">
+                        @*
+                        <ChildContent>
+                          <RadzenSeriesAnnotation Visible="true" TItem="CkAppShared.DataPointSD" Data="@ltDt[0]" OffsetY="-16" Text="Acquisition" />
+                        </ChildContent>
+                        *@
+                        <TooltipTemplate Context="data">
+                          @*
+                            <div>@(data.z + ": ")<b>@(data.y.Value.ToString("0.0"))</b></div>
+                          *@
+                          <div>@((MarkupString)data.Z)</div>
+                        </TooltipTemplate>
+                      </RadzenStackedColumnSeries>
+                    }
+                  }
+                  <RadzenColumnOptions Width="40" />
+                  <RadzenCategoryAxis Visible="true" Step="1">
+                    <RadzenGridLines Visible="true" Stroke="#ccc" LineType="Radzen.Blazor.LineType.Dashed" />
+                  </RadzenCategoryAxis>
+                  <RadzenValueAxis Min="0" Step="500">
+                    <RadzenGridLines Visible="true" StrokeWidth="2" />
+                  </RadzenValueAxis>
+                  <RadzenLegend Visible="false" />
+                </RadzenChart>
+              </div>
+            }
+          }
+        </div>
+
+        @if (model.ltPlayer != null) {
+          <div style="position: relative">
+            <h4>Spieler</h4>
+            <table class="table table-bordered" cellpadding="3" style="width: auto">
+              <thead>
+                <tr>
+                  <th style="text-align: center">Nr.</th>
+                  <th style="text-align: center">Name</th>
+                  <th style="text-align: center">Pos.</th>
+                  @if (model.bNation) {
+                    <th style="text-align: center">Verein</th>
+                  }
+                </tr>
+              </thead>
+              <tbody>
+                @foreach (ClubModel.Player pl in model.ltPlayer.OrderBy(p => p.iPos)) {
+                  <tr style="white-space: nowrap">
+                    <td align="right">@pl.iNo.ToString()</td>
+                    <td align="center"><a href="/member/playerdetails/@pl.iId.ToString()">@pl.sName</a></td>
+                    <td align="center">@pl.sPos</td>
+                    @if (model.bNation) {
+                      <td align="left">@pl.sClub</td>
+                    }
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    }
+  </div>
+</body>
+</html>
+
+@code {
+  [Parameter]
+  public int? id { get; set; } = -1;
+
+  private CornerkickManager.User? _usr;
+  private ClubModel? model;
+  private IJSObjectReference? module;
+
+  List<CkAppShared.DataPointSD>[]? ltClubAttrFac { get; set; }
+
+  private bool _navigateToRegister = false;
+
+  protected override async Task OnInitializedAsync()
+  {
+    await base.OnInitializedAsync();
+
+#if _WebApp
+    _usr = Controllers.Member.MemberController.ckUser(_auth.GetUserId().Result);
+    if (_usr == null) {
+      _navigateToRegister = true;
+      return;
+    }
+
+#else
+    _usr = CkAppShared.ckMng.ltUser[CkAppShared.iUserActive];
+#endif
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender) {
+      if (_navigateToRegister) {
+        // Navigation während Render-Phase nach Fertigstellung ausführen
+        //NavigationManager.NavigateTo(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = "/member/desk" }), forceLoad: true);
+        NavigationManager.NavigateTo("/Account/Register", forceLoad: true);
+        return;
+      }
+
+      //await JS.InvokeAsync<IJSObjectReference>("import", "./_content/CornerkickApp.Components/js/Player.js");
+      //module = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/CornerkickApp.Components/Pages/Member/Calendar.razor.js");
+
+      if (module != null && model != null) {
+        //await module.InvokeAsync<string>("init", JsonSerializer.Serialize());
+      }
+    }
+  }
+
+  // This event will fire when the parameters change
+  protected override async Task OnParametersSetAsync()
+  {
+    if (_usr == null) return;
+
+    int iClubId = -1;
+    if (id.HasValue) iClubId = id.Value;
+    model = CornerkickApp.Controllers.Member.ClubController.Model(_usr, iClubId);
+    if (model != null) {
+      ltClubAttrFac = Controllers.Member.ClubController.getAttrFtr(model.iClubId);
+    }
+  }
+
+}

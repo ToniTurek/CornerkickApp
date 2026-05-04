@@ -1,0 +1,78 @@
+﻿@using CornerkickApp.Shared.Models
+
+<DataGrid TItem="DeskModel.DatatableNews"
+          Data="@_ltNews"
+          Class="compact"
+          @bind-SelectedRow="@selected_news"
+          HeaderRowStyling="@(new DataGridRowStyling() { Class = "hidden" })"
+          Virtualize
+          VirtualizeOptions="@(new() { DataGridHeight = "226px"})"
+          Responsive>
+  <ChildContent>
+    <DataGridCommandColumn />
+    <DataGridColumn Field="@nameof(DeskModel.DatatableNews.iId)" Sortable="false" Displayable="false" />
+    <DataGridColumn Field="@nameof(DeskModel.DatatableNews.iType)">
+      <DisplayTemplate>
+        @((MarkupString)Controllers.Tool.getNewsIcon(context.iType))
+      </DisplayTemplate>
+    </DataGridColumn>
+    <DataGridColumn Field="@nameof(DeskModel.DatatableNews.sDate)" />
+    <DataGridColumn Field="@nameof(DeskModel.DatatableNews.sImg)" Sortable="false" Displayable="false" />
+    <DataGridColumn Field="@nameof(DeskModel.DatatableNews.sText)">
+      <DisplayTemplate>
+        @{
+          bool bPromNews = false;
+          byte iRspLvl = 0;
+          foreach (string sRespLvlName in CornerkickManager.Names.sUserRespLvlNames) {
+            if (context.sText.Contains(sRespLvlName)) {
+              string[] sN = context.sText.Split(sRespLvlName);
+              bPromNews = true;
+
+              <span>@(sN[0])</span>
+
+              <span style="color: #0366d6; cursor: pointer" @onclick="@(() => MainLayout.showPromotionInfo(context.sText.Trim(), iRspLvl))">@sRespLvlName</span>
+
+              <span>@(sN[1])</span>
+
+              break;
+            }
+
+            iRspLvl++;
+          }
+
+          if (!bPromNews) {
+            @((MarkupString)context.sText)
+          }
+        }
+      </DisplayTemplate>
+    </DataGridColumn>
+    <DataGridColumn Field="@nameof(DeskModel.DatatableNews.bOld)" Sortable="false" Displayable="false" />
+  </ChildContent>
+  <EmptyTemplate>
+    <div class="box">
+      Keine Nachrichten ...
+    </div>
+  </EmptyTemplate>
+  <LoadingTemplate>
+    <div class="box">
+      <progress class="progress is-small is-primary" max="100" />
+    </div>
+  </LoadingTemplate>
+</DataGrid>
+
+@code {
+  private List<DeskModel.DatatableNews> _ltNews { get; set; } = new List<DeskModel.DatatableNews>();
+  private DeskModel.DatatableNews? selected_news;
+
+  public async Task print(List<DeskModel.DatatableNews> ltNews, bool bForce=false)
+  {
+    if (ltNews.Count < 1) return;
+
+    bool bUpdate = bForce || _ltNews.Count < 1 || !_ltNews[0].sText.Equals(ltNews[0].sText) || !_ltNews[0].sDate.Equals(ltNews[0].sDate);
+
+    if (bUpdate) {
+      _ltNews = ltNews;
+      await InvokeAsync(StateHasChanged);
+    }
+  }
+}

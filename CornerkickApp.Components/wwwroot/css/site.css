@@ -1,0 +1,205 @@
+﻿/* Please see documentation at https://docs.microsoft.com/aspnet/core/client-side/bundling-and-minification
+for details on configuring this project to bundle and minify static web assets. */
+
+/* body
+-------------------------------------------------- */
+body {
+  /* Margin bottom by footer height */
+  padding-top: 0px;
+  /* padding-bottom: 20px;
+  margin-bottom: 60px; */
+  font-size: var(--ckFontSize);
+  background: #f4f5f9; /* Light gray background */
+}
+
+/* Set padding to keep content from hitting the edges */
+.body-content {
+  /*background-color: green;*/
+  padding-left: 15px;
+  padding-right: 15px;
+}
+
+@media (max-width: 640.98px) {
+  .mobile-hide {
+    display: none;
+  }
+}
+
+a.navbar-brand {
+  white-space: normal;
+  text-align: center;
+  word-break: break-all;
+}
+
+a.nav-link {
+  cursor: pointer;
+  text-decoration: none !important; /* No underline */
+  user-select: none;
+  /*padding: 0 !important;*/
+  margin: 0 !important;
+}
+
+a.nav-link i.fas {
+  /*margin-right: 10px;*/
+  width: 42px;
+  text-align: center
+}
+
+a.nav-link.sub i.fas {
+  /*margin-right: 10px;*/
+  width: 32px;
+}
+
+/* Provide sufficient contrast against white background */
+a {
+  color: #0366d6;
+}
+
+.btn-primary {
+  color: #fff;
+  background-color: #1b6ec2;
+  border-color: #1861ac;
+}
+
+.top-row {
+  border-bottom: none !important;
+}
+
+.nav-pills .nav-link.active, .nav-pills .show > .nav-link {
+  color: #fff;
+  background-color: #1b6ec2;
+  border-color: #1861ac;
+}
+
+li.nav-item {
+  cursor: pointer;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* Sticky footer styles
+-------------------------------------------------- */
+html {
+  position: relative;
+  min-height: 100%;
+  font-size: 14px;
+}
+@media (min-width: 768px) {
+  html {
+    font-size: 16px;
+  }
+}
+
+:root {
+  --ckRelSize: 1.0;
+  --ckFontSize: 100%;
+  --ckTextContainerHeight: 26px;
+}
+
+.textContainer {
+  height: var(--ckTextContainerHeight);
+}
+
+.dropdown-item {
+  font-size: var(--ckFontSize);
+}
+
+.footer {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  white-space: nowrap;
+  line-height: 60px; /* Vertically center the text there */
+}
+
+.border-top {
+  border-top: 1px solid #e5e5e5;
+}
+.border-bottom {
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.box-shadow {
+  box-shadow: 0 .25rem .75rem rgba(0, 0, 0, .05);
+}
+
+button.accept-policy {
+  font-size: 1rem;
+  line-height: inherit;
+}
+
+/* Override the default bootstrap behavior where horizontal description lists 
+   will truncate terms that are too long to fit in the left column 
+*/
+.dl-horizontal dt {
+    white-space: normal;
+}
+
+h2 {
+  font-size: 2em;
+}
+h3 {
+  font-size: 1.75em;
+}
+
+/* Set width on the form input elements since they're 100% wide by default */
+input,
+select,
+textarea {
+    max-width: 280px;
+}
+
+.ui-dialog-buttonpane {
+  min-height: 55px !important;
+}
+
+.ui-dialog-titlebar {
+  background-color: rgb(31, 158, 69) !important;
+}
+
+.ui-dialog-title {
+  color: white !important;
+}
+
+.ui-dialog-titlebar-close {
+  padding: 0 !important;
+}
+
+.ui-dialog-titlebar-close:after {
+  content: '';
+  width: 20px;
+  height: 20px;
+  display: inline-block;
+  /* Change path to image*/
+  background-image: url(images/ui-icons_777777_256x240.png);
+  background-position: -96px -128px;
+  background-repeat: no-repeat;
+}
+
+.dataTable thead .sorting {
+    padding-left: 0px !important;
+    padding-right: 20px !important;
+}
+
+table td {
+  vertical-align: middle;
+  background-color: transparent !important;
+}
+
+table th {
+  vertical-align: middle;
+  background-color: transparent !important;
+}
+
+table.compact td {
+  padding: 0;
+}
+
+/* Blazorise */
+.e-grid .e-gridheader .e-columnheader {
+  display: none;
+}
+
+.scroll-anchor {
+  scroll-margin-top: calc(3.5rem + 24px);
+}

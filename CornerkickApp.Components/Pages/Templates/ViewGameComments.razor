@@ -1,0 +1,47 @@
+﻿<div id="divComments" style="width: 100%; position: relative;">
+  @if (ltComments != null) {
+    <table id="tblComments" style="width: 100%">
+      <tbody style="display: block; border: 1px solid black; height: calc(132px * var(--ckRelSize)); overflow-y: scroll">
+        @for (int i = ltComments.Count - 1; i >= 0; i--) {
+          string[] sComm = ltComments[i];
+          <tr style="font-weight: @sComm[3]; text-decoration: @sComm[4]">
+            <td style="display: none;">@sComm[0]</td>
+            <td>@sComm[1]</td>
+            <td>@sComm[2]</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</div>
+
+@code {
+  protected List<string[]>? ltComments;
+
+  public async Task update(List<string[]> _ltComments, bool bReset = false)
+  {
+    if (ltComments == null || bReset) ltComments = new List<string[]>();
+
+    int iSt0 = 0;
+    if (ltComments.Count > 0) iSt0 = int.Parse(ltComments[ltComments.Count - 1][0]);
+
+    foreach (string[] s in _ltComments) {
+      if (ltComments.Count > 0) {
+        int iSt1;
+        if (int.TryParse(s[0], out iSt1)) {
+          if (iSt0 != iSt1) ltComments.Add(s);
+        }
+      } else {
+        ltComments.Add(s);
+      }
+    }
+
+    await InvokeAsync(StateHasChanged);
+  }
+
+  public async Task clear()
+  {
+    if (ltComments != null) ltComments.Clear();
+    await InvokeAsync(StateHasChanged);
+  }
+}

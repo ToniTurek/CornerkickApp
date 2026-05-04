@@ -1,0 +1,39 @@
+@page "/"
+@using CornerkickApp.Shared.Services
+@inject IFormFactor FormFactor
+@inject NavigationManager NavigationManager
+
+@*
+@rendermode InteractiveServer
+@rendermode InteractiveWebAssembly
+@rendermode InteractiveAuto
+*@
+
+<PageTitle>Home</PageTitle>
+
+Welcome to Cornerkick running on <em>@factor</em> using <em>@platform</em>.
+Redirecting...
+
+<button @onclick="test">Test</button>
+
+@code {
+  private string factor => FormFactor.GetFormFactor();
+  private string platform => FormFactor.GetPlatform();
+
+  protected override async Task OnInitializedAsync()
+  {
+    await base.OnInitializedAsync();
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender) {
+      NavigationManager.NavigateTo($"/home");
+    }
+  }
+
+  private void test()
+  {
+    Console.WriteLine("Click");
+  }
+}

@@ -1,0 +1,193 @@
+﻿@using CornerkickApp.Shared.Models
+@using CornerkickApp.Shared.Services
+@using CornerkickApp.Components.Shared.Components
+@inject Controllers.Shared.MyAuthenticationStateProvider _auth
+@inject IAmazonS3Service AmazonS3Service
+
+<div style="margin-top: 60px; border: 0px solid black"></div>
+<h4>Online Spielstand</h4>
+<hr />
+@if (bShowContent) {
+  <AuthorizeView>
+    <Authorized>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem">
+        <span style="margin: 0">Eingeloggt als: <b>@context.User.Identity?.Name</b></span>
+        <Logout />
+      </div>
+
+      @if (bLoading) {
+        <p style="margin-top: 1rem">Daten werden geladen ...</p>
+      } else {
+        <button class="btn btn-primary" style="width: 100%; font-size: 120%; background-color: orchid; border-color:blueviolet" @onclick="uploadGame" disabled="@bUploadButtonDisabled">
+          <Blazorise.Icon Name="Blazorise.IconName.CloudUploadAlt" Style="margin-right: 0.5rem" />
+          @if (slotsFree()) {
+            <b>@Path.GetFileNameWithoutExtension(GameToUpload)</b>
+            <span> hochladen</span>
+          } else {
+            <span>kein freier Speicherplatz verfügbar</span>
+          }
+        </button>
+        <div class="p-3 form-group" style="margin-bottom: 6px">
+          <div class="btn-group btn-group-vertical" role="group" data-bs-toggle="buttons">
+            <ListCkFiles @ref=lcf ltFilesCk=ltFilesCkOnline action="selectGame"></ListCkFiles>
+          </div>
+        </div>
+        @*
+        <input class="form-control" placeholder="Neuer Spielstand" style="width: 100%; min-width: 100%" value="@Path.GetFileNameWithoutExtension(sFileCkOnlineSelected)" autocorrect="off" autocapitalize="none" @oninput="(e) => OnCheckedValueChanged(e.Value != null ? e.Value.ToString() : null)" />
+        *@
+
+        <button class="btn btn-secondary" style="width: 100%; background-color: lightcoral; border-color:red" @onclick="removeGame" disabled="@string.IsNullOrEmpty(sFileCkOnlineSelected)">
+          <Blazorise.Icon Name="Blazorise.IconName.Delete" />
+          löschen
+        </button>
+      }
+    </Authorized>
+    <Authorizing>
+      Authorizing...
+    </Authorizing>
+    <NotAuthorized>
+      <h5>Einloggen um Funktion zu nutzen</h5>
+      <Login />
+      <div style="height: 400px"></div>
+    </NotAuthorized>
+  </AuthorizeView>
+}
+
+@code {
+  [Parameter] public string? GameToUpload { get; set; }
+
+  List<string[]>? ltFilesCkOnline;
+  public string? sFileCkOnlineSelected { get; set; } // Online game
+  bool bShowContent = false;
+  bool bLoading = true;
+  private bool bUploadButtonDisabled = true;
+  const byte nOnlineGamesMax = 1;
+  Controllers.AmazonS3FileTransfer? as3 { get; set; }
+  ListCkFiles? lcf { get; set; }
+
+  protected override async Task OnInitializedAsync()
+  {
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender) {
+      bShowContent = true;
+      await InvokeAsync(StateHasChanged);
+
+      AmazonS3Credentials? as3credentials = await AmazonS3Service.GetAmazonS3CredentialsAsync();
+      if (!string.IsNullOrEmpty(as3credentials.sAwsKeyId) && !string.IsNullOrEmpty(as3credentials.sAwsSecretKey)) {
+        as3 = new Controllers.AmazonS3FileTransfer(as3credentials.sAwsKeyId, as3credentials.sAwsSecretKey);
+
+        if (as3 != null) {
+          await GetFilesInCloudSaveAsync();
+
+          bLoading = false;
+          await InvokeAsync(StateHasChanged);
+        }
+      }
+    }
+  }
+
+  private void selectGame(string? sFileCk)
+  {
+    sFileCkOnlineSelected = sFileCk;
+    StateHasChanged();
+  }
+
+  private void enableUploadButton()
+  {
+    bUploadButtonDisabled = string.IsNullOrEmpty(GameToUpload) || ltFilesCkOnline == null || !slotsFree();
+  }
+
+  private bool slotsFree()
+  {
+    return ltFilesCkOnline == null || ltFilesCkOnline.FindAll(s => !string.IsNullOrEmpty(s[1])).Count < nOnlineGamesMax;
+  }
+
+  private async Task GetFilesInCloudSaveAsync()
+  {
+    if (as3 == null) return;
+
+    ltFilesCkOnline = await Services.StartGameService.GetFilesInCloudAsync(_auth, as3);
+    while (ltFilesCkOnline.Count < nOnlineGamesMax) ltFilesCkOnline.Add(new string[] { "leer", "" });
+  }
+
+  public async Task update(string? _sFileCk)
+  {
+    GameToUpload = _sFileCk;
+    enableUploadButton();
+    await InvokeAsync(StateHasChanged);
+    //enableSaveButton();
+  }
+
+  Task OnCheckedValueChanged(string? value)
+  {
+    sFileCkOnlineSelected = value;
+
+    return Task.CompletedTask;
+  }
+
+  private async Task uploadGame()
+  {
+    if (string.IsNullOrEmpty(GameToUpload)) return;
+    if (as3 == null) return;
+
+    bUploadButtonDisabled = true;
+    await InvokeAsync(StateHasChanged);
+
+    try {
+      // Add extension if not already
+      if (!Path.GetExtension(GameToUpload).Equals(".ckx")) GameToUpload += ".ckx";
+
+      var uidentity = _auth.GetIdentity().Result;
+      if (uidentity == null) return;
+
+      string? sUid = uidentity.Name;
+      if (string.IsNullOrEmpty(sUid)) return;
+
+      await as3.uploadFileAsync(GameToUpload, "app_save/" + Controllers.Member.MemberController.GetUserIdStandaloneApp(sUid) + "/" + Path.GetFileName(GameToUpload), "application/zip");
+
+      if (MainLayout.ckToast != null) {
+        MainLayout.toastMessage = "Spielstand <b>" + Path.GetFileNameWithoutExtension(GameToUpload) + "</b> hochgeladen";
+        await MainLayout.ckToast.Show();
+      }
+      GameToUpload = null;
+
+      await GetFilesInCloudSaveAsync();
+      enableUploadButton();
+      //await InvokeAsync(StateHasChanged);
+      //NavigationManager.NavigateTo("/member/desk", true);
+    } catch (Exception e) {
+      string sErrorMsg = "ERROR saving game. Message: " + e.Message + Environment.NewLine + e.StackTrace;
+      CkAppShared.ckMng.tl.writeLog(sErrorMsg);
+    }
+  }
+
+  private async Task removeGame()
+  {
+    if (string.IsNullOrEmpty(sFileCkOnlineSelected)) return;
+    if (as3 == null) return;
+
+    try {
+      // Add extension if not already
+      if (!Path.GetExtension(sFileCkOnlineSelected).Equals(".ckx")) sFileCkOnlineSelected += ".ckx";
+
+      var uidentity = _auth.GetIdentity().Result;
+      if (uidentity == null) return;
+
+      string? sUid = uidentity.Name;
+      if (string.IsNullOrEmpty(sUid)) return;
+
+      await as3.deleteFileAsync("app_save/" + Controllers.Member.MemberController.GetUserIdStandaloneApp(sUid) + "/" + Path.GetFileName(sFileCkOnlineSelected));
+      sFileCkOnlineSelected = null;
+      if (lcf != null) lcf.update();
+
+      await GetFilesInCloudSaveAsync();
+      enableUploadButton();
+    } catch (Exception e) {
+      string sErrorMsg = "ERROR saving game. Message: " + e.Message + Environment.NewLine + e.StackTrace;
+      CkAppShared.ckMng.tl.writeLog(sErrorMsg);
+    }
+  }
+}

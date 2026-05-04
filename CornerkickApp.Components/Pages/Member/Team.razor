@@ -1,0 +1,1080 @@
+﻿@page "/member/team"
+
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using CornerkickApp.Controllers.Member
+@using CornerkickApp.Components.Shared.Components
+@using CornerkickApp.Shared.Models
+@using CornerkickApp.Components.Pages.Templates
+
+@inject IJSRuntime JS
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject Controllers.Shared.MyAuthenticationStateProvider _auth
+
+<PageTitle>Mannschaft</PageTitle>
+
+<!DOCTYPE html>
+<html>
+<head>
+  <link rel="stylesheet" href="./_content/CornerkickApp.Components/css/slider.css" />
+
+  <style>
+    .transparent {
+      opacity: 0.5 !important;
+    }
+
+    .substituted {
+      color: rgb(180,180,180);
+    }
+  </style>
+</head>
+
+<body style="margin: 0">
+  @if (team != null && teamData != null && _usr != null) {
+    <div id="divBody">
+      @*
+      <div style="position: relative; width: 100%; left: 0px; margin-bottom: 6px">
+        @if (team?.sliSystem != null) {
+          <Blazorise.Select id="ddlSystem" style="width: 84px; text-align: right" @bind-SelectedValue="@team.iSystem" TValue="int">
+            @foreach (LayoutModel.SelectListItem sli in team.sliSystem) {
+              <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+            }
+          </Blazorise.Select>
+        }
+        <button class="form-control" id="bnTacticNew" style="width: 40px; display: none" onclick="addSystem(this, document.getElementById('divFieldContainer'), true)"><i class="fa fa-plus"></i></button>
+        <button class="form-control" id="bnTacticDel" style="width: 40px; display: none" onclick="deleteSystem(this, true)"><i class="fa fa-trash-o"></i></button>
+      </div>
+      *@
+
+      <div id="divFieldContainer">
+        <div style="height: 100%; display: flex; flex-direction:column">
+          <img style="left: 0px; height: 50%; transform:rotate(180deg)" src="@CkAppShared.sContentDir/Images/stadium/field.png" />
+          <img style="left: 0px; height: 50%" src="@CkAppShared.sContentDir/Images/stadium/field.png" />
+        </div>
+
+        <div id="selectFormationOffenceContainer" align="center">
+          <Blazorise.RadioGroup TValue="int" Name="form" CheckedValue="@iFormationOption" CheckedValueChanged="@OnCheckedValueChanged" Style="display: flex; flex-wrap: wrap">
+            <Blazorise.Radio Value="0" Inline="true">Formation</Blazorise.Radio>
+            <Blazorise.Radio Value="1" Inline="true">Offensive</Blazorise.Radio>
+          </Blazorise.RadioGroup>
+        </div>
+
+        <div id="divDrawFormationContainer"
+          style="position: absolute; display: inline-block; margin-left: 5%; width: 90%; height: 94%; top: 3%; left: 0%"
+          @ref=refField>
+          @if (iFormationOption == 0) {
+            @* Show kibitzer info *@
+            @if (teamData.iKibitzer == 0 && _usr.iResp >= CkAppShared.iUserRespStaff) {
+              <div style="position: absolute; top: 25%; width: 100%; color: white; font-size: 150%; text-align: center; z-index: 2">Stellen Sie einen <a style="color: white" href="/member/staff">Spielbeobachter</a> ein, wenn Sie mehr über Ihren nächsten Gegner erfahren wollen!</div>
+            }
+
+            @if (iPlayerDragXY != null) {
+              <div class="position-info">
+                <table>
+                  <tr>
+                    <th style="text-align: right">Pos:</th>
+                    <td style="text-align: right">@sPlayerDragPosName</td>
+                  </tr>
+                  <tr>
+                    <th style="text-align: right">X:</th>
+                    <td style="text-align: right">@iPlayerDragXY[0]</td>
+                  </tr>
+                  <tr>
+                    <th style="text-align: right">Y:</th>
+                    <td style="text-align: right">@iPlayerDragXY[1]</td>
+                  </tr>
+                </table>
+              </div>
+            }
+
+            @* Show formation (defence) *@
+            <div id="divDrawFormation" style="position: absolute; display: inline-block; width: 100%; height: 100%; top: 0px; left: 0px"></div>
+
+            @* Man-markings *@
+            <TeamField @ref=field ptPitch="teamData.ptPitch"></TeamField>
+            @*
+            @if (edField != null && edField.Height > 0 && edField.Width > 0) {
+              <svg style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:2"
+                   viewBox="0 0 @edField.Width @edField.Height" preserveAspectRatio="none">
+                @foreach (var path in ltManMarkings) {
+                  var pathEnd = convertPointToSvgPix(path[1]);
+                  <path d="@GetPathSvg(path)" stroke="orange" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.85" />
+                  <circle cx="@pathEnd[0].ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)" cy="@pathEnd[1].ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)" r="6" fill="orange"></circle>
+                }
+              </svg>
+            }
+            *@
+          } else {
+            @* Show offense *@
+            <div style="position: absolute; width: 100%; height: 100%; top: 0px; left: 0px" @onclick=clearSelectedPlayer>
+              <b style="position: absolute; top: -20px; color: orange; font-size: 110%">@team.iTcOrient.ToString()</b>
+              <Blazorise.Slider TValue="int" Value="team.iTcOrient" Min="-100" Max="100" Step="5" ValueChanged="setTactic" Class="slider" orient="vertical" />
+
+              @{
+                int iPl = 0;
+                bool bSliderPosRight = false;
+                float fTopSelPl = 0f;
+                float fLeftSelPl = 0f;
+                foreach (TeamModel.Player pl in teamData.ltPlayer2) {
+                  int jPl = iPl;
+
+                  bool bPlayerSelected = selected_player != null && selected_player.iId == pl.iId;
+                  float fHeight = bPlayerSelected ? 0.1f : 0.08f;
+                  float fWidth = fHeight * (3f / 2f);
+                  int iXOffence = pl.iPos == 1 ? 1 : CornerkickGame.Tool.getXPosOffence(tc, iPl, CkAppShared.ckMng.game.ptPitch);
+                  float fTop = 1f - (iXOffence / (float)CkAppShared.ckMng.game.ptPitch.X);
+                  float fLeft = (tc.formation.positions[iPl].pt.Y + CkAppShared.ckMng.game.ptPitch.Y) / (float)(2 * CkAppShared.ckMng.game.ptPitch.Y);
+
+                  // Remember position of selected player
+                  if (bPlayerSelected) {
+                    fTopSelPl = fTop;
+                    fLeftSelPl = fLeft;
+                  }
+
+                  fTop -= fHeight / 2f;
+                  fLeft -= fWidth / 2f;
+
+                  string sPlNo = bNation ? (iPl + 1).ToString() : pl.iNb.ToString();
+
+                  @* Player circle *@
+                  <div style="
+                      position: absolute;
+                      top: @fTop.ToString("0.00%", System.Globalization.CultureInfo.InvariantCulture);
+                      left: @fLeft.ToString("0.00%", System.Globalization.CultureInfo.InvariantCulture);
+                      height: @fHeight.ToString("0.00%", System.Globalization.CultureInfo.InvariantCulture);
+                      aspect-ratio: 1;
+                      z-index: @(bPlayerSelected ? "2" : "0");
+                      display: flex; justify-content: center; align-items: center"
+                       @onclick="() => selectPlayer(teamData.ltPlayer2[jPl].iId)" @onclick:stopPropagation="true" @onclick:preventDefault="true">
+                    <div style="
+                        position: absolute;
+                        height: 75%;
+                        aspect-ratio: 1;
+                        opacity: @(selected_player == null || selected_player.iId == pl.iId ? "1.0" : "0.5");
+                        border: 4px solid @team.sCl[1]; background-color: @team.sCl[0]; -webkit-border-radius: 50%; -moz-border-radius: 50%; cursor: pointer; -webkit-box-shadow: 0px 0px 8px 8px rgba(0, 0, 0, .3); box-shadow: 0px 0px 8px 8px rgba(0, 0, 0, .3)
+                        ">
+                    </div>
+                    <span class="nboffence" style="position: absolute; width: 100%; text-align:center; font-size: @((25f * fHeight).ToString("0%")); color: @team.sCl[2]; cursor: pointer">@sPlNo</span>
+                  </div>
+
+                  // Slider ind. orientation
+                  if (pl.iPos > 1 && ((bd != null && bd.Width > 600 && selected_player == null) || (selected_player != null && selected_player.iId == pl.iId))) {
+                    jPl = 0;
+                    int nPlSameY = 0;
+                    for (; jPl < iPl; jPl++) {
+                      if (teamData.ltPlayer2[jPl].iPos == 1) continue;
+                      if (teamData.ltPlayer2[jPl].ptPos.y == pl.ptPos.y) nPlSameY++;
+                    }
+                    //if (pl.iPos < 6 || pl.iPos > 8) fLeft += fWidth;
+                    //if (ptPos.y >= 0) fLeft += fWidth;
+                    if (nPlSameY % 2 == 0) fLeft += fWidth + 0.01f;
+                    else                   fLeft -= 0.025f;
+
+                    if (bPlayerSelected) bSliderPosRight = nPlSameY % 2 == 0;
+
+                    float[] fTcIndOrientMinMax = TeamController.GetIndOrientationMinMax(iPl, tc, fScale: bPlayerSelected ? 1f : 0.5f);
+                    string sSlidTop = (1f - fTcIndOrientMinMax[1]).ToString("0.00%", System.Globalization.CultureInfo.InvariantCulture);
+                    string sSlidHeight = (fTcIndOrientMinMax[1] - fTcIndOrientMinMax[0]).ToString("0.00%", System.Globalization.CultureInfo.InvariantCulture);
+                    jPl = iPl;
+                    <div style="position: absolute; top: @sSlidTop; left: @fLeft.ToString("0.00%", System.Globalization.CultureInfo.InvariantCulture); height: @sSlidHeight; z-index: 4" @onclick:stopPropagation=true @onclick:preventDefault="true">
+                      <Blazorise.Slider TValue="int" Value="@pl.iTcIndOrient" Min="-100" Max="100" ValueChanged="(i) => setIndOrientation(jPl, i)" orient="vertical" Style="width: 16px" />
+                    </div>
+                  }
+
+                  ++iPl;
+                }
+
+                @* Radius of action *@
+                if (selected_player != null && fRadiusOfAction != null) {
+                  float fButtonDivTop = 0f;
+                  float fButtonDivLeft = 0f;
+                  foreach (float[] fRoa in fRadiusOfAction) {
+                    string sClr = Controllers.Tool.getColor0_1((fRoa[0] - 0.5f) * 2f);
+                    bool bButtonDiv = Math.Abs(fRoa[0] - 0.9f) < 0.001f;
+                    if (bButtonDiv) {
+                      fButtonDivTop  = fRoa[1];
+                      fButtonDivLeft = fRoa[2];
+                    }
+
+                    <div style="position: absolute;
+                                top:    @fRoa[1].ToString("0.00%", System.Globalization.CultureInfo.InvariantCulture);
+                                left:   @fRoa[2].ToString("0.00%", System.Globalization.CultureInfo.InvariantCulture);
+                                height: @fRoa[3].ToString("0.00%", System.Globalization.CultureInfo.InvariantCulture);
+                                width:  @fRoa[4].ToString("0.00%", System.Globalization.CultureInfo.InvariantCulture);
+                                text-align: center; z-index: @(bButtonDiv ? "2" : "1");">
+                      @* Frame *@
+                      <div style="position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+                                  border: 3px solid @sClr; -webkit-border-radius: 4px; -moz-border-radius: 4px; opacity: 0.75; box-shadow: 0px 0px 20px @sClr inset;">
+                      </div>
+
+                      @* Label *@
+                      <div style="position: absolute; left: 0; top: 0; width: 100%;
+                                  display: flex; justify-content: @(bSliderPosRight ? "flex-start" : "flex-end"); align-items: flex-start;">
+                          <div style="width: fit-content; font-size: 90%; color: black; background-color: @sClr">
+                          <span style="margin-left: 2px; margin-right: 2px">@fRoa[0].ToString("0%")</span>
+                        </div>
+                      </div>
+                    </div>
+                  }
+                  @* Buttons *@
+                  <div style="position: absolute; height: 0;
+                              left: @fButtonDivLeft.ToString("0.00%", System.Globalization.CultureInfo.InvariantCulture);
+                              top: @fTopSelPl.ToString("0.00%", System.Globalization.CultureInfo.InvariantCulture);
+                              display: flex; flex-direction: column; justify-content: center; z-index: 4;">
+                    <div style="@(selected_player.fRadOfAction[0] >= 1f ? "opacity: 0.5" : ""); cursor: pointer"
+                         @onclick="() => SetRadiusOfAction(0, +0.1f)" @onclick:stopPropagation="true" @onclick:preventDefault="true">
+                      <img src="@CornerkickApp.Shared.Models.CkAppShared.sContentDir/Icons/plus.png" height="32" width="32" />
+                    </div>
+                    <div style="@(selected_player.fRadOfAction[0] <= 0f ? "opacity: 0.5" : ""); cursor: pointer"
+                         @onclick="() => SetRadiusOfAction(0, -0.1f)" @onclick:stopPropagation="true" @onclick:preventDefault="true">
+                      <img src="@CornerkickApp.Shared.Models.CkAppShared.sContentDir/Icons/minus.png" height="32" width="32" />
+                    </div>
+                  </div>
+
+                  <div style="position: absolute; width: 0;
+                              left: @fLeftSelPl.ToString("0.00%", System.Globalization.CultureInfo.InvariantCulture);
+                              top: @fButtonDivTop.ToString("0.00%", System.Globalization.CultureInfo.InvariantCulture);
+                              display: flex; flex-direction: row; justify-content: center; z-index: 4;">
+                    <div style="@(selected_player.fRadOfAction[1] >= 1f ? "opacity: 0.5" : ""); cursor: pointer"
+                         @onclick="() => SetRadiusOfAction(1, +0.1f)" @onclick:stopPropagation="true" @onclick:preventDefault="true">
+                      <img src="@CornerkickApp.Shared.Models.CkAppShared.sContentDir/Icons/plus.png" height="32" width="32" />
+                    </div>
+                    <div style="@(selected_player.fRadOfAction[1] <= 0f ? "opacity: 0.5" : ""); cursor: pointer"
+                         @onclick="() => SetRadiusOfAction(1, -0.1f)" @onclick:stopPropagation="true" @onclick:preventDefault="true">
+                      <img src="@CornerkickApp.Shared.Models.CkAppShared.sContentDir/Icons/minus.png" height="32" width="32" />
+                    </div>
+                  </div>
+                }
+              }
+            </div>
+          }
+
+          @*
+          <div style="position: absolute; display: @(selected_player == null ? "none" : "flex"); width: @fWidth.ToString("0%"); height: @fHeight.ToString("0%"); left: @fLeft.ToString("0%"); top: @fTop.ToString("0%"); justify-content: center; align-items: center; z-index: 999; border: 1px solid red">
+            <img src="@CkAppShared.sContentDir/Images/arrow_up.png" style="position: absolute; bottom: 100%; width: 50%; min-width: 60px" @onclick="(() => movePlayer(1))" />
+            <img src="@CkAppShared.sContentDir/Images/arrow_right.png" style="position: absolute; left: 100%; width: 20%; min-width: 24px" @onclick="(() => movePlayer(2))" />
+            <img src="@CkAppShared.sContentDir/Images/arrow_down.png" style="position: absolute; top: 100%; width: 50%; min-width: 60px" @onclick="(() => movePlayer(3))" />
+            <img src="@CkAppShared.sContentDir/Images/arrow_left.png" style="position: absolute; right: 100%; width: 20%; min-width: 24px" @onclick="(() => movePlayer(4))" />
+          </div>
+          *@
+        </div>
+
+        <div id="divTeamOppAve" style="position: absolute; top: 0px; width: 50%"></div>
+
+        <b style="position: absolute; bottom: 0%; left: 0%; width: 100%; text-align:center; font-size:120%; color:white">
+          Durchschnittsstärke (-alter): @teamData.sTeamAveSkill (@teamData.sTeamAveAge)
+        </b>
+        <div id="divTeamStrengthPos" style="position: absolute; bottom: 4px; right: 4px; height: auto; width: auto; text-align:right; z-index: 7; background-color: white; border-color: lightgray">
+          <table id="tblTeamStrengthPos"></table>
+        </div>
+      </div>
+
+      <div class="table_container" id="tablediv" style="width: 100%; flex: 1 1">
+        <div class="form-group" style="position: relative; margin-bottom: 10px; display: flex; flex-wrap: wrap">
+          <div style="position: relative; display: flex; flex-wrap: wrap">
+            @if (team?.ltsFormations != null && team.ltsFormations.Count > 0) {
+              <Blazorise.Select TValue="int" id="ddlFormation" class="form-control" SelectedValue="@team.iFormation" SelectedValueChanged="@updateAll" Style="width: 120px; margin-right: 4px">
+                @foreach (LayoutModel.SelectListItem sli in team.ltsFormations) {
+                  <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+                }
+              </Blazorise.Select>
+            }
+
+            @*
+            <input id="tbSaveFormation" class="form-control" style="position: relative; width: 100px; height: auto" />
+            <button type="submit" id="bnSaveFormation" class="btn btn-outline-secondary" style="position: relative; width: 60px"><i class="fa fa-save"></i></button>
+            <button type="submit" id="bnDeleteFormation" class="btn btn-outline-secondary" style="position: relative; width: 60px"><i class="fa fa-trash-o"></i></button>
+            *@
+          </div>
+          @{
+            if (!team.bGame) {
+              <div style="display: flex; flex-direction: row; height:fit-content">
+                <button type="submit" id="bnAutoFormation" class="btn btn-primary" style="height:fit-content; margin-right: 4px" @onclick="(() => autoFormation(iAutoFormationType))">Auto</button>
+
+                <Blazorise.Select TValue="int" SelectedValue="@iAutoFormationType" SelectedValueChanged="@autoFormation">
+                  @foreach (LayoutModel.SelectListItem sli in TeamModel.ltDdlAutoFormationType) {
+                    <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+                  }
+                </Blazorise.Select>
+              </div>
+            }
+          }
+        </div>
+
+        <div style="position: relative; width: fit-content; max-width: 100%">
+          <div id="team_table" style="margin-bottom: 4px">
+            <TeamTable @ref=teamtable ltTableTeam="ltTableTeam" User="_usr" nPlStart="team.nPlStart" nPlRes="team.nPlRes" DuringGame="team.bGame" actRefresh="(i) => GetTableTeam(i)" actSwitch="(ltPlayer) => switchPlayerWork(ltPlayer)"></TeamTable>
+          </div>
+
+          @* Substitutions *@
+          @if (team.bGame && team.ltsSubstitution != null && team.ltsSubstitution.Count > 0) {
+            <div style="position: relative; width: 100%; min-width: 320px; max-width: 99vw; height: auto; min-height: 94px; padding: 6px; border: 1px solid black;">
+              <h4>Geplante Spielerwechsel <span style="white-space: nowrap">(verbleibend: @(team.iSubRest.ToString()))</span></h4>
+              <div class="substitution-container">
+                <div style="flex-grow: 1; margin-right: 4px">
+                  <table class="table table-bordered" style="margin: 0">
+                    <thead>
+                      <tr>
+                        <th style="text-align: right">#</th>
+                        <th style="text-align: center">aus</th>
+                        <th style="text-align: center">ein</th>
+                        <th style="text-align: center">Min.</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (int iS = 0; iS < team.ltsSubstitution.Count; iS++) {
+                        string sCl = "black";
+                        if (team.ltsSubstitution[iS].Length > 3) {
+                          int iCl = 0;
+                          if (int.TryParse(team.ltsSubstitution[iS][3], out iCl) && iCl < 1) sCl = "gray";
+                        }
+                        <tr>
+                          <td align="right" style="color: @sCl">@((iS + 1).ToString())</td>
+                          <td align="center" style="color: @sCl">@team.ltsSubstitution[iS][0]</td>
+                          <td align="center" style="color: @sCl">@team.ltsSubstitution[iS][1]</td>
+                          <td align="center" style="color: @sCl">@(int.Parse(team.ltsSubstitution[iS][2]) < 1 ? "jetzt" : team.ltsSubstitution[iS][2])</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+                <div class="substitution-container-buttons">
+                  <button class="btn btn-primary" style="flex-grow: 1" @onclick="setSubstitutions">bestätigen</button>
+                  <button class="btn btn-outline-secondary" style="flex-grow: 0.25" @onclick="unsetSubstitutions">zurücksetzen</button>
+                </div>
+              </div>
+            </div>
+          }
+          <div class="vertical_spacer"></div>
+          @if (bTutorialShown) {
+            <div class="tutorial-spacer-team"></div>
+          }
+        </div>
+      </div>
+    </div>
+  }
+
+  <script src="./_content/CornerkickApp.Components/js/Player.js"></script>
+</body>
+</html>
+
+@code {
+  private CornerkickManager.User? _usr;
+  private TeamModel? team;
+  private IJSObjectReference? module;
+  private IJSObjectReference? moduleSite;
+
+  MainLayout.BrowserDimension? bd { get; set; }
+
+  // Element references of field
+  TeamField? field;
+  ElementReference refField;
+  Components.Pages.Member.ViewGame.ElemDimension? edField { get; set; }
+
+  CornerkickGame.Tactic tc { get; set; } = new CornerkickGame.Tactic();
+  bool bNation { get; set; }
+
+  int iFormationOption = 0;
+
+  int iAutoFormationType = 0;
+  private TeamModel.TeamData? teamData;
+
+  int[]? iPlayerDragXY = null;
+  string sPlayerDragPosName = "";
+
+  TeamTable? teamtable { get; set; }
+  protected List<TeamModel.TableTeam> ltTableTeam = new List<TeamModel.TableTeam>();
+  private TeamModel.TableTeam? selected_player;
+
+  List<TeamField.ManMarking> ltManMarkings = new();
+  //List<System.Drawing.Point[]> ltManMarkings = new();
+
+  private List<float[]>? fRadiusOfAction = null; // value,x,y,height,width in %
+  //protected List<TeamModel.TableTeam>? selected_players;
+  /*
+  protected List<TeamModel.TableTeam> selected_players {
+    get => new List<TeamModel.TableTeam>();
+    set {
+      if (selected_players.Count == 2) {
+
+        }
+      }
+    }
+  */
+
+  static bool bTutorialShown = false;
+
+  protected override async Task OnInitializedAsync()
+  {
+    await base.OnInitializedAsync();
+
+#if _WebApp
+  //_usr = await Http.GetFromJsonAsync<CornerkickManager.User>("member/Member/ckUser");
+  _usr = Controllers.Member.MemberController.ckUser(await _auth.GetUserId());
+#else
+    _usr = CkAppShared.ckMng.ltUser[CkAppShared.iUserActive];
+#endif
+    team = CornerkickApp.Controllers.Member.TeamController.Team(_usr);
+    teamData = CornerkickApp.Controllers.Member.TeamController.getTeamData(_usr, team, team.iFormation - 1);
+
+    CornerkickManager.Club? clb = MemberController.ckClub(_usr);
+    if (clb != null) {
+      tc = clb.ltTactic[team.iSystem];
+      bNation = clb.bNation;
+    }
+
+    if (team != null) {
+      //await GetTableTeam();
+#if _WebApp
+  } else {
+  NavigationManager.NavigateTo("/Account/Register");
+#endif
+    }
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender) {
+      await JS.InvokeAsync<IJSObjectReference>("import", "./_content/CornerkickApp.Components/js/Player.js");
+      module = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/CornerkickApp.Components/Pages/Member/Team.razor.js");
+      moduleSite = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/CornerkickApp.Components/js/site.js");
+
+      if (moduleSite != null) {
+        MainLayout.BrowserService browserService = new MainLayout.BrowserService(JS);
+        bd = await browserService.GetDimensions();
+      }
+
+      if (module != null && team != null && teamData != null) {
+        //await JS.InvokeVoidAsync("init", JsonSerializer.Serialize(teamData), JsonSerializer.Serialize(team.tutorial));
+        if (iFormationOption == 0) {
+          drawTeam();
+        }
+
+        GetTableTeam();
+      }
+
+      await ShowTutorial();
+    }
+  }
+
+  protected async Task GetTableTeam(int iSelPl = 0)
+  {
+    if (_usr != null && teamtable != null) {
+      await teamtable.disable();
+      ltTableTeam = (await CornerkickApp.Controllers.Member.TeamController.getTableTeam(_usr, 0, iSelectedPlayer: iSelPl)).ToList();
+      teamtable.update(ltTableTeam, iSelPl, bMobile: bd.Width < 600);
+      //await InvokeAsync(StateHasChanged);
+    }
+  }
+
+#if false
+  private void OnCellStyling(TeamModel.TableTeam pl, DataGridColumn<TeamModel.TableTeam> col, DataGridCellStyling styling)
+  {
+  if (!col.Caption.Equals("#")) return;
+
+  if (pl.iIndex < 12) {
+  styling.Style = "background-color: rgb(210,230,188)";
+  } else if (pl.iIndex < 19) {
+  styling.Style = "background-color: rgb(192,204,224)";
+  }
+  if (pl.bSubstituted) styling.Style = "color: rgb(180,180,180)";
+  }
+
+  private void OnRowStyling(TeamModel.TableTeam pl, DataGridRowStyling styling)
+  {
+  if (selected_player != null && selected_player.iIndex == pl.iIndex) {
+  styling.Style = "background-color: pink";
+  } else {
+  if (team != null && pl.iIndex < team.nPlStart + 1) {
+  if (pl.iIndex % 2 == 0) {
+  styling.Style = "background-color: rgb(235,255,235)";
+  } else {
+  styling.Style = "background-color: rgb(245,255,245)";
+  }
+  } else if (team != null && pl.iIndex < team.nPlStart + team.nPlRes + 1) {
+  if (pl.iIndex % 2 == 0) {
+  styling.Style = "background-color: rgb(230,240,255)";
+  } else {
+  styling.Style = "background-color: rgb(240,250,255)";
+  }
+  } else {
+  if (pl.iIndex % 2 == 0) {
+  styling.Style = "background-color: rgb(240,240,240)";
+  } else {
+  styling.Style = "background-color: white";
+  }
+  }
+  }
+
+  if (pl.bSubstituted) { // Player is substituted -->
+  styling.Style += "; color: rgb(180,180,180)"; // --> text color grey
+  } else if (pl.bAtNationalTeam) { // Player is at national team -->
+  styling.Style += "; color: rgb(180,180,180)"; // --> text color grey
+  } else if (toBeSubstituted(pl.iIndex - 1)) { // Player is to be substituted -->
+  styling.Style += "; color: rgb(180,180,180)"; // --> text color grey
+  } else {
+  if (pl.iSuspended < 0) { // Player has yellow card -->
+  styling.Style += "; color: rgb(220,140,0)"; // --> text color yellow
+  } else if (pl.iSuspended > 0) { // Player has red card -->
+  styling.Style += "; color: rgb(255,0,0)"; // --> text color red
+  }
+  }
+  }
+
+  private async Task switchPlayer(List<TeamModel.TableTeam> ltPlayer)
+  {
+  if (ltPlayer.Count == 1) {
+  if (ltPlayer[0].bSubstituted) {
+  ltPlayer.Clear();
+  return;
+  }
+
+  selected_player = ltPlayer[0];
+  //setMoveArrowPos();
+
+  if (iFormationOption == 0 && team != null && _usr != null) {
+  //teamData = CornerkickApp.Controllers.Member.TeamController.getTeamData(_usr, team, team.iFormation - 1, iSP: ltPlayer[0].iIndex - 1);
+  await GetTableTeam(iSelPl: ltPlayer[0].iIndex);
+  //await InvokeAsync(StateHasChanged);
+
+  /*
+  DotNetObjectReference<JStoCS> dotNetReference = DotNetObjectReference.Create(new JStoCS(this));
+  await JS.InvokeVoidAsync("drawAufstellung", JsonSerializer.Serialize(teamData), ltPlayer[0].iIndex, 0, true, bd.Width < 600, dotNetReference);
+  */
+  }
+  } else if (ltPlayer.Count == 2 && ltPlayer[0].iId != ltPlayer[1].iId) {
+  if (ltPlayer[1].bSubstituted) {
+  ltPlayer.RemoveAt(1);
+  return;
+  }
+
+  //CornerkickApp.Controllers.Member.TeamController.UpdateRow(_usr, ltPlayer[0].iIndex, ltPlayer[1].iIndex);
+  CornerkickApp.Controllers.Member.TeamController.SwitchPlayerByID(_usr, team, ltPlayer[0].iId, ltPlayer[1].iId);
+
+  ltPlayer.Clear();
+  selected_player = null;
+  updateAll();
+
+  await ShowTutorial(1);
+  } else {
+  selected_player = null;
+  ltPlayer.Clear();
+  await GetTableTeam();
+  //if (iFormationOption == 0) await JS.InvokeVoidAsync("drawAufstellung", JsonSerializer.Serialize(teamData), 0, 0, true, bd.Width < 600, null);
+  }
+  }
+#endif
+
+  private async Task<List<int[]>?> switchPlayerWork(List<TeamModel.TableTeam> ltPlayer)
+  {
+    if (ltPlayer.Count == 2 && ltPlayer[0].iId != ltPlayer[1].iId && _usr != null && team != null) {
+      if (ltPlayer[1].bSubstituted) {
+        ltPlayer.RemoveAt(1);
+        return null;
+      }
+
+      //CornerkickApp.Controllers.Member.TeamController.UpdateRow(_usr, ltPlayer[0].iIndex, ltPlayer[1].iIndex);
+      bool bOk = CornerkickApp.Controllers.Member.TeamController.SwitchPlayerByID(_usr, team, ltPlayer[0].iId, ltPlayer[1].iId, team.ltiSubstitution == null ? 0 : team.ltiSubstitution.Count);
+
+      if (bOk) {
+        updateTeam();
+
+        if (teamtable != null) teamtable.ltiSubstitution = team.ltiSubstitution;
+
+        await ShowTutorial(1);
+      }
+
+      return team.ltiSubstitution;
+    }
+
+    return null;
+  }
+
+  private async Task OnCheckedValueChanged(int value)
+  {
+    iFormationOption = value;
+
+    //await updateTeam();
+
+    await InvokeAsync(StateHasChanged);
+
+    if (team == null) return;
+    if (iFormationOption == 0) {
+      drawTeam();
+    }
+  }
+
+  private Task getTeamData(int jFormation = -1)
+  {
+    if (team == null) return Task.CompletedTask;
+    if (_usr == null) return Task.CompletedTask;
+
+    if (jFormation >= 0) team.iFormation = jFormation;
+
+    teamData = CornerkickApp.Controllers.Member.TeamController.getTeamData(_usr, team, team.iFormation - 1);
+
+    return Task.CompletedTask;
+  }
+
+  private async Task drawTeam()
+  {
+    if (iFormationOption == 0) {
+      DotNetObjectReference<JStoCS> dotNetReference = DotNetObjectReference.Create(new JStoCS(this));
+      await JS.InvokeVoidAsync("drawAufstellung", JsonSerializer.Serialize(teamData), selected_player == null ? -1 : selected_player.iId, 0, false, bd.Width < 600, dotNetReference);
+      //await InvokeAsync(StateHasChanged);
+      //await InvokeAsync(StateHasChanged);
+
+      edField = await JS.InvokeAsync<Components.Pages.Member.ViewGame.ElemDimension>("getElemDimensions", refField);
+
+      /* Man-markings */
+      await GetManMarkings(selected_player != null ? selected_player.iIndex : -1);
+    }
+  }
+
+  private async Task GetManMarkings(int iSelPlIx)
+  {
+    if (iFormationOption == 0) {
+      /* Man-markings */
+      ltManMarkings = new List<TeamField.ManMarking>();
+      if (teamData?.ltPlayer2 != null) {
+        int iPlIx = 0;
+        foreach (TeamModel.Player pl in teamData.ltPlayer2) {
+          if (pl.iIxManMarking >= 0) {
+            TeamModel.Player? plOpp = teamData.ltPlayerOpp2[pl.iIxManMarking];
+            if (plOpp != null) {
+              ltManMarkings.Add(
+                new TeamField.ManMarking {
+                  ptPl = pl.ptPos.toPoint(),
+                  ptPlOpp = new System.Drawing.Point(teamData.ptPitch.X - plOpp.ptPos.x, -plOpp.ptPos.y),
+                  iPlIx = iPlIx
+                }
+              );
+            }
+          }
+
+          iPlIx++;
+        }
+
+        if (field != null) field.ShowAsync(ltManMarkings, edField, iSelPlIx);
+      }
+    }
+  }
+
+  private async Task updateTeam(int jFormation = -1)
+  {
+    await getTeamData(jFormation);
+    await drawTeam();
+    await InvokeAsync(StateHasChanged);
+  }
+
+  private async Task updateAll(int jFormation = -1)
+  {
+    await getTeamData(jFormation);
+    await drawTeam();
+    GetTableTeam();
+  }
+
+  protected void autoFormation(int jAutoFormationType)
+  {
+    iAutoFormationType = jAutoFormationType;
+    CornerkickApp.Controllers.Member.TeamController.doAutoFormation(_usr, iAutoFormationType);
+    updateAll();
+  }
+
+  public class JStoCS
+  {
+    private readonly Team _input;
+    public JStoCS(Team input) => _input = input;
+
+    [JSInvokable]
+    public void selectPlayerJs(int iSelPlId)
+    {
+      _input.selectPlayer(iSelPlId).Wait();
+      _input.GetManMarkings(_input.selected_player.iIndex != null ? _input.selected_player.iIndex - 1 : -1);
+    }
+
+    [JSInvokable]
+    public int[] movePlayerJs(int iSelPlId, int iDirection)
+    {
+      System.Drawing.Point ptNew = _input.movePlayer(iSelPlId, iDirection).Result;
+
+      return new int[] { ptNew.X, ptNew.Y };
+    }
+
+    [JSInvokable]
+    public void movePlayerToJs(int iSelPlId, int iX, int iY)
+    {
+      _input.movePlayerTo(iSelPlId, iX, iY);
+      _input.GetTableTeam();
+    }
+
+    [JSInvokable]
+    public string getPosNameJs(int iSelPlId, int iX, int iY)
+    {
+      return _input.getPosName(iSelPlId, iX, iY);
+    }
+
+    [JSInvokable]
+    public void setXYInfoJs(int iX, int iY)
+    {
+      _input.setXYInfo(iX, iY);
+    }
+
+    [JSInvokable]
+    public void clearSelectedPlayerJs()
+    {
+      _input.clearSelectedPlayer();
+    }
+
+    [JSInvokable]
+    public void setManMarkingJs(int iSelPlOppIx)
+    {
+      _input.setManMarking(iSelPlOppIx);
+    }
+
+    [JSInvokable]
+    public void drawManMarkingJs(int iSelPlIx)
+    {
+      _input.GetManMarkings(iSelPlIx);
+    }
+  }
+
+  private async Task movePlayer(int iDirection)
+  {
+    if (selected_player == null) return;
+    await movePlayer(selected_player.iIndex - 1, iDirection);
+  }
+
+  private async Task<System.Drawing.Point> movePlayer(int iSelPlId, int iDirection)
+  {
+    System.Drawing.Point ptNew;
+    CornerkickApp.Controllers.Member.TeamController.movePlayer(_usr, iSelPlId, iDirection, out ptNew);
+    selected_player = ltTableTeam.Find(p => p.iId == iSelPlId);
+    //await updateTeam();
+    updateAll(0);
+    //GetTableTeam();
+
+    //setMoveArrowPos();
+
+    return ptNew;
+  }
+
+  private async Task movePlayerTo(int iSelPlId, int iX, int iY)
+  {
+    if (_usr == null) return;
+
+    if (CornerkickApp.Controllers.Member.TeamController.movePlayerTo(_usr, iSelPlId, iX, iY) && team != null) team.iFormation = 0;
+
+    //DotNetObjectReference<JStoCS> dotNetReference = DotNetObjectReference.Create(new JStoCS(this));
+    //await JS.InvokeVoidAsync("drawAufstellung", JsonSerializer.Serialize(teamData), selected_player == null ? -1 : selected_player.iId, 0, false, bd.Width < 600, dotNetReference);
+    //await drawTeam();
+    await updateTeam();
+
+    iPlayerDragXY = null;
+
+    //selected_player = ltTableTeam.Find(p => p.iId == iSelPlId);
+    //await updateTeam();
+
+    //setMoveArrowPos();
+
+    StateHasChanged();
+  }
+
+  private string getPosName(int iSelPlId, int iX, int iY)
+  {
+    if (teamData?.ltPlayer2 == null) return "";
+    if (CornerkickManager.Main.sPosition == null) return "";
+
+    TeamModel.Player? pl = teamData.ltPlayer2.Find(p => p.iId == iSelPlId);
+    if (pl == null) return "";
+
+    byte iPos = CornerkickGame.Tool.getBasisPos(CornerkickGame.Tool.getPosRole(new System.Drawing.Point(iX, iY), teamData.ptPitch));
+    if (iPos < 0) return "";
+    if (iPos >= CornerkickManager.Main.sPosition.Length) return "";
+
+    pl.iPos = iPos;
+
+    return CornerkickManager.Main.sPosition[iPos];
+  }
+
+  private string getPosName(int iX, int iY)
+  {
+    if (teamData == null) return "";
+    if (CornerkickManager.Main.sPosition == null) return "";
+
+    byte iPos = CornerkickGame.Tool.getBasisPos(CornerkickGame.Tool.getPosRole(new System.Drawing.Point(iX, iY), teamData.ptPitch));
+    if (iPos < 0) return "";
+    if (iPos >= CornerkickManager.Main.sPosition.Length) return "";
+
+    return CornerkickManager.Main.sPosition[iPos];
+  }
+
+  private void setXYInfo(int iX, int iY)
+  {
+    // Set drag position for info label in field
+    iPlayerDragXY = [iX, iY];
+    sPlayerDragPosName = getPosName(iX, iY);
+    //XYPos.StateHasChanged();
+    StateHasChanged();
+  }
+
+  const float fWidth = 0.18f;
+  const float fHeight = 0.11f;
+  float fLeft = 0f;
+  float fTop = 0f;
+  private void setMoveArrowPos()
+  {
+    if (selected_player == null) return;
+    if (teamData?.ltPlayer2 == null) return;
+
+
+    TeamModel.Player? pl = teamData.ltPlayer2.Find(p => p.iId == selected_player.iId);
+
+    if (pl != null) {
+      fLeft = ((pl.ptPos.y + 25f) / 50f) - (fWidth / 2f);
+      fTop = (1f - ((pl.ptPos.x) / 122f)) - (fHeight / 2f) - 0.03f;
+    }
+  }
+
+  private async Task selectPlayer(int iPlId)
+  {
+    selected_player = ltTableTeam.Find(p => p.iId == iPlId);
+
+    if (teamData != null) {
+      TeamModel.Player? pl = teamData.ltPlayer2.Find(p => p.iId == selected_player.iId);
+      if (pl != null) {
+        setXYInfo(pl.ptPos.x, pl.ptPos.y);
+        StateHasChanged();
+      }
+    }
+
+    GetRadiusOfActionAsync();
+  }
+
+  private async Task setManMarking(int iPlOppIx)
+  {
+    if (_usr == null) return;
+    if (selected_player == null) return;
+
+    Controllers.Member.TeamController.SetManMarking(_usr, selected_player.iIndex - 1, iPlOppIx);
+
+    if (teamData != null) teamData.ltPlayer2[selected_player.iIndex - 1].iIxManMarking = (sbyte)iPlOppIx;
+
+    //await clearSelectedPlayer();
+
+    //await updateTeam();
+    await drawTeam();
+    //await GetManMarkings();
+
+    await InvokeAsync(StateHasChanged);
+  }
+
+  private async Task GetRadiusOfActionAsync()
+  {
+    // Get Radius of Action
+    if (_usr != null && selected_player != null && iFormationOption == 1) {
+      fRadiusOfAction = new List<float[]>();
+
+      for (float fRnd = 0.5f; fRnd < 1.01f; fRnd += 0.1f) {
+        float[]? fRoa = Controllers.Member.TeamController.GetPlayerRadiusOfAction(_usr, selected_player.iIndex - 1, selected_player.fRadOfAction, fRnd);
+
+        if (fRoa != null) {
+          if ((fRoa[2] > 0.03f && fRoa[3] > 0.03f) || Math.Abs(fRnd - 0.9f) < 0.001f) {
+            fRadiusOfAction.Add(
+              [
+                fRnd,
+                fRoa[0],
+                fRoa[1],
+                fRoa[2],
+                fRoa[3]
+              ]
+            );
+          }
+        }
+
+      }
+
+      await InvokeAsync(StateHasChanged);
+    }
+  }
+
+  private async Task SetRadiusOfAction(int iXY, float fChange)
+  {
+    if (_usr == null || selected_player == null) return;
+
+    selected_player.fRadOfAction[iXY] = Controllers.Member.TeamController.SetPlayerRadiusOfAction(_usr, selected_player.iIndex - 1, iXY, fChange);
+
+    GetRadiusOfActionAsync();
+  }
+
+  private async Task clearSelectedPlayer()
+  {
+    if (selected_player == null) return;
+
+    selected_player = null;
+    fRadiusOfAction = null;
+    iPlayerDragXY = null;
+    await GetManMarkings(-1);
+    StateHasChanged();
+
+    //ltPlayer.Clear();
+    //updateAll();
+    //await InvokeAsync(StateHasChanged);
+
+    /*
+    if (iFormationOption == 0) {
+      DotNetObjectReference<JStoCS> dotNetReference = DotNetObjectReference.Create(new JStoCS(this));
+      //await JS.InvokeVoidAsync("drawAufstellung", JsonSerializer.Serialize(teamData), -1, 0, false, bd.Width < 600, dotNetReference);
+      await JS.InvokeVoidAsync("selectPlayer", null, -1, null, dotNetReference);
+    }
+    */
+  }
+  /*
+  private bool RowSelectableHandler(RowSelectableEventArgs<TeamModel.TableTeam> rowSelectableEventArgs)
+        => rowSelectableEventArgs.SelectReason is not DataGridSelectReason.RowClick;
+  private bool RowSelectableHandler(RowSelectableEventArgs<TeamModel.TableTeam> rowSelectableEventArgs)
+    {
+    if (selected_players.Count == 2) {
+
+    }
+    return true;
+  }
+*/
+
+  protected Task setTactic(int iValue)
+  {
+    if (_usr == null || team == null) return Task.CompletedTask;
+
+    team.iTcOrient = iValue;
+
+    CornerkickApp.Controllers.Member.TacticController.update(_usr, 0, iValue, team.iSystem);
+
+    return Task.CompletedTask;
+  }
+
+  protected Task setIndOrientation(int iPlIx, int iValue)
+  {
+    if (teamData?.ltPlayer2 != null && iPlIx < teamData.ltPlayer2.Count) teamData.ltPlayer2[iPlIx].iTcIndOrient = iValue;
+
+    if (_usr == null || team == null) return Task.CompletedTask;
+
+    CornerkickApp.Controllers.Member.TeamController.setIndOrientation(_usr, iPlIx, iValue, iTactic: team.iSystem);
+
+    GetRadiusOfActionAsync();
+
+    return Task.CompletedTask;
+  }
+
+  private Task setSubstitutions()
+  {
+    if (_usr == null) return Task.CompletedTask;
+    if (team == null) return Task.CompletedTask;
+
+    CornerkickApp.Controllers.Member.TeamController.SetSubstitutions(_usr, team);
+
+    StateHasChanged();
+
+    return Task.CompletedTask;
+  }
+
+  private Task unsetSubstitutions()
+  {
+    if (_usr == null) return Task.CompletedTask;
+    if (team == null) return Task.CompletedTask;
+
+    CornerkickApp.Controllers.Member.TeamController.UnsetSubstitutions(_usr, team);
+
+    StateHasChanged();
+
+    return Task.CompletedTask;
+  }
+
+  private static void ShowTutorial(CornerkickManager.User _usr, TeamModel md, NavigationManager navmng)
+  {
+    if (md?.tutorial == null) return;
+    if (MainLayout.tutorial == null) return;
+
+    CkAppShared.Tutorial tt = md.tutorial;
+
+    if (_usr != null && tt != null && tt.bShow) {
+      bTutorialShown = true;
+
+      //if (tt.iLevel == (TutorialController.iTtMainLevelStart * 10) + 3) tt.iLevel = TutorialController.iTtMainLevelTeam * 10;
+      //if (tt.iLevel == (TutorialController.iTtMainLevelStart * 10) + TutorialController.GetNbOfSubLevels(TutorialController.iTtMainLevelStart) - 1) tt.iLevel = TutorialController.iTtMainLevelTeam * 10;
+      if (TutorialController.IsLastSubLevel(tt.iLevel, TutorialController.iTtMainLevelStart)) tt.iLevel = TutorialController.iTtMainLevelTeam * 10;
+
+      if ((tt.iLevel / 10) == TutorialController.iTtMainLevelTeam) {
+        TutorialController.TutorialReturn ttr = TutorialController.getTutorial(
+          _usr,
+          tt.iLevel,
+          /*
+            [
+            new Tt_highlight((TutorialController.iTtMainLevelTeam * 10) + 0, document.getElementById("divDrawFormationContainer")),
+            new Tt_highlight((TutorialController.iTtMainLevelTeam * 10) + 1, document.getElementById("tableTeam")),
+            new Tt_highlight((TutorialController.iTtMainLevelTeam * 10) + 3, document.getElementById("bnAutoFormation"))
+          ]*/
+          _usr.bScouting
+        );
+
+        MainLayout.tutorial.Show(
+          ttr,
+          usr: _usr,
+          iLevel: tt.iLevel,
+          actionOnOk: () => ShowTutorial(_usr, md, navmng),
+          actionOnCancel: () => ShowTutorial(_usr, md, navmng),
+          actionOn3: () => navmng.NavigateTo("/member/desk", forceLoad: true)
+        );
+        //CkDialog.ckDialog.Show(ttr, usr: _usr, iLevel: tt.iLevel, actionOnOk: () => ShowTutorial(_usr, md, navmng), actionOnCancel: () => ShowTutorial(_usr, md, navmng), actionOn3: () => navmng.NavigateTo("/member/desk", forceLoad: true));
+      } else if (tt.iLevel == (TutorialController.iTtMainLevelTeam * 10) + 2) {
+        TutorialController.TutorialReturn ttr = TutorialController.getTutorial(
+          _usr,
+          tt.iLevel,
+          /*
+            [
+            new Tt_highlight((iTtMainLevelTeam * 10) + 3, document.getElementById("bnAutoFormation")),
+            new Tt_highlight((iTtMainLevelTeam * 10) + 4, a_pl_name_tt, true)
+          ]*/
+          _usr.bScouting
+        );
+
+        MainLayout.tutorial.Show(ttr, usr: _usr, iLevel: tt.iLevel, actionOnOk: () => ShowTutorial(_usr, md, navmng), actionOnCancel: () => ShowTutorial(_usr, md, navmng), actionOn3: () => navmng.NavigateTo("/member/desk", forceLoad: true));
+        //CkDialog.ckDialog.Show(ttr, usr: _usr, iLevel: tt.iLevel, actionOnOk: () => ShowTutorial(_usr, md, navmng), actionOnCancel: () => ShowTutorial(_usr, md, navmng), actionOn3: () => navmng.NavigateTo("/member/desk", forceLoad: true));
+      }
+    }
+  }
+
+  private bool toBeSubstituted(int iIndex)
+  {
+    if (team == null) return false;
+    if (_usr == null) return false;
+    if (_usr.game == null) return false;
+
+    CornerkickManager.Club? clb = MemberController.ckClub(_usr);
+    if (clb == null) return false;
+
+    bool bOnSubList = false;
+    byte iHA = 0;
+    if (clb.iId == _usr.game.data.team[1].iTeamId) iHA = 1;
+    if (_usr.game.ltSubstitutions[iHA] != null) {
+      foreach (byte[] iSub in _usr.game.ltSubstitutions[iHA]) {
+        if (iSub[0] == iIndex || iSub[1] == iIndex) {
+          bOnSubList = true;
+          break;
+        }
+      }
+    }
+
+    return bOnSubList || team.ltiSubstitution?.Find(s => s[0] == iIndex || s[1] == iIndex) != null;
+  }
+
+  protected async Task ShowTutorial(int iLevelChange = 0)
+  {
+    if (_usr != null && team?.tutorial != null) {
+      team.tutorial.iLevel += iLevelChange;
+      await Task.Run(() => ShowTutorial(_usr, team, NavigationManager));
+      await InvokeAsync(StateHasChanged);
+    }
+  }
+
+}

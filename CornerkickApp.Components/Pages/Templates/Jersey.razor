@@ -1,0 +1,271 @@
+﻿@using CornerkickApp.Shared.Models
+
+@inject HttpClient Http
+
+<head>
+  <style>
+    .jersey {
+      background-color: white;
+      border-style: outset;
+      border-width: 3px;
+      border-color: gray;
+      padding: 4px;
+      margin-right: 10px;
+    }
+  </style>
+</head>
+
+@if (sCl != null && sCl.Length > 2) {
+  <div style="display: flex">
+    <div class="form-group" style="margin-top: 6px; margin-right: 20px">
+      @if (Header) {
+        <div style="width: 100%; text-align: center">@sHA[iSet]</div>
+      }
+      <div style="display: flex">
+        <div class="jersey">
+          <div style="position: relative; height: 114px">
+            <div style="position: relative; top: 0px; left: 0px; width: 96px; height: auto; background-color: @sCl[0]">
+              <img style="position: relative; top: 0px; left: 0px; width: 100%" src="@CornerkickApp.Shared.Models.CkAppShared.sContentDir/Icons/jersey.png" />
+              @{
+                if (iNb > 0) {
+                  <div style="position: absolute; top: 12px; right: 0px; width: 100%; color: @sCl[2]; text-align: center; font-size: 44px">@iNb.ToString()</div>
+                } else {
+                  <div style="position: absolute; top: 12px; width: 94px; margin-left: 12px; display: flex; align-items: center">
+                    @{
+                      string sStyle = "font-size: 38px; text-align: center; background-color: transparent; color: " + sCl[2];
+                    }
+                    <Blazorise.Select TValue="int" SelectedValue="@(-iNb)" SelectedValueChanged="@setNo" class="form-control" style="@sStyle">
+                      @if (ltNbFree != null) {
+                        @foreach (int i in ltNbFree) {
+                          <Blazorise.SelectItem Value="@i">@i.ToString()</Blazorise.SelectItem>
+                        }
+                      }
+                    </Blazorise.Select>
+                  </div>
+                }
+              }
+            </div>
+            <div style="position: absolute; top: 72px; left: 20px; width: 56px; height: 40px; border: 1px solid black; background-color: @sCl[1]"></div>
+          </div>
+        </div>
+        @if (EditColors) {
+          <div style="width: 60px">
+            <div style="width: 100%; height: 100%; margin-right: 12px; display: flex; flex-direction: column">
+              @for (int jC = 0; jC < 3; jC++) {
+                int kC = jC;
+                <input type="color" style="width: 100%" value="@sCl[kC]" @onchange="(e) => { setClubColor(iSet, kC, e); }" />
+                  List<string> sClOthers = getOtherColors(sCl[kC]);
+                  if (sClOthers.Count > 0) {
+                    <div style="display: flex; flex-shrink: 0; width: 100%; height: 12px">
+                      @foreach (string sco in sClOthers) {
+                        @*
+                        <div style="flex-basis: 100%; background-color: @sco" @onclick="() => setClubColor(iSet, kC, sco)"></div>
+                        *@
+                        <button type="button" style="flex-basis: 100%; background-color: @sco" @onclick="() => setClubColor(iSet, kC, sco)"></button>
+                      }
+                    </div>
+                  }
+                @*
+                @defaultColors(iSet, kC, sCl[kC])
+                <input type="color" value="@sCl[kC]" @onchange="(e) => { setClubColor(iSet, kC, e.Value.ToString()); }" />
+                <Blazorise.ColorEdit ChildContent="@defaultColors(iSet, kC, sCl[kC])" @bind-Color="Color0" />
+                <Blazorise.ColorEdit Color="@sCl[kC]" ChildContent="@defaultColors(iSet, kC, sCl[kC])" ColorChanged="(e) => setClubColor(iSet, kC, e.ToString())" />
+                *@
+              }
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+}
+
+@code {
+  [Parameter] public int iClubId { get; set; } = -1;
+  [Parameter] public int iSet { get; set; }
+  [Parameter] public bool EditColors { get; set; }
+  [Parameter] public bool Header { get; set; }
+  [Parameter] public int iNb { get; set; }
+  [Parameter] public int iPlayerId { get; set; }
+  [Parameter] public List<int>? ltNbFree { get; set; }
+  public class EventCallbackArgs
+  {
+    public int i { get; set; }
+    public string Color { get; set; } = "";
+  }
+  [Parameter] public EventCallback<EventCallbackArgs> ColorChanged { get; set; }
+  [Parameter] public EventCallback<int> NumberChanged { get; set; }
+
+  string[] sHA = ["Heim:", "Ausw:"];
+  string[] sCl = new string[3];
+  List<string> ltClIni = new List<string>();
+  public string[] sClDef = new string[3];
+
+  protected override async Task OnInitializedAsync()
+  {
+    sCl = [iSet == 0 ? "#FF0000" : "#0000FF", "#FFFFFF", "#FFFFFF"];
+    sClDef = sCl;
+
+    if (ltNbFree == null) {
+      ltNbFree = new List<int>();
+      for (int i = 1; i < 99; i++) ltNbFree.Add(i);
+    }
+
+    await draw(iClubId);
+  }
+
+  /*
+  private string Color0 {
+    get => sCl.Length > 0 ? sCl[0] : "#FFFFFF";
+    set {
+      if (sCl.Length > 0 && sCl[0] != value) {
+        sCl[0] = value;
+        _ = InvokeAsync(() => setClubColor(iSet, 0, value));
+        }
+      }
+    }
+  */
+  /*
+  private RenderFragment defaultColors(int iC, int jC, string sClCurrent) => (__builder) =>
+  {
+    <div style="display: flex; flex-shrink: 0; width: 100%; height: 12px">
+    @{
+  List<string> sClOthers = new List<string>();
+  //foreach (string s in sClDef.Where((val, idx) => idx != jC).ToArray()) {
+  foreach (string s in ltClIni) {
+    if (s.Equals(sClCurrent)) continue;
+    if (sClOthers.Contains(s)) continue;
+    sClOthers.Add(s);
+    }
+
+  int iIx = 1;
+  for (int i = 0; i < ltClIni.Count; i++) {
+    if (sClOthers.Contains(ltClIni[i])) {
+      int j = i;
+      __builder.OpenElement(iIx++, "button");
+      __builder.AddAttribute(iIx++, "style", "flex-basis: 100%; background-color: " + ltClIni[j]);
+      __builder.AddAttribute(iIx++, "onclick", () => setClubColor(iC, jC, ltClIni[j]));
+      __builder.CloseElement();
+      sClOthers.Remove(ltClIni[j]);
+      }
+    }
+  }
+    </div>
+  };
+
+  private RenderFragment<string[]> defaultColors2 = sClDef =>
+  @<div style="display: flex; width: 100%; height: 16px">
+    @foreach (string s in sClDef) {
+      <button style="flex-basis: 100%; background-color: @s"></button>
+    }
+  </div>
+  ;
+  */
+  private List<string> getOtherColors(string sClCurrent)
+  {
+  List<string> sClOthers = new List<string>();
+
+  foreach (string s in ltClIni) {
+    if (s.Equals(sClCurrent)) continue;
+    if (sClOthers.Contains(s)) continue;
+    sClOthers.Add(s);
+  }
+
+  /*
+  for (int i = 0; i < ltClIni.Count; i++) {
+    if (sClOthers.Contains(ltClIni[i])) {
+      int j = i;
+      sClOthers.Remove(ltClIni[j]);
+      }
+    }
+  */
+  return sClOthers;
+  }
+
+  public async Task draw(int jClubId = -1)
+  {
+  iClubId = jClubId;
+
+  sCl = getColorArrayFromClub(jClubId, iSet);
+
+  // Set colors for default buttons
+  ltClIni = getColorArrayFromClub(jClubId, 0).ToList();
+  ltClIni.AddRange(getColorArrayFromClub(jClubId, 1).ToList());
+
+  await InvokeAsync(StateHasChanged);
+  }
+
+  public async Task draw(CornerkickManager.Club? clb)
+  {
+    if (clb == null) return;
+
+    iClubId = clb.iId;
+
+    sCl = getColorArrayFromClub(clb, iSet);
+
+    // Set colors for default buttons
+    ltClIni = getColorArrayFromClub(clb, 0).ToList();
+    ltClIni.AddRange(getColorArrayFromClub(clb, 1).ToList());
+
+    await InvokeAsync(StateHasChanged);
+  }
+
+  private string[] getColorArrayFromClub(int jClubId, int iC)
+  {
+    return getColorArrayFromClub(CkAppShared.ckMng.ltClubs.Find(c => c.iId == jClubId), iC);
+  }
+
+  private string[] getColorArrayFromClub(CornerkickManager.Club? clb, int iC)
+  {
+    List<string> sClRet = new List<string>();
+    if (clb == null) return sCl;
+
+    for (int j = 0; j < (iC == 0 ? clb.cl1.Length : clb.cl2.Length); j++) {
+      sClRet.Add(CornerkickApp.Controllers.Tool.convertToHex(iC == 0 ? clb.cl1[j] : clb.cl2[j]));
+    }
+
+    return sClRet.ToArray();
+  }
+
+  protected Task setClubColor(int iC, int jC, ChangeEventArgs e)
+  {
+    if (e?.Value == null) return Task.CompletedTask;
+    return setClubColor(iC, jC, e.Value.ToString());
+  }
+
+  protected async Task setClubColor(int iC, int jC, string? sColor)
+  {
+    if (string.IsNullOrEmpty(sColor)) return;
+
+    sCl[jC] = sColor;
+
+    CornerkickManager.Club? clb = CkAppShared.ckMng.ltClubs.Find(c => c.iId == iClubId);
+    if (clb != null) {
+      if (iC == 0) clb.cl1[jC] = System.Drawing.ColorTranslator.FromHtml(sColor);
+      else         clb.cl2[jC] = System.Drawing.ColorTranslator.FromHtml(sColor);
+    }
+
+    //Task.Run(() => draw(iClubId)).Wait();
+    draw(iClubId);
+
+    //ColorChanged(sColor);
+    await ColorChanged.InvokeAsync(
+      new EventCallbackArgs() {
+          i = jC,
+          Color = sColor
+        }
+    );
+  }
+
+  private async Task setNo(int jNb)
+  {
+    iNb = Math.Abs(jNb);
+    /*
+    bool bOk = Controllers.Member.PlayerController.setPlayerNo(iPlayerId, jNb);
+
+    if (bOk) iNb = -jNb;
+    */
+    await NumberChanged.InvokeAsync(iNb);
+  }
+
+}

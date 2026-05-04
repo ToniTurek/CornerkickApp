@@ -1,0 +1,322 @@
+﻿@page "/member/statisticplayer"
+
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using CornerkickApp.Shared.Models
+@inject IJSRuntime JS
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject Controllers.Shared.MyAuthenticationStateProvider _auth
+
+<PageTitle>Statistik Spieler</PageTitle>
+
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    tfoot {
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+  <h3>Beste Spieler</h3>
+  <div style="position: relative; width: 50em; max-width: 100%; margin-bottom: 6px">
+    <div style="width: 100%; display: flex; flex-wrap: wrap; justify-content: space-between">
+      <Blazorise.Select TValue="int" SelectedValue="@model.iNation" SelectedValueChanged="@setNations" Style="width: auto">
+        @foreach (LayoutModel.SelectListItem sli in model.ddlNations) {
+          <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+        }
+      </Blazorise.Select>
+      <Blazorise.Select TValue="int" SelectedValue="@model.iFormation" SelectedValueChanged="setFormation" Style="width: auto">
+        @foreach (LayoutModel.SelectListItem sli in model.ltsFormations) {
+          <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+        }
+      </Blazorise.Select>
+      <Blazorise.RadioGroup TValue="int" Name="form" CheckedValue="@iBestPlayerProfiJouth" CheckedValueChanged="@setProfiJouth" Style="font-size: 120%">
+        <Blazorise.Radio Value="0" Inline="true">Profis</Blazorise.Radio>
+        <Blazorise.Radio Value="1" Inline="true">U18</Blazorise.Radio>
+      </Blazorise.RadioGroup>
+    </div>
+    <div style="position: relative; width: 100%">
+      <CornerkickApp.Components.Pages.Templates.Best11 @ref="best11"></CornerkickApp.Components.Pages.Templates.Best11>
+    </div>
+  </div>
+
+  <div style="position: relative; width: fit-content; max-width: 100%; height: auto; margin-top: 20px; overflow-x: auto">
+    <table class="table table-bordered" cellpadding="4" style="width: auto; white-space: nowrap">
+      <thead>
+        <tr>
+          <th style="text-align:center">Fähigkeit</th>
+          <th style="text-align:center">Spieler</th>
+          <th style="text-align:center">Stärke</th>
+          <th style="text-align:center">Verein</th>
+          <th style="text-align:center">MW [€]</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (byte iS = 0; iS < model.sPlayerSkillBest.Length; iS++) {
+          if (model.sPlayerSkillBest[iS] == null) {
+            continue;
+          }
+
+          <tr>
+            <td align="center">@model.sPlayerSkillBest[iS][0]</td>
+            <td align="center">@((MarkupString)model.sPlayerSkillBest[iS][1])</td>
+            <td align="right">@model.sPlayerSkillBest[iS][2]</td>
+            <td align="center">@model.sPlayerSkillBest[iS][3]</td>
+            <td align="right">@model.sPlayerSkillBest[iS][4]</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <h3 style="position: relative; margin-top: 30px">Spielerstatistiken</h3>
+  <div style="display: flex; flex-wrap: wrap; align-items: center; max-width: 100%; margin-bottom: 6px">
+    <Blazorise.Select TValue="int" SelectedValue="@model.iFilterCup" SelectedValueChanged="changeFilterCup" Style="width: auto">
+      @foreach (LayoutModel.SelectListItem sli in model.ddlFilterCup) {
+        <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+      }
+    </Blazorise.Select>
+    <Blazorise.Select TValue="int" SelectedValue="@model.iFilterLand" SelectedValueChanged="@changeFilterLand" Style="width: auto" Disabled="@(model.iFilterCup == CkAppShared.iCupIdInt)">
+      @foreach (LayoutModel.SelectListItem sli in model.ddlFilterLand) {
+        <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+      }
+    </Blazorise.Select>
+    <Blazorise.Select TValue="int" SelectedValue="@model.iFilterLeague" SelectedValueChanged="@changeFilterLeague" Style="width: auto; margin-right: 4px" Disabled="@(model.iFilterLand < 0)">
+      @foreach (LayoutModel.SelectListItem sli in model.ddlFilterLeague) {
+        <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+      }
+    </Blazorise.Select>
+    <Blazorise.RadioGroup TValue="int" Name="form" CheckedValue="@iStatOption" CheckedValueChanged="@changeFilterRange">
+      <Blazorise.Radio Value="1" Inline="true">Sais.</Blazorise.Radio>
+      <Blazorise.Radio Value="2" Inline="true">Total</Blazorise.Radio>
+    </Blazorise.RadioGroup>
+  </div>
+  <div style="width: fit-content; max-width: 100%; margin-bottom: 4px">
+    <DataGrid TItem="StatisticPlayerModel.TableEntryPlayer"
+              Data="@ltPlayer"
+              Style="white-space: nowrap; margin: 0"
+              PageSize="20"
+              ShowPager
+              Narrow
+              Striped
+              Responsive
+              Sortable
+              SortMode="DataGridSortMode.Single">
+      <ChildContent>
+        <DataGridColumn Field="@nameof(StatisticPlayerModel.TableEntryPlayer.iPlayerId)" Displayable="false" Sortable="false" />
+        <DataGridColumn Field="@nameof(StatisticPlayerModel.TableEntryPlayer.sName)" Caption="Name" TextAlignment="Blazorise.TextAlignment.Center">
+          <DisplayTemplate>
+            <a href="/member/playerdetails/@context.iPlayerId" style="text-decoration: none">
+              @((MarkupString)context.sName)
+            </a>
+          </DisplayTemplate>
+        </DataGridColumn>
+        <DataGridColumn Field="@nameof(StatisticPlayerModel.TableEntryPlayer.sClubName)" Caption="Verein" TextAlignment="Blazorise.TextAlignment.Center" />
+        <DataGridColumn Field="@nameof(StatisticPlayerModel.TableEntryPlayer.fAge)" Caption="Alter" TextAlignment="Blazorise.TextAlignment.Center">
+          <DisplayTemplate>
+            @((int)context.fAge)
+          </DisplayTemplate>
+        </DataGridColumn>
+        <DataGridColumn Field="@nameof(StatisticPlayerModel.TableEntryPlayer.sNat)" Caption="Nat." TextAlignment="Blazorise.TextAlignment.Center">
+          <DisplayTemplate>
+            @((MarkupString)Controllers.Tool.getNatIcon(context.sNat))
+          </DisplayTemplate>
+        </DataGridColumn>
+        <DataGridColumn Field="@nameof(StatisticPlayerModel.TableEntryPlayer.iGames)" Caption="Spiele" DisplayFormat="{0:N0}" TextAlignment="Blazorise.TextAlignment.End" />
+        <DataGridColumn Field="@nameof(StatisticPlayerModel.TableEntryPlayer.iMinutes)" Caption="Min." DisplayFormat="{0:N0}" TextAlignment="Blazorise.TextAlignment.End" />
+        <DataGridColumn Field="@nameof(StatisticPlayerModel.TableEntryPlayer.iGoals)" Caption="Tore" DisplayFormat="{0:N0}" TextAlignment="Blazorise.TextAlignment.End" />
+        <DataGridColumn Field="@nameof(StatisticPlayerModel.TableEntryPlayer.iGoalsRight)" Caption="mit rechts" DisplayFormat="{0:N0}" TextAlignment="Blazorise.TextAlignment.End" />
+        <DataGridColumn Field="@nameof(StatisticPlayerModel.TableEntryPlayer.iGoalsLeft)" Caption="mit links" DisplayFormat="{0:N0}" TextAlignment="Blazorise.TextAlignment.End" />
+        <DataGridColumn Field="@nameof(StatisticPlayerModel.TableEntryPlayer.iGoalsHeader)" Caption="per Kopf" DisplayFormat="{0:N0}" TextAlignment="Blazorise.TextAlignment.End" />
+        <DataGridColumn Field="@nameof(StatisticPlayerModel.TableEntryPlayer.fGoalsPerGame)" Caption="Tore/Spiel" DisplayFormat="{0:N1}" TextAlignment="Blazorise.TextAlignment.End" />
+        <DataGridColumn Field="@nameof(StatisticPlayerModel.TableEntryPlayer.iPenaltyP)" Caption="11m +" DisplayFormat="{0:N0}" TextAlignment="Blazorise.TextAlignment.End" />
+        <DataGridColumn Field="@nameof(StatisticPlayerModel.TableEntryPlayer.iPenaltyM)" Caption="11m -" DisplayFormat="{0:N0}" TextAlignment="Blazorise.TextAlignment.End" />
+        <DataGridColumn Field="@nameof(StatisticPlayerModel.TableEntryPlayer.fPenalty)" Caption="11m" TextAlignment="Blazorise.TextAlignment.End">
+          <DisplayTemplate>
+            @((MarkupString)(context.fPenalty < 0f ? "-" : context.fPenalty.ToString("0.0%")))
+          </DisplayTemplate>
+        </DataGridColumn>
+        <DataGridColumn Field="@nameof(StatisticPlayerModel.TableEntryPlayer.iFreekickP)" Caption="Freistoß +" DisplayFormat="{0:N0}" TextAlignment="Blazorise.TextAlignment.End" />
+        <DataGridColumn Field="@nameof(StatisticPlayerModel.TableEntryPlayer.iFreekickM)" Caption="Freistoß -" DisplayFormat="{0:N0}" TextAlignment="Blazorise.TextAlignment.End" />
+        <DataGridColumn Field="@nameof(StatisticPlayerModel.TableEntryPlayer.fFreekick)" Caption="Freistoß" TextAlignment="Blazorise.TextAlignment.End">
+          <DisplayTemplate>
+            @((MarkupString)(context.fFreekick < 0f ? "-" : context.fFreekick.ToString("0.0%")))
+          </DisplayTemplate>
+        </DataGridColumn>
+        <DataGridColumn Field="@nameof(StatisticPlayerModel.TableEntryPlayer.iAssists)" Caption="Torvorl." DisplayFormat="{0:N0}" TextAlignment="Blazorise.TextAlignment.End" />
+        <DataGridColumn Field="@nameof(StatisticPlayerModel.TableEntryPlayer.iShoots)" Caption="Torschüsse" DisplayFormat="{0:N0}" TextAlignment="Blazorise.TextAlignment.End" />
+        <DataGridColumn Field="@nameof(StatisticPlayerModel.TableEntryPlayer.iShootsOG)" Caption="aufs Tor" DisplayFormat="{0:N0}" TextAlignment="Blazorise.TextAlignment.End" />
+        <DataGridColumn Field="@nameof(StatisticPlayerModel.TableEntryPlayer.iAssistShoots)" Caption="Torschussvorl." DisplayFormat="{0:N0}" TextAlignment="Blazorise.TextAlignment.End" />
+        <DataGridColumn Field="@nameof(StatisticPlayerModel.TableEntryPlayer.iPassP)" Caption="Abspiel +" DisplayFormat="{0:N0}" TextAlignment="Blazorise.TextAlignment.End" />
+        <DataGridColumn Field="@nameof(StatisticPlayerModel.TableEntryPlayer.iPassM)" Caption="Abspiel -" DisplayFormat="{0:N0}" TextAlignment="Blazorise.TextAlignment.End" />
+        <DataGridColumn Field="@nameof(StatisticPlayerModel.TableEntryPlayer.fPass)" Caption="Abspiel" TextAlignment="Blazorise.TextAlignment.End">
+          <DisplayTemplate>
+            @((MarkupString)(context.fPass < 0f ? "-" : context.fPass.ToString("0.0%")))
+          </DisplayTemplate>
+        </DataGridColumn>
+        <DataGridColumn Field="@nameof(StatisticPlayerModel.TableEntryPlayer.iPassStolen)" Caption="Pässe abgef." DisplayFormat="{0:N0}" TextAlignment="Blazorise.TextAlignment.End" />
+        <DataGridColumn Field="@nameof(StatisticPlayerModel.TableEntryPlayer.iDuelDefP)" Caption="Zk def. +" DisplayFormat="{0:N0}" TextAlignment="Blazorise.TextAlignment.End" />
+        <DataGridColumn Field="@nameof(StatisticPlayerModel.TableEntryPlayer.iDuelDefM)" Caption="Zk def. -" DisplayFormat="{0:N0}" TextAlignment="Blazorise.TextAlignment.End" />
+        <DataGridColumn Field="@nameof(StatisticPlayerModel.TableEntryPlayer.fDuelDef)" Caption="Zk def." TextAlignment="Blazorise.TextAlignment.End">
+          <DisplayTemplate>
+            @((MarkupString)(context.fDuelDef < 0f ? "-" : context.fDuelDef.ToString("0.0%")))
+          </DisplayTemplate>
+        </DataGridColumn>
+        <DataGridColumn Field="@nameof(StatisticPlayerModel.TableEntryPlayer.iDuelOffP)" Caption="Zk off. +" DisplayFormat="{0:N0}" TextAlignment="Blazorise.TextAlignment.End" />
+        <DataGridColumn Field="@nameof(StatisticPlayerModel.TableEntryPlayer.iDuelOffM)" Caption="Zk off. -" DisplayFormat="{0:N0}" TextAlignment="Blazorise.TextAlignment.End" />
+        <DataGridColumn Field="@nameof(StatisticPlayerModel.TableEntryPlayer.fDuelOff)" Caption="Zk off." TextAlignment="Blazorise.TextAlignment.End">
+          <DisplayTemplate>
+            @((MarkupString)(context.fDuelOff < 0f ? "-" : context.fDuelOff.ToString("0.0%")))
+          </DisplayTemplate>
+        </DataGridColumn>
+        <DataGridColumn Field="@nameof(StatisticPlayerModel.TableEntryPlayer.iFouls)" Caption="Fouls" DisplayFormat="{0:N0}" TextAlignment="Blazorise.TextAlignment.End" />
+        <DataGridColumn Field="@nameof(StatisticPlayerModel.TableEntryPlayer.iCardY)" Caption="Gelb" DisplayFormat="{0:N0}" TextAlignment="Blazorise.TextAlignment.End" />
+        <DataGridColumn Field="@nameof(StatisticPlayerModel.TableEntryPlayer.iCardYR)" Caption="G/R" DisplayFormat="{0:N0}" TextAlignment="Blazorise.TextAlignment.End" />
+        <DataGridColumn Field="@nameof(StatisticPlayerModel.TableEntryPlayer.iCardR)" Caption="Rot" DisplayFormat="{0:N0}" TextAlignment="Blazorise.TextAlignment.End" />
+        <DataGridColumn Field="@nameof(StatisticPlayerModel.TableEntryPlayer.iBallContacts)" Caption="Ballk." DisplayFormat="{0:N0}" TextAlignment="Blazorise.TextAlignment.End" />
+        <DataGridColumn Field="@nameof(StatisticPlayerModel.TableEntryPlayer.fGrade)" Caption="Note" TextAlignment="Blazorise.TextAlignment.End">
+          <DisplayTemplate>
+            @((MarkupString)(context.fGrade > 0f ? context.fGrade.ToString("0.0") : "-"))
+          </DisplayTemplate>
+        </DataGridColumn>
+      </ChildContent>
+      <EmptyTemplate>
+        <div class="box">
+          Keine Spieler ...
+        </div>
+      </EmptyTemplate>
+      <LoadingTemplate>
+        <div class="box">
+          <progress class="progress is-small is-primary" max="100" />
+        </div>
+      </LoadingTemplate>
+    </DataGrid>
+  </div>
+</body>
+</html>
+
+@code {
+  private CornerkickManager.User? _usr;
+  private StatisticPlayerModel model = new StatisticPlayerModel();
+  private IJSObjectReference? moduleSite;
+
+  MainLayout.BrowserDimension bd { get; set; } = new MainLayout.BrowserDimension();
+
+  int iBestPlayerProfiJouth = 0;
+  CornerkickApp.Components.Pages.Templates.Best11? best11 { get; set; }
+  //ElementReference erPlayerBest11Container;
+
+  List<LayoutModel.SelectListItem> sliCountries = new List<LayoutModel.SelectListItem>();
+
+  List<StatisticPlayerModel.TableEntryPlayer> ltPlayer { get; set; } = new List<StatisticPlayerModel.TableEntryPlayer>();
+
+  int iStatOption = 1; // 1 = Saison, 2 = Total
+
+  protected override async Task OnInitializedAsync()
+  {
+    await base.OnInitializedAsync();
+
+#if _WebApp
+    //_usr = await Http.GetFromJsonAsync<CornerkickManager.User>("member/Member/ckUser");
+    _usr = Controllers.Member.MemberController.ckUser(await _auth.GetUserId());
+#else
+    _usr = CkAppShared.ckMng.ltUser[CkAppShared.iUserActive];
+#endif
+
+    model = CornerkickApp.Controllers.Member.StatisticController.GetStatisticPlayerModel(_usr.club);
+    if (model != null) {
+      getTablePlayer();
+#if _WebApp
+    } else {
+      NavigationManager.NavigateTo("/authentication/register");
+#endif
+    }
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender) {
+      moduleSite = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/CornerkickApp.Components/js/site.js");
+
+      if (moduleSite != null) {
+        MainLayout.BrowserService browserService = new MainLayout.BrowserService(JS);
+        bd = await browserService.GetDimensions();
+      }
+
+      drawBest11();
+    }
+  }
+
+  protected async Task setNations(int jNation)
+  {
+    model.iNation = jNation;
+    drawBest11();
+  }
+
+  protected async Task setFormation(int jF)
+  {
+    model.iFormation = jF;
+    drawBest11();
+  }
+
+  protected async Task setProfiJouth(int jPJ)
+  {
+    iBestPlayerProfiJouth = jPJ;
+    drawBest11();
+  }
+
+  protected async Task drawBest11()
+  {
+    if (_usr == null) return;
+    if (best11 == null) return;
+
+    best11.bDisabled = true;
+    TeamModel.TeamData? tD = Controllers.Member.StatisticController.GetBest11(_usr, model.iNation, model.iFormation, bJouth: iBestPlayerProfiJouth > 0);
+    best11.draw(tD, bMobile: bd == null ? false : bd.Width < 600);
+    //await JS.InvokeVoidAsync("drawPlayerBest", JsonSerializer.Serialize(tD), erPlayerBest11Container, bd.Width < 600);
+  }
+
+  protected async Task getTablePlayer()
+  {
+    ltPlayer = Controllers.Member.StatisticController.GetPlayer(iStatOption == 1, model.iFilterCup, model.iFilterLand, model.iFilterLeague);
+  }
+
+  protected async Task changeFilterCup(int jCupId)
+  {
+    model.iFilterCup = jCupId;
+    getTablePlayer();
+  }
+  protected async Task changeFilterLand(int jLand)
+  {
+    model.iFilterLand = jLand;
+    if (jLand >= 0) {
+      model.ddlFilterLeague = [
+        new LayoutModel.SelectListItem {
+          Text = "Alle Ligen",
+          Value = "-1"
+        },
+        .. await CornerkickApp.Controllers.Tool.getLeagues(jLand),
+      ];
+    } else {
+      model.iFilterLeague = -1;
+    }
+
+    getTablePlayer();
+  }
+  protected async Task changeFilterLeague(int jLeague)
+  {
+    model.iFilterLeague = jLeague;
+    getTablePlayer();
+  }
+
+  private async Task changeFilterRange(int value)
+  {
+    iStatOption = value;
+    getTablePlayer();
+  }
+
+}

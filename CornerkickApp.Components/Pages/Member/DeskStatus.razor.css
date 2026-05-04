@@ -1,0 +1,22 @@
+td {
+    padding-right: 0.3rem;
+}
+
+td > a {
+    text-decoration: none;
+}
+
+div.cfmchartcontainer {
+  position: relative;
+  width: 30%;
+  min-width: 180px;
+}
+
+@media (max-width: 640.98px) {
+  div.cfmchartcontainer {
+    margin-top: -2rem;
+  }
+}
+
+@media (max-width: 1045px) {
+}

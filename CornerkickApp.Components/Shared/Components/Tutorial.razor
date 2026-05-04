@@ -1,0 +1,123 @@
+﻿@using CornerkickApp.Shared.Models
+@using CornerkickApp.Controllers.Member
+
+@inject IJSRuntime JS;
+
+@if (!string.IsNullOrEmpty(ckTutorial._sTitle) && !string.IsNullOrEmpty(ckTutorial._sContent)) {
+  <div class="tutorial-spacer"></div>
+  <div class="tutorial-container">
+    <div style="display: flex; flex-direction: column; max-height: 100%">
+      <div style="display: flex; flex-direction: column; height: 12.5rem; padding: 0.5rem; user-select: none">
+        <div style="position: absolute; top: 0.5rem; right: 0.5rem">@ckTutorial._iStep / @ckTutorial._nSteps</div>
+        <h3>Tutorial @ckTutorial._sTitle</h3>
+        <div style="width: 100%; overflow-y: auto">
+          <div id="top"></div>
+          @((MarkupString)ckTutorial._sContent)
+        </div>
+      </div>
+      <div style="position: relative; bottom: 0; height: 3.5rem; display: flex; justify-content: space-between; padding: 0.5rem">
+        <div>
+          @if (!string.IsNullOrEmpty(ckTutorial._sButtonBackText)) {
+            <button class="btn" style="background-color: rgb(@CkAppShared.sClCkRgb3); color: black; margin-right: 0.5rem" @onclick="() => Action(1)">@ckTutorial._sButtonBackText</button>
+          }
+          @if (!string.IsNullOrEmpty(ckTutorial._sButton3Text)) {
+            <button class="btn" style="background-color: rgb(@CkAppShared.sClCkRgb2)" @onclick="() => Action(2)">@ckTutorial._sButton3Text</button>
+          }
+        </div>
+        @if (!string.IsNullOrEmpty(ckTutorial._sButtonNextText)) {
+          <button class="btn" style="background-color: rgb(@CornerkickApp.Shared.Models.CkAppShared.sClCkRgb)" @onclick="() => Action(0)">@ckTutorial._sButtonNextText</button>
+        }
+      </div>
+    </div>
+  </div>
+}
+
+@code {
+  public CkTutorial ckTutorial = new CkTutorial();
+
+  public async Task Show(string sTitle, string sText, string sButtonNextText = "weiter", string sButtonBackText = "zurück", string sButton3Text = "",
+                    Action? actionOnOk = null, Action? actionOnCancel = null, Action? actionOn3 = null,
+                    int iStep = 0, int nSteps = 0)
+  {
+    ckTutorial._sTitle = sTitle;
+    ckTutorial._sContent = sText;
+
+    ckTutorial._sButtonNextText = sButtonNextText;
+    ckTutorial._sButtonBackText = sButtonBackText;
+    ckTutorial._sButton3Text = sButton3Text;
+
+    ckTutorial._actionOnOk = null;
+    ckTutorial._actionOnCancel = null;
+    ckTutorial._actionOn3 = null;
+    if (actionOnOk     != null) ckTutorial._actionOnOk     = actionOnOk;
+    if (actionOnCancel != null) ckTutorial._actionOnCancel = actionOnCancel;
+    if (actionOn3      != null) ckTutorial._actionOn3      = actionOn3;
+
+    ckTutorial._iStep = iStep;
+    ckTutorial._nSteps = nSteps;
+
+    ScrollToTop();
+
+    await InvokeAsync(StateHasChanged);
+  }
+
+  public Task Show(TutorialController.TutorialReturn ttr, CornerkickManager.User? usr = null, int iLevel = -1, Action? actionOnOk = null, Action? actionOnCancel = null, Action? actionOn3 = null)
+  {
+    return Show(
+        ttr.sHeader,
+        ttr.sText,
+        sButtonNextText: ttr.sButtonNextText,
+        sButtonBackText: ttr.sButtonBackText,
+        sButton3Text:    ttr.sButton3Text,
+        actionOnOk:     usr != null && iLevel >= 0 ? () => TutorialController.setTutorialLvl(usr, true,       iLevel + 1, action: actionOnOk)     : null,
+        actionOnCancel: usr != null && iLevel >= 0 ? () => TutorialController.setTutorialLvl(usr, true,       iLevel - 1, action: actionOnCancel) : null,
+        actionOn3:      usr != null && iLevel >= 0 ? () => TutorialController.setTutorialLvl(usr, iLevel > 0,          0, action: actionOn3)      : null,
+        iStep: ttr.iStep,
+        nSteps: ttr.nSteps
+      );
+  }
+
+  public async Task Action(int iTypeOfClose = -1)
+  {
+    if (iTypeOfClose == 0 && ckTutorial._actionOnOk != null) {
+      ckTutorial._actionOnOk();
+    } else if (iTypeOfClose == 1 && ckTutorial._actionOnCancel != null) {
+      ckTutorial._actionOnCancel();
+    } else if (iTypeOfClose == 2 && ckTutorial._actionOn3 != null) {
+      ckTutorial._actionOn3();
+    }
+
+    await InvokeAsync(StateHasChanged);
+  }
+
+  public async Task Close()
+  {
+    ckTutorial._sTitle = "";
+    ckTutorial._sContent = "";
+
+    await InvokeAsync(StateHasChanged);
+  }
+
+  public class CkTutorial
+  {
+    public string _sTitle { get; set; } = "";
+    public string _sContent { get; set; } = "";
+
+    internal string _sButtonNextText { get; set; } = "weiter";
+    internal string _sButtonBackText { get; set; } = "zurück";
+    internal string _sButton3Text { get; set; } = "";
+
+    internal Action? _actionOnOk { get; set; }
+    internal Action? _actionOnCancel { get; set; }
+    internal Action? _actionOn3 { get; set; }
+
+    internal int _iStep { get; set; }
+    internal int _nSteps { get; set; }
+  }
+
+  Task ScrollToTop()
+  {
+    JS.InvokeVoidAsync("ScrollTo", "top");
+    return Task.CompletedTask;
+  }
+}

@@ -1,0 +1,89 @@
+﻿@using CornerkickApp.Shared.Models
+
+@if (ltClubs != null) {
+  <div style="width: 100%; overflow: auto">
+    <div style="width: fit-content; font-size: 110%">
+      <DataGrid TItem="LeagueModel.TableItem"
+                Data="@ltClubs"
+                PageSize="100"
+                Style="white-space:nowrap"
+                Striped
+                Narrow
+                RowStyling="OnRowStyling"
+                Sortable
+                SortMode="DataGridSortMode.Single">
+        <ChildContent>
+          <DataGridColumn Field="@nameof(LeagueModel.TableItem.iId)" Sortable="false" Displayable="false" />
+          <DataGridColumn Field="@nameof(LeagueModel.TableItem.iIx)"
+                          Caption="#"
+                          TextAlignment="Blazorise.TextAlignment.End"
+                          CellStyle="@((item)=> { return "background-color: " + item.sBgColor + " !important"; })" />
+          <DataGridColumn Field="@nameof(LeagueModel.TableItem.iIxLast)"
+                          Caption=""
+                          TextAlignment="Blazorise.TextAlignment.End"
+                          CellStyle="@((item)=> {
+                                                if      (item.iIxLast < item.iIx) return "color: red";
+                                                else if (item.iIxLast > item.iIx) return "color: green";
+                                                return "";
+                                              })">
+            <DisplayTemplate>
+            @(context.iIxLast == context.iIx ? "-" : context.iIxLast.ToString())
+            </DisplayTemplate>
+          </DataGridColumn>
+          <DataGridColumn Field="@nameof(LeagueModel.TableItem.sEmblem)" Sortable="false">
+            <DisplayTemplate>
+            @((MarkupString)context.sEmblem)
+            </DisplayTemplate>
+          </DataGridColumn>
+          <DataGridColumn Field="@nameof(LeagueModel.TableItem.sName)" Caption="Verein">
+            <DisplayTemplate>
+            <a href="/member/club/@context.iId.ToString()" style="text-decoration: none">@context.sName</a>
+            </DisplayTemplate>
+          </DataGridColumn>
+          <DataGridColumn Field="@nameof(LeagueModel.TableItem.iPoints)" Caption="Pt" TextAlignment="Blazorise.TextAlignment.End" />
+          <DataGridColumn Caption="Sp." TextAlignment="Blazorise.TextAlignment.Center">
+            <DisplayTemplate>
+            @(context.iW + context.iD + context.iL)
+            </DisplayTemplate>
+          </DataGridColumn>
+          <DataGridColumn Field="@nameof(LeagueModel.TableItem.iW)" Caption="g" TextAlignment="Blazorise.TextAlignment.End" />
+          <DataGridColumn Field="@nameof(LeagueModel.TableItem.iD)" Caption="u" TextAlignment="Blazorise.TextAlignment.End" />
+          <DataGridColumn Field="@nameof(LeagueModel.TableItem.iL)" Caption="v" TextAlignment="Blazorise.TextAlignment.End" />
+          <DataGridColumn Field="@nameof(LeagueModel.TableItem.sGoals)" Caption="Tore" Sortable="false" TextAlignment="Blazorise.TextAlignment.Center" />
+        <DataGridColumn Field="@nameof(LeagueModel.TableItem.iGoalsDiff)" Caption="+/-" TextAlignment="Blazorise.TextAlignment.End" />
+        </ChildContent>
+        <EmptyTemplate>
+          <div class="box">
+            Keine Daten ...
+          </div>
+        </EmptyTemplate>
+        <LoadingTemplate>
+          <div class="box">
+            <progress class="progress is-small is-primary" max="100" />
+          </div>
+        </LoadingTemplate>
+      </DataGrid>
+    </div>
+  </div>
+}
+
+@code {
+  [Parameter]
+  public List<LeagueModel.TableItem>? ltClubs { get; set; }
+
+  [Parameter]
+  public int iClubUserId { get; set; }
+
+  private void OnRowStyling(LeagueModel.TableItem ti, DataGridRowStyling styling)
+  {
+    if (ti.iId == iClubUserId) {
+      styling.Style = "font-weight: bold";
+    }
+  }
+
+  public void Redraw(List<LeagueModel.TableItem>? _ltClubs)
+  {
+    ltClubs = _ltClubs;
+    StateHasChanged();
+  }
+}
