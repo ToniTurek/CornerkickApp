@@ -12,6 +12,19 @@ namespace CornerkickApp.Controllers
 {
   public class App
   {
+    //////////////////////////////////////////////////////////////////////////
+    // Version tags
+    //////////////////////////////////////////////////////////////////////////
+    public const string VersionMajor = ThisAssembly.Git.BaseVersion.Major;
+    public const string VersionMinor = ThisAssembly.Git.BaseVersion.Minor;
+    public const string VersionPatch = ThisAssembly.Git.BaseVersion.Patch;
+    public const string Commit = ThisAssembly.Git.Commit;
+    public static string Version {
+      get {
+        return VersionMajor + "." + VersionMinor + "." + VersionPatch;
+      }
+    }
+
     //public static CornerkickManager.Main ckMng;
     public static AmazonS3FileTransfer? as3;
     private readonly string _sHomeDir = ".";

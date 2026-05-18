@@ -1,0 +1,36 @@
+﻿@page "/info"
+
+<PageTitle>Info</PageTitle>
+
+<h3>Versionen</h3>
+<table>
+  <tbody>
+    <tr>
+      <td>Cornerkick GUI:</td>
+      <td>@sCkAppVersion</td>
+    </tr>
+    <tr>
+      <td>Cornerkick Manager:</td>
+      <td>@sCkMngVersion</td>
+    </tr>
+    <tr>
+      <td>Cornerkick Game:</td>
+      <td>@sCkGameVersion</td>
+    </tr>
+  </tbody>
+</table>
+
+@code {
+  string sCkAppVersion = "Unknown";
+  string sCkMngVersion = "Unknown";
+  string sCkGameVersion = "Unknown";
+
+  protected override async Task OnInitializedAsync()
+  {
+    await base.OnInitializedAsync();
+
+    sCkAppVersion  = CornerkickApp.Controllers.App.Version + " (commit: " + CornerkickApp.Controllers.App.Commit + ")";
+    sCkMngVersion  = CornerkickManager.Main.Version + " (commit: " + CornerkickManager.Main.Commit + ")";
+    sCkGameVersion = CornerkickGame   .Game.Version + " (commit: " + CornerkickGame   .Game.Commit + ")";
+  }
+}

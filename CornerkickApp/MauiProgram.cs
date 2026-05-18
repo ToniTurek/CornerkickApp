@@ -113,7 +113,8 @@ namespace CornerkickApp
       appCk.start();
 
       // Set Version
-      Shared.Models.CkAppShared.sVersion = AppInfo.Current.VersionString;
+      //Shared.Models.CkAppShared.sVersion = AppInfo.Current.VersionString;
+      Shared.Models.CkAppShared.sVersion = Controllers.App.Version;
 
 #if ANDROID
       Platforms.Android.Initialize.initialize(Shared.Models.CkAppShared.ckMng);
