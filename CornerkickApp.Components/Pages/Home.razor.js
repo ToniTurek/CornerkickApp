@@ -22,14 +22,16 @@ window.getPlatform = () => {
 window.init = (DotNetRef, dtCounterStart2, bWebApp) => {
   const dtCounterStart = JSON.parse(dtCounterStart2);
 
-  DotNetRef.invokeMethodAsync("movePlayerJs", 1, 2);
+  //DotNetRef.invokeMethodAsync("movePlayerJs", 1, 2);
 
+  /*
   if (bWebApp) {
     //setView(showRender);
     setView();
   } else {
     setView();
   }
+  */
 
   var counter_container = document.getElementById("counter_container");
   var dt_diff = new Date(dtCounterStart - Date.now());
@@ -46,6 +48,7 @@ window.init = (DotNetRef, dtCounterStart2, bWebApp) => {
   });
   */
 
+ /*
   function setView(_callback) {
     let main = document.getElementById("divMain");
     let divImg = document.getElementById("divImg");
@@ -97,6 +100,7 @@ window.init = (DotNetRef, dtCounterStart2, bWebApp) => {
       _callback();
     }
   }
+  */
 
   function showRender() {
     let renderContainer = document.getElementById("renderContainer");

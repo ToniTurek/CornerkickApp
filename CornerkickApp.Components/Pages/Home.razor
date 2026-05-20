@@ -16,6 +16,12 @@
   <meta charset="utf-8">
 
   <style>
+    .btn-primary {
+      width: 100%;
+      max-width: 270px;
+      border: 2px solid white;
+    }
+
     p[name="txtTeaser"] {
       color: white;
       font-family: Arial, Helvetica, sans-serif;
@@ -45,78 +51,91 @@
       <b id="txtRenderShootResult" style="position: absolute; top: 16px; left: 0px; width: 100%; text-align: center; color: rgb(@CkAppShared.sClCkRgb2); font-size: 200%"></b>
     </div>
 
-    <div class="p-5 mb-4 rounded-3" style="background-color: rgb(@CkAppShared.sClCkRgb); padding-bottom: 1rem">
-      <div id="divImg" style="position: relative; float: right; border-style: outset; border-width: 6px; border-color: gray">
-        <img style="width: 100%" src="./_content/CornerkickApp.Components/Content/Images/ck.png" />
-      </div>
-
-      <div style="position: relative; min-height: 340px; color: white">
-        @if (CkAppShared.bWebApp) {
-          @*<h1>CORNERKICK<i style="position: absolute; left: 172px; top: 20px; font-size: 75%; color: red"><b>Online</b></i></h1>*@
-          @*<h1>CORNERKICK<i><b style="color: yellow; text-shadow: 3px 3px red"> Online</b></i></h1>*@
-          <h1 style="margin-bottom: 0px">CORNERKICK<i style="color: rgb(@CkAppShared.sClCkRgb2); text-shadow: 2px 2px #696969"> Online</i></h1>
-          <p class="lead" style="position: relative; font-size: 1.1rem">v<span>@CkAppShared.sVersion</span></p>
-          <p class="lead" style="position: relative">Online football manager simulation</p>
-          <p style="margin-top: 40px">
-            <b style="font-size: 20px">Registriere dich als Manager mit deinem Verein und starte sofort in die neue @sSeason Saison!</b><br />
-            <a href="/Account/Register" class="btn btn-primary btn-lg" style="width: 270px; background-color: rgb(@CkAppShared.sClCkRgb2); border: 2px solid white">Registrieren &raquo;</a>
-          </p>
-          <p><a href="/Account/Login" class="btn btn-primary btn-lg" style="width: 270px; background-color: rgb(@CkAppShared.sClCkRgb3); color: black; border: 2px solid white">Anmelden &raquo;</a></p>
-
-          <div id="counter_container" style="display: none; width: 100%; background-color: rgb(@CkAppShared.sClCkRgb3); padding: 10px; border: 2px solid rgb(@CkAppShared.sClCkRgb2)">
-            <p style="color: rgb(@CkAppShared.sClCkRgb2); font-size: 200%; margin-left: 10px">Die neue Saison startet am <span><i><b id="counter_date_season_start"></b></i></span></p>
-            <p style="color: rgb(@CkAppShared.sClCkRgb2); font-size: 200%; margin-left: 10px; margin-bottom: 0">&#10146; noch: <span id="counter_season_start"></span></p>
+    <div class="p-5 mb-4 rounded-3" style="background-color: rgb(@CkAppShared.sClCkRgb); padding-bottom: 0.5rem !important">
+      <div style="display: flex; flex-direction: row; flex-wrap: wrap-reverse; justify-content: space-between; align-items: flex-end">
+        <div style="position: relative; min-height: 340px; color: white; margin-right: 2rem; display: flex; flex-direction: column">
+          @* Title *@
+          <div style="width: fit-content; display: flex; flex-direction: column; align-items: center">
+            <h1 style="margin-bottom: 0px; font-size: 3rem">
+              CORNERKICK
+              @if (CkAppShared.bWebApp) {
+                <i style="color: rgb(@CkAppShared.sClCkRgb2); text-shadow: 2px 2px #696969"> Online</i>
+              }
+            </h1>
+            <p style="position: relative; font-size: 1.5rem; margin-bottom: 0px">
+              @if (CkAppShared.bWebApp) {
+                <span>Online </span>
+              }
+              Football Manager Simulation
+            </p>
+            <p style="position: relative; font-size: 0.9rem">v<span>@CkAppShared.sVersion</span></p>
           </div>
 
-          @if (CkAppShared.sCkInstanceName != null) {
-            <div style="position: relative; margin-top: 40px">
-              <p style="margin-bottom: 0px;">
-                Aktuelle Welt: <b>@CkAppShared.sCkInstanceName</b>
-                @{
-                  if (CkAppShared.ckMng?.ltUser != null) {
-                    string sUserCount = Math.Max(CkAppShared.ckMng.ltUser.Count - 1, 0).ToString();
-                    <span>(Anzahl Manager: @sUserCount)</span>
-                  }
-                }
+          @* Buttons *@
+          <div style="width: 100%; display: flex; flex: 1; align-items: center">
+            <div style="width: 100%">
+              <p>
+              @if (CkAppShared.bWebApp) {
+                <b style="font-size: 20px">Registriere dich als Manager mit deinem Verein und starte sofort in die neue @sSeason Saison!</b>
+                <br />
+                <a href="/Account/Register" class="btn btn-primary btn-lg" style="background-color: rgb(@CkAppShared.sClCkRgb2)">Registrieren &raquo;</a>
+              } else {
+                <a href="/database" class="btn btn-primary btn-lg" style="background-color: rgb(@CkAppShared.sClCkRgb2)">Neues Spiel &raquo;</a>
+              }
               </p>
-              <p style="margin-bottom: 0px;">
-                Wechseln zu Welt:
-                <b>
-                  @if (CkAppShared.sCkInstanceName.Equals("Cornerkick1")) {
-                    <a href="http://ck2.cornerkick-manager.de">Cornerkick2</a>
-                  } else if (CkAppShared.sCkInstanceName.Equals("Cornerkick2")) {
-                    <a href="http://www.cornerkick-manager.de">Cornerkick1</a>
-                  }
-                </b>
+              <p>
+              @if (CkAppShared.bWebApp) {
+                <a href="/Account/Login" class="btn btn-primary btn-lg" style="background-color: rgb(@CkAppShared.sClCkRgb3); color: black">Anmelden &raquo;</a>
+              } else {
+                <a href="/gameload" class="btn btn-primary btn-lg @(HomeModel.iFilesLoad > 0 ? "" : " disabled")" style="background-color: rgb(@CkAppShared.sClCkRgb3); color: black">Spiel laden &raquo;</a>
+              }
               </p>
             </div>
-          }
-        }
-        @if (!CkAppShared.bWebApp) {
-          <h1 style="margin-bottom: 0px">CORNERKICK</h1>
-          <p class="lead" style="position: relative; font-size: 1.1rem">v<span>@CkAppShared.sVersion</span></p>
-          <p class="lead" style="position: relative">Football manager simulation</p>
-          <div style="width: 100%">
-            <p>
-              <a href="/database" class="btn btn-primary btn-lg" style="width: 100%; max-width: 270px; background-color: rgb(@CkAppShared.sClCkRgb2); border: 2px solid white">Neues Spiel &raquo;</a>
-            </p>
-            <p>
-              @{ string sBtnClass = "btn btn-primary btn-lg" + (HomeModel.iFilesLoad > 0 ? "" : " disabled"); }
-              <a href="/gameload" class="@sBtnClass" style="width: 100%; max-width: 270px; background-color: rgb(@CkAppShared.sClCkRgb3); color: black; border: 2px solid white">Spiel laden &raquo;</a>
-            </p>
           </div>
-        }
+
+          @if (CkAppShared.bWebApp) {
+            @* Game to start info *@
+            <div id="counter_container" style="display: none; width: 100%; background-color: rgb(@CkAppShared.sClCkRgb3); padding: 10px; border: 2px solid rgb(@CkAppShared.sClCkRgb2)">
+              <p style="color: rgb(@CkAppShared.sClCkRgb2); font-size: 200%; margin-left: 10px">Die neue Saison startet am <span><i><b id="counter_date_season_start"></b></i></span></p>
+              <p style="color: rgb(@CkAppShared.sClCkRgb2); font-size: 200%; margin-left: 10px; margin-bottom: 0">&#10146; noch: <span id="counter_season_start"></span></p>
+            </div>
+
+            @* World info *@
+            @if (CkAppShared.sCkInstanceName != null) {
+              <div style="position: relative; margin-top: 40px">
+                <p style="margin-bottom: 0px;">
+                  Aktuelle Welt: <b>@CkAppShared.sCkInstanceName</b>
+                  @{
+                    if (CkAppShared.ckMng?.ltUser != null) {
+                      string sUserCount = Math.Max(CkAppShared.ckMng.ltUser.Count - 1, 0).ToString();
+                      <span>(Anzahl Manager: @sUserCount)</span>
+                    }
+                  }
+                </p>
+                <p style="margin-bottom: 0px;">
+                  Wechseln zu Welt:
+                  <b>
+                    @if (CkAppShared.sCkInstanceName.Equals("Cornerkick1")) {
+                      <a href="http://ck2.cornerkick-manager.de">Cornerkick2</a>
+                    } else if (CkAppShared.sCkInstanceName.Equals("Cornerkick2")) {
+                      <a href="http://www.cornerkick-manager.de">Cornerkick1</a>
+                    }
+                  </b>
+                </p>
+              </div>
+            }
+          }
+        </div>
+
+        @* Ck Image *@
+        <div style="position: relative; flex: 1; min-width: 320px; height: fit-content; margin-bottom: 1rem; border-style: outset; border-width: 6px; border-color: gray">
+          <img style="width: 100%" src="./_content/CornerkickApp.Components/Content/Images/ck.png" />
+        </div>
       </div>
+      <span style="position: relative; bottom: 0; color: white">Entwickelt von Toni Turek</span>
     </div>
 
-    @*
-    <div id="renderContainer" style="position: relative; left: 0%; width: 100%; min-width: 300px; height: 500px; z-index: 99; border-style: ridge; border-width: 4px; border-color: lightgray; margin-bottom: 20px">
-    <b id="txtRenderInfo" style="position: absolute; top: 4px; left: 4px; color: white"></b>
-    <b id="txtRenderCount" style="position: absolute; top: 4px; right: 4px; text-align: right; color: white">Tore: 0<br />Daneben: 0</b>
-    <b id="txtRenderShootResult" style="position: absolute; top: 4px; left: 0px; width: 100%; text-align: center; color: red; font-size: 200%"></b>
-    </div>
-    *@
-
+    @* Online / App links *@
     <div class="p-5 mb-4 rounded-3" style="width: 100%; padding-top: 1rem; padding-bottom: 1rem; background-color: rgb(@CkAppShared.sClCkRgb3)">
       @if (CkAppShared.bWebApp) {
         <b style="width: 100%; color: rgb(@CkAppShared.sClCkRgb2); font-size: 20px">Hol dir den Cornerkick-Manager als lokale App:</b>
@@ -137,9 +156,13 @@
           </a>
         </div>
       } else {
-        <b style="width: 100%; color: rgb(@CkAppShared.sClCkRgb2); font-size: 20px">Registriere dich beim <i>online Cornerkick-Manager</i> und beweise dich gegen andere menschliche Spieler:<br /><a href="http://www.cornerkick-manager.de">www.cornerkick-manager.de</a></b>
+        <b style="width: 100%; color: rgb(@CkAppShared.sClCkRgb2); font-size: 20px">Registriere dich beim <i>online Cornerkick-Manager</i> und beweise dich gegen andere menschliche Spieler:<br />
+          <a href="http://www.cornerkick-manager.de">www.cornerkick-manager.de</a>
+        </b>
       }
     </div>
+
+    @* Teaser *@
     <div class="p-5 mb-4 rounded-3" style="background-color: rgb(@CkAppShared.sClCkRgb); margin-top: 10px">
       <p name="txtTeaser" class="ckTeaser"><span><img src="./_content/CornerkickApp.Components/Content/Images/logo_64.png" width="24" /></span> Absolut kostenlos, keine in-game Käufe</p>
       <p name="txtTeaser" class="ckTeaser"><span><img src="./_content/CornerkickApp.Components/Content/Images/logo_64.png" width="24" /></span> Komplette Simulation der Spiele in Echtzeit</p>
@@ -147,6 +170,11 @@
       <p name="txtTeaser" class="ckTeaser"><span><img src="./_content/CornerkickApp.Components/Content/Images/logo_64.png" width="24" /></span> Gewinne die Meisterschaft und coache die Nationalmannschaft</p>
       <p name="txtTeaser" class="ckTeaser"><span><img src="./_content/CornerkickApp.Components/Content/Images/logo_64.png" width="24" /></span> Baue dein Stadion aus und errichte weitere Gebäude um deinen Verein nach ganz oben zu bringen</p>
       <p name="txtTeaser" class="ckTeaser"><span><img src="./_content/CornerkickApp.Components/Content/Images/logo_64.png" width="24" /></span> Umfassende Statistik z.B. deiner Spieler</p>
+
+      <div style="margin-top: 2rem">
+        <a href="/info" class="btn btn-primary" style="font-size: 20px">Weitere Informationen &raquo;</a>
+        <a href="/usermanual" class="btn btn-primary" style="font-size: 20px">Anleitung &raquo;</a>
+      </div>
     </div>
 
     @if (CkAppShared.bWebApp) {
@@ -154,7 +182,7 @@
 
       <div style="width: 100%; height: 440px; z-index: 99">
         @*<div style="width: 200px; cursor: pointer; margin-right: 10px; margin-bottom: 10px; float: left" onclick="zoomVideo(this, 1)">*@
-        <div style="height: 200px; cursor: pointer; margin-right: 10px; margin-bottom: 10px; float: left">
+        <div style="height: 200px; cursor: pointer; margin-right: 10px; margin-bottom: 10px">
           <video height="200" controls="controls">
             <source src="./_content/CornerkickApp.Components/Content/Videos/game_example_1.mp4" type="video/mp4" />
             <source src="./_content/CornerkickApp.Components/Content/Videos/game_example_1.ogg" type="video/ogg">
@@ -187,8 +215,6 @@
         </div>
       </div>
     }
-
-    <p><a href="/usermanual" class="btn btn-primary" style="font-size:20px">Anleitung &raquo;</a></p>
   </div>
 
   @*
