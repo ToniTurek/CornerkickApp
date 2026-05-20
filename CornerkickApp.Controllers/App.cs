@@ -1308,15 +1308,15 @@ namespace CornerkickApp.Controllers
       CkAppShared.ckMng.tl.writeLog("save file: " + sFileSave2);
 
       // Save
-      string sSaveRet = "";
+      CornerkickManager.IO.Return io = new CornerkickManager.IO.Return();
       try {
-        sSaveRet = CkAppShared.ckMng.io.save(sFileSave2);
+        io = CkAppShared.ckMng.io.save(sFileSave2);
       } catch (Exception e) {
         CkAppShared.ckMng.tl.writeLog("ERROR: could not save to file " + sFileSave2 + Environment.NewLine + e.Message + e.StackTrace, CornerkickManager.Main.sErrorFile);
       }
 
       // Upload save
-      if (string.IsNullOrEmpty(sSaveRet) || sSaveRet.IndexOf("ERROR", StringComparison.OrdinalIgnoreCase) < 0) {
+      if (io.bOk) {
 #if _USE_AMAZON_S3
         Task.Run(() => as3.uploadFileAsync(sFileSave2, as3.sCkInstanceName + "save/" + sFilenameSave2, "application/zip"));
 #endif
@@ -1335,7 +1335,7 @@ namespace CornerkickApp.Controllers
         Task.Run(() => as3.uploadFileAsync(sFileSave, as3.sCkInstanceName + "save/" + CkAppShared.sFilenameSave, "application/zip"));
 #endif
       } else {
-        CkAppShared.ckMng.tl.writeLog("ERROR: Save error messages: " + sSaveRet, CornerkickManager.Main.sErrorFile);
+        CkAppShared.ckMng.tl.writeLog("ERROR: Save error messages: " + io.sError, CornerkickManager.Main.sErrorFile);
       }
 
       //saveMerchHistory(sHomeDir);
