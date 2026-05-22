@@ -188,4 +188,7 @@ CornerkickApp.Shared.Models.CkAppShared.sCkInstanceName = builder.Configuration.
 CornerkickApp.Controllers.App appCk = new CornerkickApp.Controllers.App(builder.Configuration);
 appCk.start();
 
+// Set Version
+CornerkickApp.Shared.Models.CkAppShared.sVersion = CornerkickApp.Controllers.App.Version;
+
 app.Run();
