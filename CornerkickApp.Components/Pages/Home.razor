@@ -75,20 +75,22 @@
           <div style="width: 100%; display: flex; flex: 1; align-items: center">
             <div style="width: 100%">
               <p>
-              @if (CkAppShared.bWebApp) {
-                <b style="font-size: 20px">Registriere dich als Manager mit deinem Verein und starte sofort in die neue @sSeason Saison!</b>
-                <br />
-                <a href="/Account/Register" class="btn btn-primary btn-lg" style="background-color: rgb(@CkAppShared.sClCkRgb2)">Registrieren &raquo;</a>
-              } else {
-                <a href="/database" class="btn btn-primary btn-lg" style="background-color: rgb(@CkAppShared.sClCkRgb2)">Neues Spiel &raquo;</a>
-              }
+                @if (CkAppShared.bWebApp) {
+                  <div>
+                    <b style="font-size: 20px">Registriere dich als Manager mit deinem<br>Verein und starte sofort in die neue @sSeason Saison!</b>
+                  </div>
+                  <br />
+                  <a href="/Account/Register" class="btn btn-primary btn-lg" style="background-color: rgb(@CkAppShared.sClCkRgb2)">Registrieren &raquo;</a>
+                } else {
+                  <a href="/database" class="btn btn-primary btn-lg" style="background-color: rgb(@CkAppShared.sClCkRgb2)">Neues Spiel &raquo;</a>
+                }
               </p>
               <p>
-              @if (CkAppShared.bWebApp) {
-                <a href="/Account/Login" class="btn btn-primary btn-lg" style="background-color: rgb(@CkAppShared.sClCkRgb3); color: black">Anmelden &raquo;</a>
-              } else {
-                <a href="/gameload" class="btn btn-primary btn-lg @(HomeModel.iFilesLoad > 0 ? "" : " disabled")" style="background-color: rgb(@CkAppShared.sClCkRgb3); color: black">Spiel laden &raquo;</a>
-              }
+                @if (CkAppShared.bWebApp) {
+                  <a href="/Account/Login" class="btn btn-primary btn-lg" style="background-color: rgb(@CkAppShared.sClCkRgb3); color: black">Anmelden &raquo;</a>
+                } else {
+                  <a href="/gameload" class="btn btn-primary btn-lg @(HomeModel.iFilesLoad > 0 ? "" : " disabled")" style="background-color: rgb(@CkAppShared.sClCkRgb3); color: black">Spiel laden &raquo;</a>
+                }
               </p>
             </div>
           </div>
