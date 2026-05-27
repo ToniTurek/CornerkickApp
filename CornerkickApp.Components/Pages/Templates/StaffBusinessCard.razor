@@ -364,9 +364,14 @@
   string FormatAsStr(object value)
   {
     string[] sNames = new string[] { "Kond.", "Fri.", "Mor." };
+
     if (value != null) {
-      int iVal = Convert.ToInt32(value);
-      if (iVal >= 0 && iVal < sNames.Length) return sNames[iVal];
+      int iVal;
+      if (int.TryParse(value.ToString(), out iVal)) {
+        if (iVal >= 0 && iVal < sNames.Length) return sNames[iVal];
+      }
+
+      return value.ToString();
     }
 
     return string.Empty;
