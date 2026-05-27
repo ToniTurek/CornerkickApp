@@ -64,7 +64,7 @@
         @if (bLiveGame) {
           <a @onclick="checkNextStepAndContinue" style="cursor: pointer; display: table-cell; width: fit-content; font-weight:bold; color:red; z-Index: 9">@sLiveGameInfo</a>
         } else {
-          <Stars_horizontal @ref="stars"></Stars_horizontal>
+          <Stars_horizontal @ref="stars_mobile"></Stars_horizontal>
         }
       </div>
       <div style="display: flex; flex-direction: row; align-items: center; flex-wrap: nowrap; margin-right: 0">
@@ -324,6 +324,7 @@
   public static string toastMessage = "";
 
   Stars_horizontal? stars;
+  Stars_horizontal? stars_mobile;
 
   int iGamesDone { get; set; }
   int iGamesFailed { get; set; }
@@ -441,6 +442,7 @@
       setLiveGame();
 
       if (stars != null) stars.updateStars(_usr);
+      if (stars_mobile != null) stars_mobile.updateStars(_usr);
 
       // Set stadium index
       if (_usr.lti != null && _usr.lti.Count > UserOptionsModel.iUserOptionsIxStadium) iSelectedStadium = _usr.lti[UserOptionsModel.iUserOptionsIxStadium];
@@ -1050,6 +1052,7 @@
       if (navMenu != null) navMenu.refresh();
 
       if (stars != null) stars.updateStarsFlicker(ltUserPromoted[0].iResp);
+      if (stars_mobile != null) stars_mobile.updateStarsFlicker(ltUserPromoted[0].iResp);
 
       showPromotionInfo(sText, ltUserPromoted[0].iResp);
     }
