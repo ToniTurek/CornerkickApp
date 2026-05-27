@@ -1049,10 +1049,20 @@
         }
       }
 
+      // Update nav menu
       if (navMenu != null) navMenu.refresh();
 
+      // Show balance
+      if (headline != null && ltUserPromoted[0].club != null && ltUserPromoted[0].iResp == CkAppShared.iUserRespFinance) {
+        headline.Refresh(0, ltUserPromoted[0].club.iBalance, 0, 0);
+      }
+
+      // Update user resp. stars
       if (stars != null) stars.updateStarsFlicker(ltUserPromoted[0].iResp);
       if (stars_mobile != null) stars_mobile.updateStarsFlicker(ltUserPromoted[0].iResp);
+
+      // Update desk warnings via trigger service
+      if (_triggerSerivce != null) _triggerSerivce.TriggerMethodAsync();
 
       showPromotionInfo(sText, ltUserPromoted[0].iResp);
     }
