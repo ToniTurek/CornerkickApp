@@ -45,19 +45,19 @@ namespace CornerkickApp.Shared.Models
     {
       public DataPointSpec(int x, int y, int[] spec, string z = "")
       {
-        this.x = x;
-        this.y = y;
+        this.X = x;
+        this.Y = y;
         this.spec = spec;
-        this.z = z;
+        this.Z = z;
       }
 
       // Explicitly setting the name to be used while serializing to JSON.
       [DataMember(Name = "x")]
-      public int? x { get; set; } = null;
+      public int? X { get; set; } = null;
 
       // Explicitly setting the name to be used while serializing to JSON.
       [DataMember(Name = "y")]
-      public int? y { get; set; } = null;
+      public int? Y { get; set; } = null;
 
       // Explicitly setting the name to be used while serializing to JSON.
       [DataMember(Name = "spec")]
@@ -65,7 +65,7 @@ namespace CornerkickApp.Shared.Models
 
       // Explicitly setting the name to be used while serializing to JSON.
       [DataMember(Name = "z")]
-      public string z { get; set; } = "";
+      public string Z { get; set; } = "";
     }
   }
 

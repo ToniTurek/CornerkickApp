@@ -326,22 +326,22 @@ namespace CornerkickApp.Shared.Models
     {
       public DataPointTL(DateTime x, long y, string z = "")
       {
-        this.x = x;
-        this.y = y;
-        this.z = z;
+        this.X = x;
+        this.Y = y;
+        this.Z = z;
       }
 
       // Explicitly setting the name to be used while serializing to JSON.
       [DataMember(Name = "x")]
-      public DateTime? x { get; set; }
+      public DateTime? X { get; set; }
 
       // Explicitly setting the name to be used while serializing to JSON.
       [DataMember(Name = "y")]
-      public long? y { get; set; } = null;
+      public long? Y { get; set; } = null;
 
       // Explicitly setting the name to be used while serializing to JSON.
       [DataMember(Name = "z")]
-      public string z { get; set; }
+      public string Z { get; set; }
     }
 
     [DataContract]
@@ -349,22 +349,22 @@ namespace CornerkickApp.Shared.Models
     {
       public DataPointTsD(TimeSpan x, double y, string z = "")
       {
-        this.x = x;
-        this.y = y;
-        this.z = z;
+        this.X = x;
+        this.Y = y;
+        this.Z = z;
       }
 
       // Explicitly setting the name to be used while serializing to JSON.
       [DataMember(Name = "x")]
-      public TimeSpan? x { get; set; }
+      public TimeSpan? X { get; set; }
 
       // Explicitly setting the name to be used while serializing to JSON.
       [DataMember(Name = "y")]
-      public double? y { get; set; } = null;
+      public double? Y { get; set; } = null;
 
       // Explicitly setting the name to be used while serializing to JSON.
       [DataMember(Name = "z")]
-      public string z { get; set; }
+      public string Z { get; set; }
     }
 
     [DataContract]
@@ -395,22 +395,22 @@ namespace CornerkickApp.Shared.Models
     {
       public DataPointIL(int x, long y, string z = "")
       {
-        this.x = x;
-        this.y = y;
-        this.z = z;
+        this.X = x;
+        this.Y = y;
+        this.Z = z;
       }
 
       // Explicitly setting the name to be used while serializing to JSON.
       [DataMember(Name = "x")]
-      public int? x { get; set; } = null;
+      public int? X { get; set; } = null;
 
       // Explicitly setting the name to be used while serializing to JSON.
       [DataMember(Name = "y")]
-      public long? y { get; set; } = null;
+      public long? Y { get; set; } = null;
 
       // Explicitly setting the name to be used while serializing to JSON.
       [DataMember(Name = "z")]
-      public string z { get; set; }
+      public string Z { get; set; }
     }
 
     [DataContract]
@@ -418,22 +418,22 @@ namespace CornerkickApp.Shared.Models
     {
       public DataPointLL(long x, long y, string z = "")
       {
-        this.x = x;
-        this.y = y;
-        this.z = z;
+        this.X = x;
+        this.Y = y;
+        this.Z = z;
       }
 
       // Explicitly setting the name to be used while serializing to JSON.
       [DataMember(Name = "x")]
-      public long? x { get; set; } = null;
+      public long? X { get; set; } = null;
 
       // Explicitly setting the name to be used while serializing to JSON.
       [DataMember(Name = "y")]
-      public long? y { get; set; } = null;
+      public long? Y { get; set; } = null;
 
       // Explicitly setting the name to be used while serializing to JSON.
       [DataMember(Name = "z")]
-      public string z { get; set; }
+      public string Z { get; set; }
     }
 
     [DataContract]

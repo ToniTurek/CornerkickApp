@@ -39,10 +39,10 @@
         <Blazorise.TabPanel Name="tabBalanceHist">
           <div style="margin-top: 1rem; max-width: 100%; overflow-x: auto">
             <RadzenChart Style="width: 50%; min-width: 300px; height: 320px">
-              <RadzenAreaSeries Data="@ltBalanceHist" CategoryProperty="x" ValueProperty="y" Stroke="blue" StrokeWidth="2">
+              <RadzenAreaSeries Data="@ltBalanceHist" CategoryProperty="X" ValueProperty="Y" Stroke="blue" StrokeWidth="2">
                 <TooltipTemplate Context="data">
-                  @if (data.x.HasValue && data.y.HasValue) {
-                    <div>@(data.x.Value.ToString("dd.MM.yy") + ": ")<b>@data.y.Value.ToString("C0")</b></div>
+                  @if (data.X.HasValue && data.Y.HasValue) {
+                    <div>@(data.X.Value.ToString("dd.MM.yy") + ": ")<b>@data.Y.Value.ToString("C0")</b></div>
                   }
                 </TooltipTemplate>
                 <ChildContent>
@@ -64,22 +64,22 @@
           @if (ltBudgetHist != null && ltBudgetHist[0] != null && ltBudgetHist[1] != null && ltBudgetHist[0].Count > 0 && ltBudgetHist[1].Count > 0) {
             <div style="margin-top: 1rem; max-width: 100%; overflow-x: auto">
               <RadzenChart Style="width: 50%; min-width: 300px; height: 320px">
-                <RadzenColumnSeries Data="@ltBudgetHist[0]" CategoryProperty="x" ValueProperty="y" Stroke="blue" StrokeWidth="2" Title="Umsatz">
+                <RadzenColumnSeries Data="@ltBudgetHist[0]" CategoryProperty="X" ValueProperty="Y" Stroke="blue" StrokeWidth="2" Title="Umsatz">
                   <TooltipTemplate Context="data">
-                    @if (data.x.HasValue && data.y.HasValue) {
-                      <div><u>@(Controllers.Tool.getSeasonString(data.x.Value))</u></div>
-                      <div>Umsatz: <b>@data.y.Value.ToString("C0")</b></div>
+                    @if (data.X.HasValue && data.Y.HasValue) {
+                      <div><u>@(Controllers.Tool.getSeasonString(data.X.Value))</u></div>
+                      <div>Umsatz: <b>@data.Y.Value.ToString("C0")</b></div>
                     }
                   </TooltipTemplate>
                 </RadzenColumnSeries>
-                <RadzenColumnSeries Data="@ltBudgetHist[1]" CategoryProperty="x" ValueProperty="y" Stroke="green" StrokeWidth="2" Title="Gewinn">
+                <RadzenColumnSeries Data="@ltBudgetHist[1]" CategoryProperty="X" ValueProperty="Y" Stroke="green" StrokeWidth="2" Title="Gewinn">
                   <TooltipTemplate Context="data">
-                    @if (data.x.HasValue && data.y.HasValue) {
-                      <div><u>@(Controllers.Tool.getSeasonString(data.x.Value))</u></div>
-                      @if (data.y.Value < 0) {
-                        <div>Verlust: <b style="color: red">@data.y.Value.ToString("C0")</b></div>
+                    @if (data.X.HasValue && data.Y.HasValue) {
+                      <div><u>@(Controllers.Tool.getSeasonString(data.X.Value))</u></div>
+                      @if (data.Y.Value < 0) {
+                        <div>Verlust: <b style="color: red">@data.Y.Value.ToString("C0")</b></div>
                       } else {
-                        <div>Gewinn: <b style="color: green">@data.y.Value.ToString("C0")</b></div>
+                        <div>Gewinn: <b style="color: green">@data.Y.Value.ToString("C0")</b></div>
                       }
                     }
                   </TooltipTemplate>
@@ -176,14 +176,14 @@
                 <h4>Zuschauerhistorie</h4>
                 <div id="divChartSpec" style="position: relative; height: 280px; width: 100%">
                   <RadzenChart>
-                    <RadzenLineSeries Data="@ltSpecHist[1]" CategoryProperty="x" ValueProperty="y" Stroke="red" StrokeWidth="1" Title="Stadionkapazität">
+                    <RadzenLineSeries Data="@ltSpecHist[1]" CategoryProperty="X" ValueProperty="Y" Stroke="red" StrokeWidth="1" Title="Stadionkapazität">
                       <TooltipTemplate Context="data">
-                        @if (data.x.HasValue && data.y.HasValue) {
-                          <div style="width: 100%; text-align: center">@((MarkupString)(data.z))</div>
+                        @if (data.X.HasValue && data.Y.HasValue) {
+                          <div style="width: 100%; text-align: center">@((MarkupString)(data.Z))</div>
                           <div style="display: flex; justify-content: center">
                             <table>
                               <tr>
-                                <td style="text-align: right; color: red">@(data.y.Value.ToString("N0") + " (" + data.spec[0].ToString("N0") + " / " + data.spec[1].ToString("N0") + " / " + data.spec[2].ToString("N0") + ")")</td>
+                                <td style="text-align: right; color: red">@(data.Y.Value.ToString("N0") + " (" + data.spec[0].ToString("N0") + " / " + data.spec[1].ToString("N0") + " / " + data.spec[2].ToString("N0") + ")")</td>
                               </tr>
                             </table>
                           </div>
@@ -193,14 +193,14 @@
                         <RadzenMarkers MarkerType="MarkerType.Circle" Size="4" Fill="red" StrokeWidth="0" />
                       </ChildContent>
                     </RadzenLineSeries>
-                    <RadzenAreaSeries Data="@ltSpecHist[0]" CategoryProperty="x" ValueProperty="y" StrokeWidth="1" Title="Zuschauer">
+                    <RadzenAreaSeries Data="@ltSpecHist[0]" CategoryProperty="X" ValueProperty="Y" StrokeWidth="1" Title="Zuschauer">
                       <TooltipTemplate Context="data">
-                        @if (data.x.HasValue && data.y.HasValue) {
-                          <div style="width: 100%; text-align: center">@((MarkupString)(data.z))</div>
+                        @if (data.X.HasValue && data.Y.HasValue) {
+                          <div style="width: 100%; text-align: center">@((MarkupString)(data.Z))</div>
                           <div style="display: flex; justify-content: center">
                             <table>
                               <tr>
-                                <td style="text-align: right">@(data.y.Value.ToString("N0") + " (" + data.spec[0].ToString("N0") + " / " + data.spec[1].ToString("N0") + " / " + data.spec[2].ToString("N0") + ")")</td>
+                                <td style="text-align: right">@(data.Y.Value.ToString("N0") + " (" + data.spec[0].ToString("N0") + " / " + data.spec[1].ToString("N0") + " / " + data.spec[2].ToString("N0") + ")")</td>
                               </tr>
                             </table>
                           </div>
