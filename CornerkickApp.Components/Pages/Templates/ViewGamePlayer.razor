@@ -60,7 +60,7 @@
           </div>
         }
 
-        @if (AppConstants.IS_DEBUG && playerchances != null && playerchances.Length > 3) {
+        @if (CkAppShared.debug && playerchances != null && playerchances.Length > 3) {
           <RadzenChart Style="width: 160px; min-height: 200px">
               <RadzenStackedColumnSeries Data="@playerchances[0]" Title="Schuss" Fill="red" ValueProperty="fChance">
                 <RadzenSeriesDataLabels Visible="true" />
@@ -112,15 +112,6 @@
   {
     public string sType { get; set; } = "";
     public float fChance { get; set; }
-  }
-
-  public static class AppConstants
-  {
-#if DEBUG
-    public const bool IS_DEBUG = true;
-#else
-    public const bool IS_DEBUG = false;
-#endif
   }
 
   protected override async Task OnInitializedAsync()

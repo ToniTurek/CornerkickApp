@@ -85,7 +85,13 @@
               </label>
             </td>
           </tr>
-          @if (AppConstants.IS_DEBUG && _usr != null) {
+          <tr>
+            <td><b>Debug mode:</b></td>
+            <td>
+              <input type="checkbox" @bind-value="CkAppShared.debug" style="cursor: pointer" checked="@CkAppShared.debug">
+            </td>
+          </tr>
+          @if (CkAppShared.debug && _usr != null) {
             <tr>
               <td><b>User resp. level:</b></td>
               <td>
@@ -196,15 +202,6 @@
     new LayoutModel.SelectListItem() { Value = "2",                                             Text = "maximal" },
     new LayoutModel.SelectListItem() { Value = "0",                                             Text = "sofort" }
   };
-
-  public static class AppConstants
-  {
-#if DEBUG
-    public const bool IS_DEBUG = true;
-#else
-    public const bool IS_DEBUG = false;
-#endif
-  }
 
   protected override async Task OnInitializedAsync()
   {

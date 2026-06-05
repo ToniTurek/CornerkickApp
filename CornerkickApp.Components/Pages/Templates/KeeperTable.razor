@@ -145,7 +145,7 @@
       </div>
     }
   }
-  @if (fElapsedTime > 0.0 && AppConstants.IS_DEBUG) {
+  @if (fElapsedTime > 0.0 && CkAppShared.debug) {
     <div>
       Elapsed time: @(fElapsedTime.ToString("0.000")) s
     </div>
@@ -175,15 +175,6 @@
 
   System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
   double fElapsedTime = 0.0;
-
-  public static class AppConstants
-  {
-#if DEBUG
-    public const bool IS_DEBUG = true;
-#else
-    public const bool IS_DEBUG = false;
-#endif
-  }
 
   protected override async Task OnInitializedAsync()
   {

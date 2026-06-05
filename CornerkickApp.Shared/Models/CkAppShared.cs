@@ -78,6 +78,13 @@ namespace CornerkickApp.Shared.Models
     public static bool bWebApp = false;
     public static bool bStandaloneLoggedIn { get; set; } = !bWebApp && ckMng?.ltUser?.Count > 0;
 #endif
+
+#if DEBUG
+    public static bool debug = true;
+#else
+    public static bool debug = false;
+#endif
+
     public static string sCkInstanceName = "";
     public static int iUserActive; // Current active user index
 
