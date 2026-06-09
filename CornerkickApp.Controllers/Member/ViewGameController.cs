@@ -753,17 +753,10 @@ namespace CornerkickApp.Controllers.Member
         state.sPlActiveName = "";
         state.iPlActiveHA = -1;
         if (!bAverage && plActive != null && bPlayerAtBallDetails) {
-          state.sPlActiveName = plActive.sName + " - " + plActive.iNr.ToString();
+          string[] sPlayerActiveDetails = GetPlayerActiveDetails(plActive);
+          state.sPlActiveName = sPlayerActiveDetails[0];
+          state.sPlActivePortraitImg = sPlayerActiveDetails[1];
           state.iPlActiveHA = plActive.iHA;
-
-          CornerkickManager.Player? plMng = ckMng.ltPlayer.Find(p => p.plGame.iId == plActive.iId);
-          if (plMng != null) {
-            state.sPlActivePortraitImg = PlayerController.getPlayerPortraitHtmlImg(plMng);
-            /*
-            byte[]? bPlPortrait = PlayerController.getPlayerPortraitFile(plMng);
-            if (bPlPortrait != null) state.sPlActivePortraitImg = "data:image/*;base64," + Convert.ToBase64String(bPlPortrait);
-            */
-          }
         }
 
         // Player chances
@@ -895,6 +888,17 @@ namespace CornerkickApp.Controllers.Member
 #endif
 
       return Task.FromResult(state);
+    }
+
+    public static string[] GetPlayerActiveDetails(CornerkickGame.Player plActive)
+    {
+      string[] sDetails = [ "", "" ];
+
+      sDetails[0] = plActive.sName + " - " + plActive.iNr.ToString();
+      CornerkickManager.Player? plMng = ckMng.ltPlayer.Find(p => p.plGame.iId == plActive.iId);
+      sDetails[1] = PlayerController.getPlayerPortraitHtmlImg(plMng, sStyle: "height: 100%; object-fit: contain");
+
+      return sDetails;
     }
 
     //
