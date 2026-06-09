@@ -341,6 +341,12 @@ namespace CornerkickApp.Shared.Models
       public bool bPlayerChoice { get; set; }
     }
 
+    // DEBUG options
+    public int iOrient = 0;
+    public int iShootFreq = 0;
+    public int iDistOffsite = 0;
+    // DEBUG options
+
     public ViewGameModel()
     {
       UserOptionsModel mdUserOptions = new UserOptionsModel();

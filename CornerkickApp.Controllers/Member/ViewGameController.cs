@@ -79,6 +79,13 @@ namespace CornerkickApp.Controllers.Member
 
 #if DEBUG
       view.bAdmin = true;
+
+      // Debug tactic values
+      if (clb != null) {
+        view.iOrient      = (int)(clb.ltTactic[clb.iTactic].fOrientation * 100f);
+        view.iShootFreq   = (int)(clb.ltTactic[clb.iTactic].fShootFreq   * 100f);
+        view.iDistOffsite = clb.ltTactic[clb.iTactic].iGapOffsite;
+      }
 #else
 #if _WebApp
       //view.bAdmin = AdminModel.checkUserIsAdmin(user.id);

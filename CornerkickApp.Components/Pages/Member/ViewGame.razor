@@ -111,38 +111,68 @@
         </div>
       }
 
-      @if (AppConstants.IS_DEBUG) {
-        <div id="divDebugOptions" style="position: relative; left: 0px; width: 100%; margin-top: 2px; display: block;">
-          <select @bind="iDebugNextAction">
-            <option value="-1">auto</option>
-            <option value="0">Schuss</option>
-            <option value="1">Pass</option>
-            <option value="2">Solo</option>
-            <option value="3">Warten</option>
-          </select>
-          <select @bind="iDebugNextActionResult">
-            <option value="-1">auto</option>
-            <option value="0">vorbei</option>
-            <option value="1">Tor</option>
-            <option value="2">gefangen</option>
-            <option value="3">Abpraller</option>
-            <option value="4">Ecke</option>
-            <option value="5">Pfosten</option>
-            <option value="6">Latte</option>
-          </select>
-          <button class="btn btn-outline-secondary" @onclick="StartStopDebug">
-            <i class="@( bRunning ? "fa fa-stop" : "fa fa-play" )"></i>
-          </button>
-          <button class="btn btn-outline-secondary" @onclick="OneStep">
-            <i class="fa fa-step-forward"></i>
-          </button>
-          <select @bind="iDebugHA">
-            <option value="0">Heim</option>
-            <option value="1">Ausw</option>
-          </select>
-          <button class="btn btn-outline-secondary" style="width: auto" @onclick="setSituation1">Sit. 1</button>
-          <button class="btn btn-outline-secondary" style="width: auto" @onclick="setSituation2">Sit. 2</button>
-          <button class="btn btn-outline-secondary" style="width: auto" @onclick="setSituation3">Sit. 3</button>
+      @if (CkAppShared.debug) {
+        <h5>Debug options</h5>
+        <div id="divDebugOptions" style="position: relative; left: 0px; width: 100%; margin-top: 2px; margin-bottom: 4px; display: flex; flex-wrap: wrap; align-items: center; border: 1px solid black; padding: 4px">
+          <div style="margin-right: 2rem">
+            <button class="btn btn-outline-secondary" @onclick="StartStopDebug">
+              <i class="@( bRunning ? "fa fa-stop" : "fa fa-play" )"></i>
+            </button>
+            <button class="btn btn-outline-secondary" @onclick="OneStep" disabled="@bRunning">
+              <i class="fa fa-step-forward"></i>
+            </button>
+          </div>
+          <div style="margin-right: 1rem">
+            <label>
+              Anspieler:
+              <Blazorise.Select @bind-SelectedValue="@iRecvIx" TValue="int" Style="width: 100px; margin-right: 4px" Disabled="@(bRunning || slRecv.Count == 0)">
+                @foreach (LayoutModel.SelectListItem sli in slRecv) {
+                  <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+                }
+              </Blazorise.Select>
+            </label>
+          </div>
+          <div style="width: 100%; max-width: 300px; margin-right: 1rem; display: flex; flex-direction: column; z-index: 1">
+            <div style="color: orange">Ausrichtung: @model.iOrient.ToString()</div>
+            <Blazorise.Slider TValue="int" Value="model.iOrient" Min="-100" Max="100" Step="5" ValueChanged="setTacticOrient" Class="slider handleOrange" />
+          </div>
+          <div style="width: 100%; max-width: 300px; margin-right: 1rem; display: flex; flex-direction: column; z-index: 1">
+            <div style="color: red">Schusshäufigk.: @model.iShootFreq.ToString()</div>
+            <Blazorise.Slider TValue="int" Value="model.iShootFreq" Min="-100" Max="100" Step="5" ValueChanged="setTacticShootFreq" Class="slider handleRed" />
+          </div>
+          <div style="width: 100%; max-width: 300px; margin-right: 1rem; display: flex; flex-direction: column; z-index: 1">
+            <div style="color: blue">Abstand gegn. Abseits: @model.iDistOffsite.ToString()</div>
+            <Blazorise.Slider TValue="int" Value="model.iDistOffsite" Min="-1" Max="3" Step="1" ValueChanged="setTacticDistOffsite" Class="slider handleRed" />
+          </div>
+          @if (AppConstants.IS_DEBUG) {
+            <div>
+              <select @bind="iDebugHA">
+                <option value="0">Heim</option>
+                <option value="1">Ausw</option>
+              </select>
+
+              <button class="btn btn-outline-secondary" style="width: auto" @onclick="setSituation1">Sit. 1</button>
+              <button class="btn btn-outline-secondary" style="width: auto" @onclick="setSituation2">Sit. 2</button>
+              <button class="btn btn-outline-secondary" style="width: auto" @onclick="setSituation3">Sit. 3</button>
+              <select @bind="iDebugNextAction">
+                <option value="-1">auto</option>
+                <option value="0">Schuss</option>
+                <option value="1">Pass</option>
+                <option value="2">Solo</option>
+                <option value="3">Warten</option>
+              </select>
+              <select @bind="iDebugNextActionResult">
+                <option value="-1">auto</option>
+                <option value="0">vorbei</option>
+                <option value="1">Tor</option>
+                <option value="2">gefangen</option>
+                <option value="3">Abpraller</option>
+                <option value="4">Ecke</option>
+                <option value="5">Pfosten</option>
+                <option value="6">Latte</option>
+              </select>
+            </div>
+          }
         </div>
       }
 
@@ -764,6 +794,9 @@
   int iDebugNextAction = -1;
   int iDebugNextActionResult = -1;
   int iDebugHA = 0;
+
+  int iRecvIx = -1;
+  List<CornerkickApp.Shared.Models.LayoutModel.SelectListItem> slRecv = new List<CornerkickApp.Shared.Models.LayoutModel.SelectListItem>();
   // DEBUG options
 
   public static class AppConstants
@@ -1041,6 +1074,20 @@
             if (comments != null)               await comments.update(state.ltComments);
 
             if (bShowPlayerPath) UpdatePath();
+
+            if (CkAppShared.debug) {
+              slRecv = new List<CornerkickApp.Shared.Models.LayoutModel.SelectListItem>();
+
+              if (_usr.game.ball.plAtBall != null) {
+                List<CornerkickGame.AI.Receiver> ltReceiver = CornerkickGame.AI.getReceiverList(_usr.game, _usr.game.ball.plAtBall, iType: 0);
+                if (ltReceiver != null && ltReceiver.Count > 0) {
+                  slRecv.Add(new CornerkickApp.Shared.Models.LayoutModel.SelectListItem() { Value = "-1", Text = "zufällig" });
+                  for (int i = 0; i < ltReceiver.Count; i++) {
+                    slRecv.Add(new CornerkickApp.Shared.Models.LayoutModel.SelectListItem() { Value = i.ToString(), Text = ltReceiver[i].plReceiver.sName });
+                  }
+                }
+              }
+            }
 #if !DEBUG
             }
 #endif
@@ -1547,6 +1594,56 @@
   private void ToggleOffsiteWait(ChangeEventArgs? e = null)
   {
     bOffsiteWait = !bOffsiteWait;
+  }
+
+  protected Task setTacticOrient(int iValue)
+  {
+    if (_usr == null) return Task.CompletedTask;
+
+    model.iOrient = iValue;
+
+    float fReturn = CornerkickApp.Controllers.Member.TacticController.update(_usr, 0, iValue, model.iSystem);
+
+    return setTactic();
+  }
+
+  protected Task setTacticShootFreq(int iValue)
+  {
+    if (_usr == null) return Task.CompletedTask;
+
+    model.iShootFreq = iValue;
+
+    float fReturn = CornerkickApp.Controllers.Member.TacticController.update(_usr, 2, iValue, model.iSystem);
+
+    return setTactic();
+  }
+
+  protected Task setTacticDistOffsite(int iValue)
+  {
+    if (_usr == null) return Task.CompletedTask;
+
+    model.iDistOffsite = iValue;
+
+    float fReturn = CornerkickApp.Controllers.Member.TacticController.update(_usr, 9, iValue, model.iSystem);
+
+    return setTactic();
+  }
+
+  protected Task setTactic()
+  {
+    if (_usr == null) return Task.CompletedTask;
+
+    // Set tactic directly (do not wait for next step)
+    int iHA = _usr.game.data.team[0].iTeamId == _usr.club.iId ? 0 : 1;
+    _usr.game.SetTactic(iHA);
+    _usr.game.ai.setOffenceWoBallTargetPos(iDebugHA == 0);
+
+    CornerkickApp.Controllers.Member.ViewGameController.PlayerChances? pc = CornerkickApp.Controllers.Member.ViewGameController.GetPlayerChances(_usr.game, iReceiverIx: (sbyte)iRecvIx);
+    if (player != null && gd != null) player.update(state.ltPlayer, gd.sJerseyColors, _sPlActive: sPlActive, _fPlAction: pc?.fPlAction, _iEventCounter: iEventCounter);
+
+    ShowPath();
+
+    return Task.CompletedTask;
   }
 
 }
