@@ -1097,7 +1097,7 @@ namespace CornerkickApp.Controllers.Member
       return Task.FromResult(gD);
     }
 
-    public static object? GetPlayerChances(CornerkickManager.User usr)
+    public static object? GetPlayerChancesFromState(CornerkickManager.User usr)
     {
       ViewGameModel.gameData2? gd2 = getViewGameData(usr.id); // view.gD;
       if (gd2 == null) return null;
