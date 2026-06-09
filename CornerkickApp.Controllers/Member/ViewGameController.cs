@@ -1931,23 +1931,36 @@ namespace CornerkickApp.Controllers.Member
       return fRet;
     }
 
-    public static object AdminGetPlayerChances(CornerkickManager.User usr)
+    public class PlayerChances
     {
-      if (usr.game == null) return null;
+      public float[] fPlAction = Array.Empty<float>();
+      public CornerkickGame.Player? pl;
+      public ViewGameModel.PassTarget[] ltPassTargets = Array.Empty<ViewGameModel.PassTarget>();
+    }
+    public static PlayerChances? GetPlayerChances(CornerkickManager.User usr)
+    {
+      return GetPlayerChances(usr.game);
+    }
+    public static PlayerChances? GetPlayerChances(CornerkickGame.Game game, sbyte iReceiverIx = -1)
+    {
+      if (game == null) return null;
 
-      CornerkickGame.Player plChance = usr.game.ball.plAtBall;
-      if (plChance == null && usr.game.ball.plAtBallLast != null) plChance = usr.game.ball.plAtBallLast;
+      CornerkickGame.Player plChance = game.ball.plAtBall;
+      if (plChance == null && game.ball.plAtBallLast != null) plChance = game.ball.plAtBallLast;
       if (plChance == null) return null;
 
-      float[] fPlAction;
+      PlayerChances pc = new PlayerChances();
+
+      pc.pl = plChance;
+
       double fPlActionRnd;
       System.Drawing.Point? ptPassTarget;
       bool bLowPass = false;
-      sbyte iAction = usr.game.ai.getPlayerAction(plChance, out fPlAction, out fPlActionRnd, out ptPassTarget, out bLowPass);
+      sbyte iAction = game.ai.getPlayerAction(plChance, out pc.fPlAction, out fPlActionRnd, out ptPassTarget, out bLowPass, iReceiverIx: iReceiverIx);
 
       // Get all pass targets
       List<ViewGameModel.PassTarget> ltPtBallTarget = new List<ViewGameModel.PassTarget>();
-      List<CornerkickGame.AI.Receiver> ltReceiver = CornerkickGame.AI.getReceiverList(usr.game, plChance, 0);
+      List<CornerkickGame.AI.Receiver> ltReceiver = CornerkickGame.AI.getReceiverList(game, plChance, 0);
       if (ltReceiver != null) {
         foreach (CornerkickGame.AI.Receiver rec in ltReceiver) {
           // Check if current pass target is players choice
@@ -1958,7 +1971,9 @@ namespace CornerkickApp.Controllers.Member
         }
       }
 
-      return new { fPlAction = fPlAction, plPos = new TeamModel.Point(plChance.ptPos), ltPassTargets = ltPtBallTarget.ToArray() };
+      pc.ltPassTargets = ltPtBallTarget.ToArray();
+
+      return pc;
     }
 
     public static bool AdminGetPlayerTargetPos(CornerkickManager.User usr)
