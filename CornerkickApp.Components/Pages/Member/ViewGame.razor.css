@@ -98,6 +98,13 @@ td.scouting-row-details {
   font-size: 75%;
 }
 
+.heatmap-point {
+  position: absolute;
+  width: 2%;
+  height: 3%;
+  opacity: 0.5;
+}
+
 @media (max-width: 640.98px) {
   .emblem {
     height: 40%;

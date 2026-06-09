@@ -1807,12 +1807,14 @@ namespace CornerkickApp.Controllers.Member
           //iZindex = (int)(fHeat * 10) + 1;
 
           ltHp.Add(
-            new ViewGameModel.HeatmapPoint() { x = fXper, y = fYper, level = iZindex, color = sColor }
+            new ViewGameModel.HeatmapPoint() { value = fHeat, x = fXper, y = fYper, level = iZindex, color = sColor }
           );
 
-          sDiv += "<div style=\"position: absolute; width: 2%; height: 3%; top: " + fYper.ToString("0.00%", System.Globalization.CultureInfo.InvariantCulture) + "; left: " + fXper.ToString("0.00%", System.Globalization.CultureInfo.InvariantCulture) + "; background-color: " + sColor + "; -webkit-border-radius: 50%; -moz-border-radius: 50%; z-index:" + iZindex.ToString() + "\">" +
+          /*
+          sDiv += "<div style=\"position: absolute; width: 2%; height: 3%; top: " + fYper.ToString("0.00%", System.Globalization.CultureInfo.InvariantCulture) + "; left: " + fXper.ToString("0.00%", System.Globalization.CultureInfo.InvariantCulture) + "; background-color: " + sColor + "; -webkit-border-radius: 50%; -moz-border-radius: 50%; opacity: 0.5; z-index:" + iZindex.ToString() + "\">" +
                   //"<h2 style=\"position: absolute; text-align: center; vertical-align: middle; width: 100%; margin: 0; font-size: 100%; color: black; z-index:2\">" + fHeat.ToString("0%") + "</h2>" +
                   "</div>";
+          */
         }
       }
 

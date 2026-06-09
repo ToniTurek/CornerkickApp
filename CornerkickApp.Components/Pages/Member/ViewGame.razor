@@ -198,7 +198,7 @@
                 @* Heatmap *@
                 <div id="drawHeatmap" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%">
                   @foreach (ViewGameModel.HeatmapPoint hmp in ltHeatmap) {
-                    <div style="position: absolute; width: 2%; height: 3%; top: @hmp.y.ToString("0.00%", System.Globalization.CultureInfo.InvariantCulture); left: @hmp.x.ToString("0.00%", System.Globalization.CultureInfo.InvariantCulture); background-color: @hmp.color; -webkit-border-radius: 50%; -moz-border-radius: 50%; z-index: @hmp.level.ToString()"></div>
+                    <div class="heatmap-point" style="top: @hmp.y.ToString("0.00%", System.Globalization.CultureInfo.InvariantCulture); left: @hmp.x.ToString("0.00%", System.Globalization.CultureInfo.InvariantCulture); background-color: @hmp.color; -webkit-border-radius: 50%; -moz-border-radius: 50%; z-index: @hmp.level.ToString()" title="@hmp.value.ToString("0.0%")"></div>
                   }
                 </div>
 

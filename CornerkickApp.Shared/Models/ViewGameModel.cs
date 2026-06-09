@@ -318,6 +318,7 @@ namespace CornerkickApp.Shared.Models
 
     public struct HeatmapPoint
     {
+      public float value { get; set; }
       public float x { get; set; }
       public float y { get; set; }
       public string color { get; set; }
