@@ -136,6 +136,10 @@
           <button class="btn btn-outline-secondary" @onclick="OneStep">
             <i class="fa fa-step-forward"></i>
           </button>
+          <select @bind="iDebugHA">
+            <option value="0">Heim</option>
+            <option value="1">Ausw</option>
+          </select>
           <button class="btn btn-outline-secondary" style="width: auto" @onclick="setSituation1">Sit. 1</button>
           <button class="btn btn-outline-secondary" style="width: auto" @onclick="setSituation2">Sit. 2</button>
           <button class="btn btn-outline-secondary" style="width: auto" @onclick="setSituation3">Sit. 3</button>
@@ -754,10 +758,13 @@
   DataItem[] dataH = new DataItem[6];
   DataItem[] dataA = new DataItem[6];
 
+  private bool _navigateToRegister = false;
+
+  // DEBUG options
   int iDebugNextAction = -1;
   int iDebugNextActionResult = -1;
-
-  private bool _navigateToRegister = false;
+  int iDebugHA = 0;
+  // DEBUG options
 
   public static class AppConstants
   {
@@ -1388,56 +1395,36 @@
 
   private async Task setSituation1()
   {
-    bStop = true;
-
-    if (_usr?.game == null) return;
-
-    _usr.game.resetGame();
-
-    CornerkickGame.Player plShoot = _usr.game.player[1][_usr.game.data.nPlStart - 1];
-    plShoot.ptPos = new System.Drawing.Point(22, 1);
-    _usr.game.ball.ptPos     = plShoot.ptPos;
-    _usr.game.ball.ptPosLast = plShoot.ptPos;
-    _usr.game.ball.plAtBall = plShoot;
-    _usr.game.ball.setPos();
-
-    CornerkickGame.Player plKeeper = _usr.game.tl.getKeeper(true);
-    plKeeper.ptPos = new System.Drawing.Point(3, 0);
-
-    state = await CornerkickApp.Controllers.Member.ViewGameController.getState(_usr);
-    if (state == null) return;
-
-    if (player   != null && gd != null) await player.update(state.ltPlayer, gd.sJerseyColors, _sPlActive: sPlActive);
-    if (ball     != null)               await ball  .update(state.gBall, 0);
-
-    await InvokeAsync(StateHasChanged);
+    await setShootSituation(
+      new System.Drawing.Point(22, 1),
+      new System.Drawing.Point( 3, 0)
+    );
   }
 
   private async Task setSituation2()
   {
-    bStop = true;
+    await setShootSituation(
+      new System.Drawing.Point(30, 1),
+      new System.Drawing.Point( 1, 0)
+    );
+  }
 
+  private async Task setSituation3()
+  {
     if (_usr?.game == null) return;
 
-    _usr.game.resetGame();
+    await setShootSituation(
+      new System.Drawing.Point(22, 1),
+      new System.Drawing.Point( 3, 0)
+    );
 
-    CornerkickGame.Player plShoot = _usr.game.player[1][_usr.game.data.nPlStart - 1];
-    plShoot.ptPos = new System.Drawing.Point(30, 1);
-    _usr.game.ball.ptPos     = plShoot.ptPos;
-    _usr.game.ball.ptPosLast = plShoot.ptPos;
-    _usr.game.ball.plAtBall = plShoot;
-    _usr.game.ball.setPos();
-
-    state = await CornerkickApp.Controllers.Member.ViewGameController.getState(_usr);
-    if (state == null) return;
-
-    if (player   != null && gd != null) await player.update(state.ltPlayer, gd.sJerseyColors, _sPlActive: sPlActive);
-    if (ball     != null)               await ball  .update(state.gBall, 0);
+    CornerkickGame.Player plDef = _usr.game.player[1 - iDebugHA][2];
+    plDef.ptPos = new System.Drawing.Point(12, 1);
 
     await InvokeAsync(StateHasChanged);
   }
 
-  private async Task setSituation3()
+  private async Task setShootSituation(System.Drawing.Point ptShooter, System.Drawing.Point ptKeeper)
   {
     bStop = true;
 
@@ -1445,23 +1432,30 @@
 
     _usr.game.resetGame();
 
-    CornerkickGame.Player plShoot = _usr.game.player[1][_usr.game.data.nPlStart - 1];
-    plShoot.ptPos = new System.Drawing.Point(22, 1);
-    CornerkickGame.Player plDef = _usr.game.player[0][2];
-    plDef.ptPos = new System.Drawing.Point(12, 1);
+    // Correct player positions
+    if (iDebugHA == 0) {
+      ptShooter = CornerkickGame.Tool.transformPosition(ptShooter, _usr.game.ptPitch.X);
+      ptKeeper  = CornerkickGame.Tool.transformPosition(ptKeeper,  _usr.game.ptPitch.X);
+    }
+
+    // Define player and ball
+    CornerkickGame.Player plShoot = _usr.game.player[iDebugHA][_usr.game.data.nPlStart - 1];
+    plShoot.ptPos = ptShooter;
     _usr.game.ball.ptPos     = plShoot.ptPos;
     _usr.game.ball.ptPosLast = plShoot.ptPos;
     _usr.game.ball.plAtBall = plShoot;
     _usr.game.ball.setPos();
 
-    CornerkickGame.Player plKeeper = _usr.game.tl.getKeeper(true);
-    plKeeper.ptPos = new System.Drawing.Point(3, 0);
+    CornerkickGame.Player plKeeper = _usr.game.tl.getKeeper(iDebugHA == 1);
+    plKeeper.ptPos = ptKeeper;
 
     state = await CornerkickApp.Controllers.Member.ViewGameController.getState(_usr);
     if (state == null) return;
 
-    if (player   != null && gd != null) await player.update(state.ltPlayer, gd.sJerseyColors, _sPlActive: sPlActive);
-    if (ball     != null)               await ball  .update(state.gBall, 0);
+    sPlActive = CornerkickApp.Controllers.Member.ViewGameController.GetPlayerActiveDetails(plShoot);
+    CornerkickApp.Controllers.Member.ViewGameController.PlayerChances? pc = CornerkickApp.Controllers.Member.ViewGameController.GetPlayerChances(_usr.game, iReceiverIx: (sbyte)iRecvIx);
+    if (player != null && gd != null) await player.update(state.ltPlayer, gd.sJerseyColors, _sPlActive: sPlActive, _fPlAction: pc?.fPlAction);
+    if (ball   != null)               await ball  .update(state.gBall, 0);
 
     await InvokeAsync(StateHasChanged);
   }
