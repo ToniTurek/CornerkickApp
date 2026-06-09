@@ -216,11 +216,11 @@ namespace CornerkickApp.Controllers.Member
         */
       }
 
+      iniGameData(usr, view, game);
+
       view.ddlShoots = new List<SelectListItem>(view.ddlHeatmap);
       view.ddlDuels  = new List<SelectListItem>(view.ddlHeatmap);
       view.ddlPasses = new List<SelectListItem>(view.ddlHeatmap);
-
-      iniGameData(usr, view, game);
 
       return view;
     }
