@@ -111,34 +111,68 @@
         </div>
       }
 
-      @if (AppConstants.IS_DEBUG) {
-        <div id="divDebugOptions" style="position: relative; left: 0px; width: 100%; margin-top: 2px; display: block;">
-          <select @bind="iDebugNextAction">
-            <option value="-1">auto</option>
-            <option value="0">Schuss</option>
-            <option value="1">Pass</option>
-            <option value="2">Solo</option>
-            <option value="3">Warten</option>
-          </select>
-          <select @bind="iDebugNextActionResult">
-            <option value="-1">auto</option>
-            <option value="0">vorbei</option>
-            <option value="1">Tor</option>
-            <option value="2">gefangen</option>
-            <option value="3">Abpraller</option>
-            <option value="4">Ecke</option>
-            <option value="5">Pfosten</option>
-            <option value="6">Latte</option>
-          </select>
-          <button class="btn btn-outline-secondary" @onclick="StartStopDebug">
-            <i class="@( bRunning ? "fa fa-stop" : "fa fa-play" )"></i>
-          </button>
-          <button class="btn btn-outline-secondary" @onclick="OneStep">
-            <i class="fa fa-step-forward"></i>
-          </button>
-          <button class="btn btn-outline-secondary" style="width: auto" @onclick="setSituation1">Sit. 1</button>
-          <button class="btn btn-outline-secondary" style="width: auto" @onclick="setSituation2">Sit. 2</button>
-          <button class="btn btn-outline-secondary" style="width: auto" @onclick="setSituation3">Sit. 3</button>
+      @if (CkAppShared.debug) {
+        <h5>Debug options</h5>
+        <div id="divDebugOptions" style="position: relative; left: 0px; width: 100%; margin-top: 2px; margin-bottom: 4px; display: flex; flex-wrap: wrap; align-items: center; border: 1px solid black; padding: 4px">
+          <div style="margin-right: 2rem">
+            <button class="btn btn-outline-secondary" @onclick="StartStopDebug">
+              <i class="@( bRunning ? "fa fa-stop" : "fa fa-play" )"></i>
+            </button>
+            <button class="btn btn-outline-secondary" @onclick="OneStep" disabled="@bRunning">
+              <i class="fa fa-step-forward"></i>
+            </button>
+          </div>
+          <div style="margin-right: 1rem">
+            <label>
+              Anspieler:
+              <Blazorise.Select @bind-SelectedValue="@iRecvIx" TValue="int" Style="width: 100px; margin-right: 4px" Disabled="@(bRunning || slRecv.Count == 0)">
+                @foreach (LayoutModel.SelectListItem sli in slRecv) {
+                  <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+                }
+              </Blazorise.Select>
+            </label>
+          </div>
+          <div style="width: 100%; max-width: 300px; margin-right: 1rem; display: flex; flex-direction: column; z-index: 1">
+            <div style="color: orange">Ausrichtung: @model.iOrient.ToString()</div>
+            <Blazorise.Slider TValue="int" Value="model.iOrient" Min="-100" Max="100" Step="5" ValueChanged="setTacticOrient" Class="slider handleOrange" />
+          </div>
+          <div style="width: 100%; max-width: 300px; margin-right: 1rem; display: flex; flex-direction: column; z-index: 1">
+            <div style="color: red">Schusshäufigk.: @model.iShootFreq.ToString()</div>
+            <Blazorise.Slider TValue="int" Value="model.iShootFreq" Min="-100" Max="100" Step="5" ValueChanged="setTacticShootFreq" Class="slider handleRed" />
+          </div>
+          <div style="width: 100%; max-width: 300px; margin-right: 1rem; display: flex; flex-direction: column; z-index: 1">
+            <div style="color: blue">Abstand gegn. Abseits: @model.iDistOffsite.ToString()</div>
+            <Blazorise.Slider TValue="int" Value="model.iDistOffsite" Min="-1" Max="3" Step="1" ValueChanged="setTacticDistOffsite" Class="slider handleRed" />
+          </div>
+          @if (AppConstants.IS_DEBUG) {
+            <div>
+              <select @bind="iDebugHA">
+                <option value="0">Heim</option>
+                <option value="1">Ausw</option>
+              </select>
+
+              <button class="btn btn-outline-secondary" style="width: auto" @onclick="setSituation1">Sit. 1</button>
+              <button class="btn btn-outline-secondary" style="width: auto" @onclick="setSituation2">Sit. 2</button>
+              <button class="btn btn-outline-secondary" style="width: auto" @onclick="setSituation3">Sit. 3</button>
+              <select @bind="iDebugNextAction">
+                <option value="-1">auto</option>
+                <option value="0">Schuss</option>
+                <option value="1">Pass</option>
+                <option value="2">Solo</option>
+                <option value="3">Warten</option>
+              </select>
+              <select @bind="iDebugNextActionResult">
+                <option value="-1">auto</option>
+                <option value="0">vorbei</option>
+                <option value="1">Tor</option>
+                <option value="2">gefangen</option>
+                <option value="3">Abpraller</option>
+                <option value="4">Ecke</option>
+                <option value="5">Pfosten</option>
+                <option value="6">Latte</option>
+              </select>
+            </div>
+          }
         </div>
       }
 
@@ -198,7 +232,7 @@
                 @* Heatmap *@
                 <div id="drawHeatmap" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%">
                   @foreach (ViewGameModel.HeatmapPoint hmp in ltHeatmap) {
-                    <div style="position: absolute; width: 2%; height: 3%; top: @hmp.y.ToString("0.00%", System.Globalization.CultureInfo.InvariantCulture); left: @hmp.x.ToString("0.00%", System.Globalization.CultureInfo.InvariantCulture); background-color: @hmp.color; -webkit-border-radius: 50%; -moz-border-radius: 50%; z-index: @hmp.level.ToString()"></div>
+                    <div class="heatmap-point" style="top: @hmp.y.ToString("0.00%", System.Globalization.CultureInfo.InvariantCulture); left: @hmp.x.ToString("0.00%", System.Globalization.CultureInfo.InvariantCulture); background-color: @hmp.color; -webkit-border-radius: 50%; -moz-border-radius: 50%; z-index: @hmp.level.ToString()" title="@hmp.value.ToString("0.0%")"></div>
                   }
                 </div>
 
@@ -754,10 +788,16 @@
   DataItem[] dataH = new DataItem[6];
   DataItem[] dataA = new DataItem[6];
 
+  private bool _navigateToRegister = false;
+
+  // DEBUG options
   int iDebugNextAction = -1;
   int iDebugNextActionResult = -1;
+  int iDebugHA = 0;
 
-  private bool _navigateToRegister = false;
+  int iRecvIx = -1;
+  List<CornerkickApp.Shared.Models.LayoutModel.SelectListItem> slRecv = new List<CornerkickApp.Shared.Models.LayoutModel.SelectListItem>();
+  // DEBUG options
 
   public static class AppConstants
   {
@@ -1034,6 +1074,20 @@
             if (comments != null)               await comments.update(state.ltComments);
 
             if (bShowPlayerPath) UpdatePath();
+
+            if (CkAppShared.debug) {
+              slRecv = new List<CornerkickApp.Shared.Models.LayoutModel.SelectListItem>();
+
+              if (_usr.game.ball.plAtBall != null) {
+                List<CornerkickGame.AI.Receiver> ltReceiver = CornerkickGame.AI.getReceiverList(_usr.game, _usr.game.ball.plAtBall, iType: 0);
+                if (ltReceiver != null && ltReceiver.Count > 0) {
+                  slRecv.Add(new CornerkickApp.Shared.Models.LayoutModel.SelectListItem() { Value = "-1", Text = "zufällig" });
+                  for (int i = 0; i < ltReceiver.Count; i++) {
+                    slRecv.Add(new CornerkickApp.Shared.Models.LayoutModel.SelectListItem() { Value = i.ToString(), Text = ltReceiver[i].plReceiver.sName });
+                  }
+                }
+              }
+            }
 #if !DEBUG
             }
 #endif
@@ -1388,56 +1442,36 @@
 
   private async Task setSituation1()
   {
-    bStop = true;
-
-    if (_usr?.game == null) return;
-
-    _usr.game.resetGame();
-
-    CornerkickGame.Player plShoot = _usr.game.player[1][_usr.game.data.nPlStart - 1];
-    plShoot.ptPos = new System.Drawing.Point(22, 1);
-    _usr.game.ball.ptPos     = plShoot.ptPos;
-    _usr.game.ball.ptPosLast = plShoot.ptPos;
-    _usr.game.ball.plAtBall = plShoot;
-    _usr.game.ball.setPos();
-
-    CornerkickGame.Player plKeeper = _usr.game.tl.getKeeper(true);
-    plKeeper.ptPos = new System.Drawing.Point(3, 0);
-
-    state = await CornerkickApp.Controllers.Member.ViewGameController.getState(_usr);
-    if (state == null) return;
-
-    if (player   != null && gd != null) await player.update(state.ltPlayer, gd.sJerseyColors, _sPlActive: sPlActive);
-    if (ball     != null)               await ball  .update(state.gBall, 0);
-
-    await InvokeAsync(StateHasChanged);
+    await setShootSituation(
+      new System.Drawing.Point(22, 1),
+      new System.Drawing.Point( 3, 0)
+    );
   }
 
   private async Task setSituation2()
   {
-    bStop = true;
+    await setShootSituation(
+      new System.Drawing.Point(30, 1),
+      new System.Drawing.Point( 1, 0)
+    );
+  }
 
+  private async Task setSituation3()
+  {
     if (_usr?.game == null) return;
 
-    _usr.game.resetGame();
+    await setShootSituation(
+      new System.Drawing.Point(22, 1),
+      new System.Drawing.Point( 3, 0)
+    );
 
-    CornerkickGame.Player plShoot = _usr.game.player[1][_usr.game.data.nPlStart - 1];
-    plShoot.ptPos = new System.Drawing.Point(30, 1);
-    _usr.game.ball.ptPos     = plShoot.ptPos;
-    _usr.game.ball.ptPosLast = plShoot.ptPos;
-    _usr.game.ball.plAtBall = plShoot;
-    _usr.game.ball.setPos();
-
-    state = await CornerkickApp.Controllers.Member.ViewGameController.getState(_usr);
-    if (state == null) return;
-
-    if (player   != null && gd != null) await player.update(state.ltPlayer, gd.sJerseyColors, _sPlActive: sPlActive);
-    if (ball     != null)               await ball  .update(state.gBall, 0);
+    CornerkickGame.Player plDef = _usr.game.player[1 - iDebugHA][2];
+    plDef.ptPos = new System.Drawing.Point(12, 1);
 
     await InvokeAsync(StateHasChanged);
   }
 
-  private async Task setSituation3()
+  private async Task setShootSituation(System.Drawing.Point ptShooter, System.Drawing.Point ptKeeper)
   {
     bStop = true;
 
@@ -1445,23 +1479,30 @@
 
     _usr.game.resetGame();
 
-    CornerkickGame.Player plShoot = _usr.game.player[1][_usr.game.data.nPlStart - 1];
-    plShoot.ptPos = new System.Drawing.Point(22, 1);
-    CornerkickGame.Player plDef = _usr.game.player[0][2];
-    plDef.ptPos = new System.Drawing.Point(12, 1);
+    // Correct player positions
+    if (iDebugHA == 0) {
+      ptShooter = CornerkickGame.Tool.transformPosition(ptShooter, _usr.game.ptPitch.X);
+      ptKeeper  = CornerkickGame.Tool.transformPosition(ptKeeper,  _usr.game.ptPitch.X);
+    }
+
+    // Define player and ball
+    CornerkickGame.Player plShoot = _usr.game.player[iDebugHA][_usr.game.data.nPlStart - 1];
+    plShoot.ptPos = ptShooter;
     _usr.game.ball.ptPos     = plShoot.ptPos;
     _usr.game.ball.ptPosLast = plShoot.ptPos;
     _usr.game.ball.plAtBall = plShoot;
     _usr.game.ball.setPos();
 
-    CornerkickGame.Player plKeeper = _usr.game.tl.getKeeper(true);
-    plKeeper.ptPos = new System.Drawing.Point(3, 0);
+    CornerkickGame.Player plKeeper = _usr.game.tl.getKeeper(iDebugHA == 1);
+    plKeeper.ptPos = ptKeeper;
 
     state = await CornerkickApp.Controllers.Member.ViewGameController.getState(_usr);
     if (state == null) return;
 
-    if (player   != null && gd != null) await player.update(state.ltPlayer, gd.sJerseyColors, _sPlActive: sPlActive);
-    if (ball     != null)               await ball  .update(state.gBall, 0);
+    sPlActive = CornerkickApp.Controllers.Member.ViewGameController.GetPlayerActiveDetails(plShoot);
+    CornerkickApp.Controllers.Member.ViewGameController.PlayerChances? pc = CornerkickApp.Controllers.Member.ViewGameController.GetPlayerChances(_usr.game, iReceiverIx: (sbyte)iRecvIx);
+    if (player != null && gd != null) await player.update(state.ltPlayer, gd.sJerseyColors, _sPlActive: sPlActive, _fPlAction: pc?.fPlAction);
+    if (ball   != null)               await ball  .update(state.gBall, 0);
 
     await InvokeAsync(StateHasChanged);
   }
@@ -1553,6 +1594,56 @@
   private void ToggleOffsiteWait(ChangeEventArgs? e = null)
   {
     bOffsiteWait = !bOffsiteWait;
+  }
+
+  protected Task setTacticOrient(int iValue)
+  {
+    if (_usr == null) return Task.CompletedTask;
+
+    model.iOrient = iValue;
+
+    float fReturn = CornerkickApp.Controllers.Member.TacticController.update(_usr, 0, iValue, model.iSystem);
+
+    return setTactic();
+  }
+
+  protected Task setTacticShootFreq(int iValue)
+  {
+    if (_usr == null) return Task.CompletedTask;
+
+    model.iShootFreq = iValue;
+
+    float fReturn = CornerkickApp.Controllers.Member.TacticController.update(_usr, 2, iValue, model.iSystem);
+
+    return setTactic();
+  }
+
+  protected Task setTacticDistOffsite(int iValue)
+  {
+    if (_usr == null) return Task.CompletedTask;
+
+    model.iDistOffsite = iValue;
+
+    float fReturn = CornerkickApp.Controllers.Member.TacticController.update(_usr, 9, iValue, model.iSystem);
+
+    return setTactic();
+  }
+
+  protected Task setTactic()
+  {
+    if (_usr == null) return Task.CompletedTask;
+
+    // Set tactic directly (do not wait for next step)
+    int iHA = _usr.game.data.team[0].iTeamId == _usr.club.iId ? 0 : 1;
+    _usr.game.SetTactic(iHA);
+    _usr.game.ai.setOffenceWoBallTargetPos(iDebugHA == 0);
+
+    CornerkickApp.Controllers.Member.ViewGameController.PlayerChances? pc = CornerkickApp.Controllers.Member.ViewGameController.GetPlayerChances(_usr.game, iReceiverIx: (sbyte)iRecvIx);
+    if (player != null && gd != null) player.update(state.ltPlayer, gd.sJerseyColors, _sPlActive: sPlActive, _fPlAction: pc?.fPlAction, _iEventCounter: iEventCounter);
+
+    ShowPath();
+
+    return Task.CompletedTask;
   }
 
 }

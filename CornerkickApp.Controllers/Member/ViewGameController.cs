@@ -79,6 +79,13 @@ namespace CornerkickApp.Controllers.Member
 
 #if DEBUG
       view.bAdmin = true;
+
+      // Debug tactic values
+      if (clb != null) {
+        view.iOrient      = (int)(clb.ltTactic[clb.iTactic].fOrientation * 100f);
+        view.iShootFreq   = (int)(clb.ltTactic[clb.iTactic].fShootFreq   * 100f);
+        view.iDistOffsite = clb.ltTactic[clb.iTactic].iGapOffsite;
+      }
 #else
 #if _WebApp
       //view.bAdmin = AdminModel.checkUserIsAdmin(user.id);
@@ -216,11 +223,11 @@ namespace CornerkickApp.Controllers.Member
         */
       }
 
+      iniGameData(usr, view, game);
+
       view.ddlShoots = new List<SelectListItem>(view.ddlHeatmap);
       view.ddlDuels  = new List<SelectListItem>(view.ddlHeatmap);
       view.ddlPasses = new List<SelectListItem>(view.ddlHeatmap);
-
-      iniGameData(usr, view, game);
 
       return view;
     }
@@ -753,17 +760,10 @@ namespace CornerkickApp.Controllers.Member
         state.sPlActiveName = "";
         state.iPlActiveHA = -1;
         if (!bAverage && plActive != null && bPlayerAtBallDetails) {
-          state.sPlActiveName = plActive.sName + " - " + plActive.iNr.ToString();
+          string[] sPlayerActiveDetails = GetPlayerActiveDetails(plActive);
+          state.sPlActiveName = sPlayerActiveDetails[0];
+          state.sPlActivePortraitImg = sPlayerActiveDetails[1];
           state.iPlActiveHA = plActive.iHA;
-
-          CornerkickManager.Player? plMng = ckMng.ltPlayer.Find(p => p.plGame.iId == plActive.iId);
-          if (plMng != null) {
-            state.sPlActivePortraitImg = PlayerController.getPlayerPortraitHtmlImg(plMng);
-            /*
-            byte[]? bPlPortrait = PlayerController.getPlayerPortraitFile(plMng);
-            if (bPlPortrait != null) state.sPlActivePortraitImg = "data:image/*;base64," + Convert.ToBase64String(bPlPortrait);
-            */
-          }
         }
 
         // Player chances
@@ -895,6 +895,17 @@ namespace CornerkickApp.Controllers.Member
 #endif
 
       return Task.FromResult(state);
+    }
+
+    public static string[] GetPlayerActiveDetails(CornerkickGame.Player plActive)
+    {
+      string[] sDetails = [ "", "" ];
+
+      sDetails[0] = plActive.sName + " - " + plActive.iNr.ToString();
+      CornerkickManager.Player? plMng = ckMng.ltPlayer.Find(p => p.plGame.iId == plActive.iId);
+      sDetails[1] = PlayerController.getPlayerPortraitHtmlImg(plMng, sStyle: "height: 100%; object-fit: contain");
+
+      return sDetails;
     }
 
     //
@@ -1093,7 +1104,7 @@ namespace CornerkickApp.Controllers.Member
       return Task.FromResult(gD);
     }
 
-    public static object? GetPlayerChances(CornerkickManager.User usr)
+    public static object? GetPlayerChancesFromState(CornerkickManager.User usr)
     {
       ViewGameModel.gameData2? gd2 = getViewGameData(usr.id); // view.gD;
       if (gd2 == null) return null;
@@ -1807,12 +1818,14 @@ namespace CornerkickApp.Controllers.Member
           //iZindex = (int)(fHeat * 10) + 1;
 
           ltHp.Add(
-            new ViewGameModel.HeatmapPoint() { x = fXper, y = fYper, level = iZindex, color = sColor }
+            new ViewGameModel.HeatmapPoint() { value = fHeat, x = fXper, y = fYper, level = iZindex, color = sColor }
           );
 
-          sDiv += "<div style=\"position: absolute; width: 2%; height: 3%; top: " + fYper.ToString("0.00%", System.Globalization.CultureInfo.InvariantCulture) + "; left: " + fXper.ToString("0.00%", System.Globalization.CultureInfo.InvariantCulture) + "; background-color: " + sColor + "; -webkit-border-radius: 50%; -moz-border-radius: 50%; z-index:" + iZindex.ToString() + "\">" +
+          /*
+          sDiv += "<div style=\"position: absolute; width: 2%; height: 3%; top: " + fYper.ToString("0.00%", System.Globalization.CultureInfo.InvariantCulture) + "; left: " + fXper.ToString("0.00%", System.Globalization.CultureInfo.InvariantCulture) + "; background-color: " + sColor + "; -webkit-border-radius: 50%; -moz-border-radius: 50%; opacity: 0.5; z-index:" + iZindex.ToString() + "\">" +
                   //"<h2 style=\"position: absolute; text-align: center; vertical-align: middle; width: 100%; margin: 0; font-size: 100%; color: black; z-index:2\">" + fHeat.ToString("0%") + "</h2>" +
                   "</div>";
+          */
         }
       }
 
@@ -1925,23 +1938,36 @@ namespace CornerkickApp.Controllers.Member
       return fRet;
     }
 
-    public static object AdminGetPlayerChances(CornerkickManager.User usr)
+    public class PlayerChances
     {
-      if (usr.game == null) return null;
+      public float[] fPlAction = Array.Empty<float>();
+      public CornerkickGame.Player? pl;
+      public ViewGameModel.PassTarget[] ltPassTargets = Array.Empty<ViewGameModel.PassTarget>();
+    }
+    public static PlayerChances? GetPlayerChances(CornerkickManager.User usr)
+    {
+      return GetPlayerChances(usr.game);
+    }
+    public static PlayerChances? GetPlayerChances(CornerkickGame.Game game, sbyte iReceiverIx = -1)
+    {
+      if (game == null) return null;
 
-      CornerkickGame.Player plChance = usr.game.ball.plAtBall;
-      if (plChance == null && usr.game.ball.plAtBallLast != null) plChance = usr.game.ball.plAtBallLast;
+      CornerkickGame.Player plChance = game.ball.plAtBall;
+      if (plChance == null && game.ball.plAtBallLast != null) plChance = game.ball.plAtBallLast;
       if (plChance == null) return null;
 
-      float[] fPlAction;
+      PlayerChances pc = new PlayerChances();
+
+      pc.pl = plChance;
+
       double fPlActionRnd;
       System.Drawing.Point? ptPassTarget;
       bool bLowPass = false;
-      sbyte iAction = usr.game.ai.getPlayerAction(plChance, out fPlAction, out fPlActionRnd, out ptPassTarget, out bLowPass);
+      sbyte iAction = game.ai.getPlayerAction(plChance, out pc.fPlAction, out fPlActionRnd, out ptPassTarget, out bLowPass, iReceiverIx: iReceiverIx);
 
       // Get all pass targets
       List<ViewGameModel.PassTarget> ltPtBallTarget = new List<ViewGameModel.PassTarget>();
-      List<CornerkickGame.AI.Receiver> ltReceiver = CornerkickGame.AI.getReceiverList(usr.game, plChance, 0);
+      List<CornerkickGame.AI.Receiver> ltReceiver = CornerkickGame.AI.getReceiverList(game, plChance, 0);
       if (ltReceiver != null) {
         foreach (CornerkickGame.AI.Receiver rec in ltReceiver) {
           // Check if current pass target is players choice
@@ -1952,7 +1978,9 @@ namespace CornerkickApp.Controllers.Member
         }
       }
 
-      return new { fPlAction = fPlAction, plPos = new TeamModel.Point(plChance.ptPos), ltPassTargets = ltPtBallTarget.ToArray() };
+      pc.ltPassTargets = ltPtBallTarget.ToArray();
+
+      return pc;
     }
 
     public static bool AdminGetPlayerTargetPos(CornerkickManager.User usr)

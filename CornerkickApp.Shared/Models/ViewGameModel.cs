@@ -318,6 +318,7 @@ namespace CornerkickApp.Shared.Models
 
     public struct HeatmapPoint
     {
+      public float value { get; set; }
       public float x { get; set; }
       public float y { get; set; }
       public string color { get; set; }
@@ -339,6 +340,12 @@ namespace CornerkickApp.Shared.Models
 
       public bool bPlayerChoice { get; set; }
     }
+
+    // DEBUG options
+    public int iOrient = 0;
+    public int iShootFreq = 0;
+    public int iDistOffsite = 0;
+    // DEBUG options
 
     public ViewGameModel()
     {

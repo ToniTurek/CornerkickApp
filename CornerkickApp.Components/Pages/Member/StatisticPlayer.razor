@@ -22,59 +22,61 @@
 
 <body>
   <h3>Beste Spieler</h3>
-  <div style="position: relative; width: 50em; max-width: 100%; margin-bottom: 6px">
-    <div style="width: 100%; display: flex; flex-wrap: wrap; justify-content: space-between">
-      <Blazorise.Select TValue="int" SelectedValue="@model.iNation" SelectedValueChanged="@setNations" Style="width: auto">
-        @foreach (LayoutModel.SelectListItem sli in model.ddlNations) {
-          <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
-        }
-      </Blazorise.Select>
-      <Blazorise.Select TValue="int" SelectedValue="@model.iFormation" SelectedValueChanged="setFormation" Style="width: auto">
-        @foreach (LayoutModel.SelectListItem sli in model.ltsFormations) {
-          <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
-        }
-      </Blazorise.Select>
-      <Blazorise.RadioGroup TValue="int" Name="form" CheckedValue="@iBestPlayerProfiJouth" CheckedValueChanged="@setProfiJouth" Style="font-size: 120%">
-        <Blazorise.Radio Value="0" Inline="true">Profis</Blazorise.Radio>
-        <Blazorise.Radio Value="1" Inline="true">U18</Blazorise.Radio>
-      </Blazorise.RadioGroup>
-    </div>
-    <div style="position: relative; width: 100%">
-      <CornerkickApp.Components.Pages.Templates.Best11 @ref="best11"></CornerkickApp.Components.Pages.Templates.Best11>
-    </div>
-  </div>
-
-  <div style="position: relative; width: fit-content; max-width: 100%; height: auto; margin-top: 20px; overflow-x: auto">
-    <table class="table table-bordered" cellpadding="4" style="width: auto; white-space: nowrap">
-      <thead>
-        <tr>
-          <th style="text-align:center">Fähigkeit</th>
-          <th style="text-align:center">Spieler</th>
-          <th style="text-align:center">Stärke</th>
-          <th style="text-align:center">Verein</th>
-          <th style="text-align:center">MW [€]</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (byte iS = 0; iS < model.sPlayerSkillBest.Length; iS++) {
-          if (model.sPlayerSkillBest[iS] == null) {
-            continue;
+  <div style="display: flex; flex-wrap: wrap; width: 100%">
+    <div style="position: relative; width: 50em; max-width: 100%; margin-bottom: 1rem; margin-right: 1rem">
+      <div style="position: relative; width: 100%; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; margin-bottom: 1rem; z-index: 8">
+        <Blazorise.Select TValue="int" SelectedValue="@model.iNation" SelectedValueChanged="@setNations" Style="width: auto">
+          @foreach (LayoutModel.SelectListItem sli in model.ddlNations) {
+            <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
           }
+        </Blazorise.Select>
+        <Blazorise.Select TValue="int" SelectedValue="@model.iFormation" SelectedValueChanged="setFormation" Style="width: auto">
+          @foreach (LayoutModel.SelectListItem sli in model.ltsFormations) {
+            <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+          }
+        </Blazorise.Select>
+        <Blazorise.RadioGroup TValue="int" Name="rgBestPlayer" CheckedValue="@iBestPlayerProfiJouth" CheckedValueChanged="@setProfiJouth" Style="font-size: 120%">
+          <Blazorise.Radio Value="0" Inline="true">Profis</Blazorise.Radio>
+          <Blazorise.Radio Value="1" Inline="true">U18</Blazorise.Radio>
+        </Blazorise.RadioGroup>
+      </div>
+      <div style="position: relative; width: 100%">
+        <CornerkickApp.Components.Pages.Templates.Best11 @ref="best11"></CornerkickApp.Components.Pages.Templates.Best11>
+      </div>
+    </div>
 
+    <div style="position: relative; width: fit-content; max-width: 100%; height: auto; overflow-x: auto">
+      <table class="table table-bordered" cellpadding="4" style="width: auto; white-space: nowrap">
+        <thead>
           <tr>
-            <td align="center">@model.sPlayerSkillBest[iS][0]</td>
-            <td align="center">@((MarkupString)model.sPlayerSkillBest[iS][1])</td>
-            <td align="right">@model.sPlayerSkillBest[iS][2]</td>
-            <td align="center">@model.sPlayerSkillBest[iS][3]</td>
-            <td align="right">@model.sPlayerSkillBest[iS][4]</td>
+            <th style="text-align:center">Fähigkeit</th>
+            <th style="text-align:center">Spieler</th>
+            <th style="text-align:center">Stärke</th>
+            <th style="text-align:center">Verein</th>
+            <th style="text-align:center">MW [€]</th>
           </tr>
-        }
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          @for (byte iS = 0; iS < model.sPlayerSkillBest.Length; iS++) {
+            if (model.sPlayerSkillBest[iS] == null) {
+              continue;
+            }
+
+            <tr>
+              <td align="center">@model.sPlayerSkillBest[iS][0]</td>
+              <td align="center">@((MarkupString)model.sPlayerSkillBest[iS][1])</td>
+              <td align="right">@model.sPlayerSkillBest[iS][2]</td>
+              <td align="center">@model.sPlayerSkillBest[iS][3]</td>
+              <td align="right">@model.sPlayerSkillBest[iS][4]</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
   </div>
 
-  <h3 style="position: relative; margin-top: 30px">Spielerstatistiken</h3>
-  <div style="display: flex; flex-wrap: wrap; align-items: center; max-width: 100%; margin-bottom: 6px">
+  <h3 style="position: relative">Spielerstatistiken</h3>
+  <div style="display: flex; flex-wrap: wrap; align-items: flex-end; max-width: 100%; margin-bottom: 6px">
     <Blazorise.Select TValue="int" SelectedValue="@model.iFilterCup" SelectedValueChanged="changeFilterCup" Style="width: auto">
       @foreach (LayoutModel.SelectListItem sli in model.ddlFilterCup) {
         <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
@@ -90,7 +92,7 @@
         <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
       }
     </Blazorise.Select>
-    <Blazorise.RadioGroup TValue="int" Name="form" CheckedValue="@iStatOption" CheckedValueChanged="@changeFilterRange">
+    <Blazorise.RadioGroup TValue="int" Name="rgStatOption" CheckedValue="@iStatOption" CheckedValueChanged="@changeFilterRange">
       <Blazorise.Radio Value="1" Inline="true">Sais.</Blazorise.Radio>
       <Blazorise.Radio Value="2" Inline="true">Total</Blazorise.Radio>
     </Blazorise.RadioGroup>

@@ -414,7 +414,7 @@ namespace CornerkickApp.Controllers.Member
         }
       }
 
-      return ltDePlayer;
+      return ltDePlayer.OrderByDescending(o => o.iMinutes).ToList();
     }
 
     public static List<PlayerModel.ClubHistory> StatisticGetTransferTable()

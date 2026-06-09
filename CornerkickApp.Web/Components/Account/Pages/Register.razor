@@ -54,7 +54,7 @@
 
 <PageTitle>Registrieren</PageTitle>
 
-@if (AppConstants.IS_DEBUG) {
+@if (CkAppShared.debug) {
   <p>Render Mode: @mode</p>
 }
 
@@ -168,15 +168,6 @@
   List<LayoutModel.SelectListItem> sliCountries = new List<LayoutModel.SelectListItem>();
   CornerkickApp.Components.Pages.Templates.Jersey? jerseyH { get; set; }
   CornerkickApp.Components.Pages.Templates.Jersey? jerseyA { get; set; }
-
-  public static class AppConstants
-  {
-#if DEBUG
-    public const bool IS_DEBUG = true;
-#else
-    public const bool IS_DEBUG = false;
-#endif
-  }
 
   protected override async Task OnInitializedAsync()
   {
