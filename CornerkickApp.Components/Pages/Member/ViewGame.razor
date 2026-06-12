@@ -413,6 +413,10 @@
                     </Blazorise.AccordionHeader>
                     <Blazorise.AccordionBody Style="background-color: rgb(255,255,255,0.25)">
                       <div id="divOptions" style="position: relative; left: 0px; width: fit-content; display: flex; flex-direction: column">
+                        <label style="margin-left:8px">
+                          <input type="checkbox" @onchange="ToggleHexGrid" />
+                          Spielfelder
+                        </label>
                         @if (bFinished) {
                           <label>
                             Schüsse:
@@ -424,27 +428,32 @@
                           </label>
                           <label>
                             Heatmap:
-                            <Blazorise.Select SelectedValue="@model.iHeatmap" SelectedValueChanged="(i) => SetHeatmap(i)" TValue="int" Style="width: 100px; margin-right: 4px">
+                            <Blazorise.Select SelectedValue="@model.iHeatmap" SelectedValueChanged="(i) => SetHeatmap(i, 0)" TValue="int" Style="width: 100px; margin-right: 4px">
                               @foreach (LayoutModel.SelectListItem sli in model.ddlHeatmap) {
                                 <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
                               }
                             </Blazorise.Select>
                           </label>
+                        } else {
+                          <label style="margin-left:8px">
+                            <input type="checkbox" @onchange="TogglePlayerPath" />
+                            Zielpositionen
+                          </label>
+                          <label style="margin-left:8px">
+                            <input type="checkbox" @onchange="ToggleOffsiteWait" />
+                            Warte bei Abseits
+                          </label>
                         }
-
-                        <label style="margin-left:8px">
-                          <input type="checkbox" @onchange="ToggleHexGrid" />
-                          Spielfelder
-                        </label>
-                        <label style="margin-left:8px">
-                          <input type="checkbox" @onchange="TogglePlayerPath" />
-                          Zielpositionen
-                        </label>
-                        <label style="margin-left:8px">
-                          <input type="checkbox" @onchange="ToggleOffsiteWait" />
-                          Warte bei Abseits
-                        </label>
-                        
+                        @if (CkAppShared.debug && !bFinished) {
+                          <label>
+                            Gegnerdruck:
+                            <Blazorise.Select SelectedValue="@model.iOppThreat" SelectedValueChanged="(i) => SetHeatmap(i, 1)" TValue="int" Style="width: 100px; margin-right: 4px">
+                              @foreach (LayoutModel.SelectListItem sli in model.ddlOppThreat) {
+                                <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+                              }
+                            </Blazorise.Select>
+                          </label>
+                        }
                       </div>
                     </Blazorise.AccordionBody>
                   </Blazorise.AccordionItem>
@@ -1081,6 +1090,7 @@
             if (comments != null)               await comments.update(state.ltComments);
 
             if (bShowPlayerPath) UpdatePath();
+            if (model.iOppThreat >= 0) await GetHeatmap(1);
 
             if (CkAppShared.debug) {
               slRecv = new List<CornerkickApp.Shared.Models.LayoutModel.SelectListItem>();
@@ -1277,7 +1287,7 @@
 
     await getGameData();
     setChartData();
-    await GetHeatmap();
+    await GetHeatmap(model.iOppThreat);
     await GetShootLines();
 
     await InvokeAsync(StateHasChanged);
@@ -1371,15 +1381,19 @@
     */
   }
 
-  private Task SetHeatmap(int iHm)
+  private Task SetHeatmap(int iHm, int iType)
   {
     if (model == null) return Task.CompletedTask;
-    model.iHeatmap = iHm;
+
+    model.iHeatmap   = -1;
+    model.iOppThreat = -1;
+    if      (iType == 0) model.iHeatmap   = iHm;
+    else if (iType == 1) model.iOppThreat = iHm;
 
     ltHeatmap.Clear();
     StateHasChanged();
 
-    GetHeatmap();
+    GetHeatmap(iType);
 
     //if (player   != null) player.clear();
 
@@ -1387,19 +1401,23 @@
 
     return Task.CompletedTask;
   }
-  private Task GetHeatmap()
+  private Task GetHeatmap(int iType)
   {
     if (model == null) return Task.CompletedTask;
 
-    if (model.iHeatmap < 0) return Task.CompletedTask;
-    
+    int iValue = -1;
+    if (iType == 0) iValue = model.iHeatmap;
+    if (iType == 1) iValue = model.iOppThreat;
+    if (iValue < 0) return Task.CompletedTask;
+
     //gd = await CornerkickApp.Controllers.Member.ViewGameController.getStatistics(_usr, iState: iState, iHeatmap: iHm, bAddFMList: false);
     if (gd == null) return Task.CompletedTask;
 
     byte iHA = 0;
     int iPlIx = -1;
-    Controllers.Member.ViewGameController.getStatisticHAPlayerIx(model.iHeatmap, gd.nPlStart, out iHA, out iPlIx);
-    ltHeatmap = Controllers.Member.ViewGameController.getDivHeatmap(_usr, iHA, iState, iPlIx);
+    if      (iType == 0) Controllers.Member.ViewGameController.getStatisticHAPlayerIx(iValue, gd.nPlStart, out iHA, out iPlIx);
+    else if (iType == 1) iHA = (byte)iValue;
+    ltHeatmap = Controllers.Member.ViewGameController.getDivHeatmap(_usr, iHA, iState, iPlIx, iType: iType);
 
     return Task.CompletedTask;
   }

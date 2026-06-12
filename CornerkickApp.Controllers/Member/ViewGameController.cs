@@ -1749,7 +1749,7 @@ namespace CornerkickApp.Controllers.Member
       return gD;
     }
 
-    public static List<ViewGameModel.HeatmapPoint> getDivHeatmap(CornerkickManager.User? usr, byte iHA = 0, int iStateMax = 0, int iPlayer = -1)
+    public static List<ViewGameModel.HeatmapPoint> getDivHeatmap(CornerkickManager.User? usr, byte iHA = 0, int iStateMax = 0, int iPlayer = -1, int iType = 0)
     {
       List<ViewGameModel.HeatmapPoint> ltHp = new List<ViewGameModel.HeatmapPoint>();
 
@@ -1759,10 +1759,29 @@ namespace CornerkickApp.Controllers.Member
 
       if (gd2?.game == null) return ltHp;
 
-      float fHeatmapMax = 0f;
-      float[][] fHeatmap = ckMng.ui.getHeatmap(gd2.game, iHA, ref fHeatmapMax, iStateMax, iPlayer);
+      List<CornerkickGame.Player> plOpp = new List<CornerkickGame.Player>();
+      for (int iPl = 0; iPl < gd2.game.data.nPlStart; iPl++) {
+        CornerkickGame.Player pl = gd2.game.player[1 - iHA][iPl];
+        if (pl.checkPlayerValid(gd2.game.iSuspensionIx)) plOpp.Add(pl);
+      }
 
-      string sDiv = "";
+      float fHeatmapMin = float.MaxValue;
+      float fHeatmapMax = float.MinValue;
+      float[][] fHeatmap = new float[gd2.game.ptPitch.X][];
+      if (iType == 0) {
+        fHeatmap = ckMng.ui.getHeatmap(gd2.game, iHA, ref fHeatmapMax, iStateMax, iPlayer);
+      } else if (iType == 1) {
+        for (int iX = 0; iX < gd2.game.ptPitch.X; iX++) {
+          fHeatmap[iX] = new float[2 * gd2.game.ptPitch.Y];
+          for (int iY = -gd2.game.ptPitch.Y; iY < gd2.game.ptPitch.Y; iY++) {
+            fHeatmap[iX][iY + gd2.game.ptPitch.Y] = (float)CornerkickGame.Tool.GetOpponentThreateningFactorTotal(new System.Drawing.Point(iX, iY), iHA, plOpp.ToArray(), gd2.game.ptPitch.X);
+            if (fHeatmap[iX][iY + gd2.game.ptPitch.Y] < fHeatmapMin) fHeatmapMin = fHeatmap[iX][iY + gd2.game.ptPitch.Y];
+            if (fHeatmap[iX][iY + gd2.game.ptPitch.Y] > fHeatmapMax) fHeatmapMax = fHeatmap[iX][iY + gd2.game.ptPitch.Y];
+          }
+        }
+      }
+
+      //string sDiv = "";
 
       for (int iX = 0; iX < fHeatmap.Length; iX++) {
         float fXper = iX / (float)(fHeatmap.Length - 1);
@@ -1774,6 +1793,10 @@ namespace CornerkickApp.Controllers.Member
           fYper -= 0.015f; // - 1.5% (half height)
 
           float fHeat = fHeatmap[iX][iY];
+          if (iType == 1) {
+            //fHeat = 0.5f * (fHeat - fHeatmapMin) / (fHeatmapMax - fHeatmapMin);
+            fHeat = 0.5f * fHeat / fHeatmapMax;
+          }
 
 #if DEBUG
           /*
@@ -1787,7 +1810,7 @@ namespace CornerkickApp.Controllers.Member
           */
 #endif
 
-          if (fHeat == 0f) continue;
+          if (fHeat <= 0f) continue;
 
           int iZindex = 8;
 
