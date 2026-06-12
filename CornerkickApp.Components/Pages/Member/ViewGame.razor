@@ -257,13 +257,16 @@
               }
 
               @* Half-time information & continue button *@
-              @if (state != null && (state.evt != null || state.bFinished)) {
+              @if (state != null && (state.evt != null || state.bFinished) && !(bHideScoutingData && state.bFinished)) {
                 if ((state.evt != null && (state.evt == ViewGameModel.State.Event.NotStarted || state.evt == ViewGameModel.State.Event.HalfTime || state.evt == ViewGameModel.State.Event.FullTime || state.evt == ViewGameModel.State.Event.PenaltyShootout)) || state.bFinished) {
                   <div style="position: absolute; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; bottom: 4px">
                     <div style="display: flex; flex-direction: column; height: fit-content; max-height: 100%; background-color: white; padding: 0.5rem; z-index: 10">
                       @* Half-time information *@
-                      @if (ltScoutedPlayer != null) {
-                        <h5><img src="@CkAppShared.sContentDir/Icons/menu/binoculars.svg" height="20" width="20" /> Spielerbeobachtungen</h5>
+                      @if (ltScoutedPlayer != null && !bHideScoutingData) {
+                        <div style= "display: flex; justify-content: space-between; align-items: center">
+                          <h5><img src="@CkAppShared.sContentDir/Icons/menu/binoculars.svg" height="20" width="20" /> Spielerbeobachtungen</h5>
+                          <button @onclick="@(() => bHideScoutingData = true)">X</button>
+                        </div>
                         <div style="overflow-y: auto">
                           <table style="border: 1px solid black">
                             <thead>
@@ -764,6 +767,7 @@
 
   // Player scouting data
   List<CornerkickManager.Main.Staff.Scout.PlayerData>? ltScoutedPlayer = null;
+  bool bHideScoutingData = false;
 
   class DataItem
   {
@@ -1000,6 +1004,8 @@
       iBalanceSecretStart = clb.iBalanceSecret;
     }
 
+    bHideScoutingData = false;
+
     while (!bFinished) {
       if (bStop) {
         bRunning = false;
@@ -1041,6 +1047,7 @@
             // Break for game pause
             if (state.evt == ViewGameModel.State.Event.HalfTime || state.evt == ViewGameModel.State.Event.FullTime || state.evt == ViewGameModel.State.Event.PenaltyShootout) {
               ltScoutedPlayer = Controllers.Member.ViewGameController.GetScoutedPlayer(_usr, model.game.data.dt);
+              bHideScoutingData = false;
               /*
               // Scout home player
               if (clbH.user != null && clbH.ltPlayer != null) {
