@@ -239,7 +239,8 @@
               }
             }
 
-            <div id="divDrawGame" style="position: absolute; margin-left: 5%; width: 90%; height: 84%; top: 8%" @ref=refField>
+            @*<div id="divDrawGame" style="position: absolute; margin-left: 5%; width: 90%; height: 84%; top: 8%" @ref=refField>*@
+            <div id="divDrawGame" style="position: absolute; margin-left: 5%; width: 90%; aspect-ratio: 1.57895; top: 8%" @ref=refField>
               @if (gd != null) {
                 @* Hexagonnetz SVG-Overlay *@
                 <ViewGameGrid @ref="grid" edField="@edField" ptPitch="@gd.ptPitch"></ViewGameGrid>
