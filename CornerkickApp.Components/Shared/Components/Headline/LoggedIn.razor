@@ -33,9 +33,11 @@
       <a href="/member/finance" id="txtBalance" style="text-decoration:none">
         <span style="color: @(iCash[0] < 0 ? "red" : "")">@(iCash[0].ToString("N0")) €</span>
       </a>
-      <a href="/member/finance" id="txtBalanceSecret" style="text-decoration:none; margin-left: 0.5rem">
-        <span style="color: grey">@(iCash[1].ToString("N0")) €</span>
-      </a>
+      @if (_usr.iResp >= CkAppShared.iUserRespSecretBalance) {
+        <a href="/member/finance" id="txtBalanceSecret" style="text-decoration:none; margin-left: 0.5rem">
+          <span style="color: grey">@(iCash[1].ToString("N0")) €</span>
+        </a>
+      }
     </div>
   }
   //}
