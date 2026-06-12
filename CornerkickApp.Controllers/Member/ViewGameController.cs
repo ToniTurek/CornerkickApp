@@ -1552,9 +1552,11 @@ namespace CornerkickApp.Controllers.Member
 
         drawLine.x0 = plShoot.ptPos.X;
         drawLine.y0 = plShoot.ptPos.Y;
-        if (state.shoot.result == CornerkickGame.Game.Shoot.Result.SaveBounce) { // keeper
+        if (state.shoot.result == CornerkickGame.Game.Shoot.Result.SaveBounce || state.shoot.result == CornerkickGame.Game.Shoot.Result.SaveCornerkick) { // keeper
+          // Draw two lines for saved shoot
           CornerkickGame.Player plKeeper = CornerkickGame.Tool.getKeeper(game.player[1 - plShoot.iHA], game.iSuspensionIx, game.tc[plShoot.iHA].formation, game.ptPitch, game.data.nPlStart);
 
+          // 1st: shoot --> keeper
           drawLine.x1 = plKeeper.ptPos.X;
           drawLine.y1 = plKeeper.ptPos.Y;
           drawLine.sColor = "yellow";
@@ -1569,9 +1571,10 @@ namespace CornerkickApp.Controllers.Member
 
           ltDrawLine.Add(drawLine);
 
+          // 2nd line: keeper --> ball position after save
           drawLine = new ViewGameModel.drawLine();
-          drawLine.x0 = ltDrawLine[0].x1;
-          drawLine.y0 = ltDrawLine[0].y1;
+          drawLine.x0 = plKeeper.ptPos.X;
+          drawLine.y0 = plKeeper.ptPos.Y;
         } else if (state.shoot.result == CornerkickGame.Game.Shoot.Result.Post) { // post
           drawLine.x1 = (1 - state.shoot.iHA) * game.ptPitch.X;
           drawLine.y1 = -2;

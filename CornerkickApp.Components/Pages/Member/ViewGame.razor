@@ -203,8 +203,42 @@
         </div>
 
         <div id="divDrawGameContainer2" style="position: relative; width: 100%; min-height: 28px; margin-bottom: 4px; height: auto;">
-          <div id="divDrawGameContainer" style="position: relative; width: 100%; height: 100%; display: block; top: 0px; left: 0px; z-index: 0;">
+          <div id="divDrawGameContainer" style="position: relative; width: 100%; height: 100%; display: block; top: 0px; left: 0px; z-index: 0;" @ref=refFieldContainer>
             <img id="imgGame" style="position: relative; width: 100%; height: auto;" src="@CornerkickApp.Shared.Models.CkAppShared.sContentDir/Images/stadium/field_full.png" alt="">
+
+            @* Shoots *@
+            @{
+              if (ltShootLines != null && ltShootLines.Count > 0) {
+                <svg style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:3"
+                     viewBox="0 0 @edFieldContainer.Width @edFieldContainer.Height" preserveAspectRatio="none">
+                  @{
+                    int iShoot = 0;
+                    foreach (var line in ltShootLines) {
+                      List<float[]> path = new List<float[]>();
+                      path.Add(new float[] { line.x0, line.y0 });
+                      path.Add(new float[] { line.x1, line.y1 });
+                      <defs>
+                        <marker id="circle_@iShoot" markerWidth="8" markerHeight="8" refX="4" refY="4">
+                          <circle cx="4" cy="4" r="2" fill="@line.sColor" />
+                        </marker>
+                        <marker id='head_@iShoot'
+                                orient="auto"
+                                markerWidth='6'
+                                markerHeight='6'
+                                refX='5'
+                                refY='3'>
+                          <path d='M0,0 V6 L6,3 Z' fill="@line.sColor" />
+                        </marker>
+                      </defs>
+                      <path d="@GetPathSvg(path)" stroke="@line.sColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" marker-start="url(#circle_@iShoot)" marker-end='url(#head_@iShoot)' />
+
+                      iShoot++;
+                    }
+                  }
+                </svg>
+              }
+            }
+
             <div id="divDrawGame" style="position: absolute; margin-left: 5%; width: 90%; height: 84%; top: 8%" @ref=refField>
               @if (gd != null) {
                 @* Hexagonnetz SVG-Overlay *@
@@ -421,7 +455,7 @@
                           <label>
                             Schüsse:
                             <Blazorise.Select SelectedValue="@model.iShoots" SelectedValueChanged="(i) => SetShootLines(i)" TValue="int" Style="width: 100px; margin-right: 4px">
-                              @foreach (LayoutModel.SelectListItem sli in model.ddlHeatmap) {
+                              @foreach (LayoutModel.SelectListItem sli in model.ddlShoots) {
                                 <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
                               }
                             </Blazorise.Select>
@@ -751,6 +785,7 @@
   bool bTeamInfos;
 
   // Element references of field
+  ElementReference refFieldContainer;
   ElementReference refField;
 
   // Grid
@@ -763,6 +798,7 @@
 
   // Heatmap
   ElemDimension edField = new ElemDimension();
+  ElemDimension edFieldContainer = new ElemDimension();
   List<ViewGameModel.HeatmapPoint> ltHeatmap = new List<ViewGameModel.HeatmapPoint>();
 
   // Shoot / Pass lines
@@ -944,9 +980,10 @@
       */
 
       edField = await JS.InvokeAsync<ElemDimension>("getElemDimensions", refField);
+      edFieldContainer = await JS.InvokeAsync<ElemDimension>("getElemDimensions", refFieldContainer);
       //int Height = dimension.Height;
       //int Width = dimension.Width;
-      InvokeAsync(StateHasChanged);
+      //InvokeAsync(StateHasChanged);
 
 #if !_WebApp
       bInterruptLiveGame = false;
@@ -1559,6 +1596,19 @@
     for (int i = 0; i < path.Count; i++) {
       double x = (path[i].X) * scaleX;
       double y = (path[i].Y + gd.ptPitch.Y) * scaleY;
+      if (i == 0) sb.Append($"M{x.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)},{y.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)} ");
+      else        sb.Append($"L{x.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)},{y.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)} ");
+    }
+    return sb.ToString();
+  }
+  private string GetPathSvg(List<float[]> xy)
+  {
+    if (gd == null || edField.Width == 0 || edField.Height == 0 || xy == null || xy.Count < 2) return string.Empty;
+
+    var sb = new System.Text.StringBuilder();
+    for (int i = 0; i < xy.Count; i++) {
+      float x = (xy[i][0] * edField.Width)  + ((edFieldContainer.Width  - edField.Width ) / 2);
+      float y = (xy[i][1] * edField.Height) + ((edFieldContainer.Height - edField.Height) / 2);
       if (i == 0) sb.Append($"M{x.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)},{y.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)} ");
       else        sb.Append($"L{x.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)},{y.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)} ");
     }
