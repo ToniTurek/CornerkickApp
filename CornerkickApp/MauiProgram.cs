@@ -117,6 +117,9 @@ namespace CornerkickApp
       Shared.Models.CkAppShared.sVersion = Controllers.App.Version;
 
 #if ANDROID
+      // Keep screen on on Android while app is running
+      DeviceDisplay.Current.KeepScreenOn = true;
+
       Platforms.Android.Initialize.initialize(Shared.Models.CkAppShared.ckMng);
 
 #if DEBUG
