@@ -453,6 +453,14 @@
                         </label>
                         @if (bFinished) {
                           <label>
+                            Spielerpos.:
+                            <Blazorise.Select SelectedValue="@model.iPositions" SelectedValueChanged="(i) => SetPlayerPos(i)" TValue="int" Style="width: 100px; margin-right: 4px">
+                              @foreach (LayoutModel.SelectListItem sli in model.ddlPositions) {
+                                <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+                              }
+                            </Blazorise.Select>
+                          </label>
+                          <label>
                             Schüsse:
                             <Blazorise.Select SelectedValue="@model.iShoots" SelectedValueChanged="(i) => SetShootLines(i)" TValue="int" Style="width: 100px; margin-right: 4px">
                               @foreach (LayoutModel.SelectListItem sli in model.ddlShoots) {
@@ -1375,15 +1383,35 @@
     }
   }
 
+  private async Task SetPlayerPos(int iPos)
+  {
+    if (model == null) return;
+    model.iPositions = iPos;
+
+    if (player != null && ball != null) {
+      if (iPos < 0) {
+        await player.clear();
+        await ball.clear();
+      } else if (_usr != null && gd != null) {
+        state = await CornerkickApp.Controllers.Member.ViewGameController.getState(_usr, bAverage: iPos == 1);
+        await player.update(state.ltPlayer, gd.sJerseyColors, _sPlActive: sPlActive);
+        await ball.update(state.gBall, 0);
+      }
+    }
+
+    //await InvokeAsync(StateHasChanged);
+  }
+
   private async Task SetShootLines(int iSl)
   {
     if (model == null) return;
     model.iShoots = iSl;
 
+    // Hide players when showing shoot lines
+    if (iSl >= 0) await SetPlayerPos(-1);
+
     ltShootLines.Clear();
     await GetShootLines();
-
-    //if (player   != null) await player.clear();
 
     await InvokeAsync(StateHasChanged);
   }
