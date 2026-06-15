@@ -1,5 +1,7 @@
 ﻿@page "/member/viewgame/{id}"
 
+@implements IAsyncDisposable
+
 @using System.Text.Json
 @using System.Text.Json.Serialization
 @using CornerkickApp.Shared.Models
@@ -777,7 +779,7 @@
   CornerkickApp.Components.Pages.Templates.ViewGameBall? ball { get; set; }
   CornerkickApp.Components.Pages.Templates.ViewGameComments? comments { get; set; }
 
-  static RadzenChart? chartPlayerFresh { get; set; }
+  RadzenChart? chartPlayerFresh { get; set; }
   TimeSpan step = TimeSpan.FromMinutes(15);
 
   public static int iClIxH = 0;
@@ -1750,4 +1752,30 @@
     return Task.CompletedTask;
   }
 
+  public async ValueTask DisposeAsync()
+  {
+    // Fordere laufende Update-Schleifen zum Stoppen auf
+    bStop = true;
+
+    // Warte kurz auf das Ende der Schleifen (sicherer Abbruch)
+    for (int i = 0; i < 50 && bRunning; i++) {
+      await Task.Delay(100).ConfigureAwait(false);
+    }
+
+    // Dispose JS-Module sicher
+    if (moduleSite != null) {
+      try { await moduleSite.DisposeAsync().ConfigureAwait(false); } catch { }
+      moduleSite = null;
+    }
+    if (module != null) {
+      try { await module.DisposeAsync().ConfigureAwait(false); } catch { }
+      module = null;
+    }
+
+    // Entferne statische UI-Referenzen, damit GC greifen kann
+    chartPlayerFresh = null;
+
+    // Optional: Reset globaler Flags
+    MainLayout.bOnViewGamePage = false;
+  }
 }
