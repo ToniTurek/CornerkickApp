@@ -1,4 +1,5 @@
 ﻿@using CornerkickApp.Shared.Models
+@using CornerkickApp.Components.Shared.Components
 
 <div class="div_skill" style="position: relative; top: 0px; left: 0px; width: 100%">
   <div class="myPb" style="position: absolute; top: 0px; left: 0px; height: 100%; width: @((fSkillScouted / 10f).ToString("0%")); background-color: @sColor"></div>
@@ -14,6 +15,8 @@
   }
 </div>
 
+<ScoutingReport @ref="ckScoutingReport"></ScoutingReport>
+
 @code {
   [Parameter] public CornerkickManager.User? usr { get; set; }
   [Parameter] public int iPlayerId { get; set; }
@@ -26,6 +29,8 @@
   string sColor = "";
   CornerkickManager.Main.Staff? _staff;
   CornerkickManager.Player? _pl;
+
+  private ScoutingReport? ckScoutingReport;
 
   protected override async Task OnInitializedAsync()
   {
@@ -68,7 +73,7 @@
     if (Silent) return;
 
     //if (modalSkillDetails != null) modalSkillDetails.Show();
-    if (MainLayout.ckScoutingReport != null) await MainLayout.ckScoutingReport.Show(_pl, _staff, iSkillIx, action: () => update());
+    if (ckScoutingReport != null) await ckScoutingReport.Show(_pl, _staff, iSkillIx, action: () => update());
     //Components.Shared.Components.ScoutingReport.Show(_pl, _staff, iSkillIx);
   }
 }

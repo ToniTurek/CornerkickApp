@@ -938,21 +938,31 @@
   public void Stop()
   {
     bStop = true;
+    try {
+      cts?.Cancel();
+    } catch {
+    }
   }
 
   public async Task Reset()
   {
     bStop = true;
+    try { cts?.Cancel(); } catch { }
+
     while (bRunning) {
       // Warte, bis laufendes Update fertig ist
       await wait(state != null && state.iGameSpeedUsed > 2 ? state.iGameSpeedUsed / 2 : 100);
     }
+
+    // neues CancellationTokenSource für zukünftige Starts
+    try { cts?.Dispose(); } catch { }
+    cts = new System.Threading.CancellationTokenSource();
     bStop = false;
 
     Ini();
 
     if (StartGameOnEnter) {
-      updateState();
+      _ = updateState();
     } else {
       if (player   != null) await player  .clear();
       if (ball     != null) await ball    .clear();
@@ -1000,7 +1010,11 @@
       bInterruptLiveGame = false;
 #endif
 
-      if (StartGameOnEnter) updateState();
+      if (StartGameOnEnter) {
+        cts?.Dispose();
+        cts = new System.Threading.CancellationTokenSource();
+        _ = updateState();
+      }
     }
 
     //return base.OnAfterRenderAsync(firstRender);
@@ -1023,16 +1037,31 @@
   }
 
   bool bStop = false;
+  System.Threading.CancellationTokenSource? cts;
+
   int iEventCounter = 0;
   private async Task StartStopDebug()
   {
-    bStop = !bStop;
-    await InvokeAsync(StateHasChanged);
+    // Wenn aktuell gestoppt -> starten
+    if (bStop) {
+      bStop = false;
+      try { cts?.Dispose(); } catch { }
+      cts = new System.Threading.CancellationTokenSource();
+      await InvokeAsync(StateHasChanged);
+      _ = updateState();
+      return;
+    }
 
-    if (!bStop) updateState();
+    // sonst stoppen
+    bStop = true;
+    try { cts?.Cancel(); } catch { }
+    await InvokeAsync(StateHasChanged);
   }
   private async Task OneStep()
   {
+    // Einzelschritt: neues Token, sicherstellen dass nicht abgebrochen wird
+    try { cts?.Dispose(); } catch { }
+    cts = new System.Threading.CancellationTokenSource();
     bStop = false;
 
     await updateState(bOneStep: true);
@@ -1063,8 +1092,10 @@
 
     bHideScoutingData = false;
 
+    // Verwende das aktuelle CancellationToken (falls vorhanden)
+    var token = cts?.Token ?? System.Threading.CancellationToken.None;
     while (!bFinished) {
-      if (bStop) {
+      if (token.IsCancellationRequested) {
         bRunning = false;
         await InvokeAsync(StateHasChanged);
         return;
@@ -1196,13 +1227,13 @@
 
             if (state.evt == ViewGameModel.State.Event.GoalHome || state.evt == ViewGameModel.State.Event.GoalAway) {
               // Wait 1 sec. for goal cheers
-              await wait(1500);
+              await Task.Delay(1500, token).ContinueWith(_ => { });
             } else if (state.evt == ViewGameModel.State.Event.NoGoal) {
               // Wait 0.75 sec. for shoot result
-              await wait(750);
+              await Task.Delay(750, token).ContinueWith(_ => { });
             } else if (state.evt == ViewGameModel.State.Event.RedCard) {
               // Wait 2 sec. for red card
-              await wait(1500);
+              await Task.Delay(1500, token).ContinueWith(_ => { });
             } else if (state.evt == ViewGameModel.State.Event.Offsite) {
               fOffsiteLine = model.game.tl.getOffsiteX(model.game.ball.plAtBallLast.iHA == 0) / (float)model.game.ptPitch.X;
               if (model.game.ball.plAtBall != null) {
@@ -1218,7 +1249,7 @@
               return;
               */
 
-            if (bOffsiteWait) await wait(1000);
+              if (bOffsiteWait) await Task.Delay(1000, token).ContinueWith(_ => { });
               /*
               fOffsiteLine = -1f;
               fPlOffsite = null;
@@ -1229,7 +1260,9 @@
             //await InvokeAsync(StateHasChanged);
           } // if (state.evt != ViewGameModel.State.Event.Wait)
 
-          if (state.iGameSpeedUsed > 2) await wait(state.iGameSpeedUsed);
+          if (state.iGameSpeedUsed > 2) {
+            try { await Task.Delay(state.iGameSpeedUsed, token).ConfigureAwait(false); } catch (OperationCanceledException) { }
+          }
         } else if (state.evt != null) {
           await getGameData();
           if (MainLayout.headline != null) await MainLayout.headline.Refresh();
@@ -1567,6 +1600,7 @@
   private async Task setShootSituation(System.Drawing.Point ptShooter, System.Drawing.Point ptKeeper)
   {
     bStop = true;
+    try { cts?.Cancel(); } catch { }
 
     if (_usr?.game == null) return;
 
@@ -1756,6 +1790,7 @@
   {
     // Fordere laufende Update-Schleifen zum Stoppen auf
     bStop = true;
+    try { cts?.Cancel(); } catch { }
 
     // Warte kurz auf das Ende der Schleifen (sicherer Abbruch)
     for (int i = 0; i < 50 && bRunning; i++) {
@@ -1777,5 +1812,9 @@
 
     // Optional: Reset globaler Flags
     MainLayout.bOnViewGamePage = false;
+
+    // Dispose CTS
+    try { cts?.Dispose(); } catch { }
+    cts = null;
   }
 }
