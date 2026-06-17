@@ -162,13 +162,22 @@
       <Blazorise.Modal @ref="modalGameIni">
         <Blazorise.ModalContent Centered Size="Blazorise.ModalSize.ExtraLarge">
           <Blazorise.ModalHeader>
-            <Blazorise.ModalTitle>Spielvorschau</Blazorise.ModalTitle>
+            <Blazorise.ModalTitle>
+              <div style="display: flex; align-items: center">
+                @if (giPreviewGame != null) {
+                  <div class="cup-emblem_mobile">
+                    @((MarkupString)giPreviewGame.sCupEmblem)
+                  </div>
+                }
+                <div>Spielvorschau</div>
+              </div>
+            </Blazorise.ModalTitle>
             <Blazorise.CloseButton />
           </Blazorise.ModalHeader>
           <Blazorise.ModalBody>
             @if (giPreviewGame != null) {
               <div style="position: relative; width: 100%; max-width: 1000px; height: auto;">
-                <div style="position: absolute; top: 0px; left: 0px; text-align: left; width: 15%;">
+                <div class="cup-emblem_wide">
                   @*
                   @if (giPreviewGame.bCupEmblem != null && giPreviewGame.bCupEmblem.Length > 0) {
                     <img style="width: 100%; object-fit: contain" src="data:image/*;base64,@Convert.ToBase64String(giPreviewGame.bCupEmblem)" onerror="this.onerror=null;this.src='@sErrorImg'" />
@@ -764,6 +773,11 @@
         }
       }
 
+      // Show support info
+      if (CkAppShared.ckMng.dtDatum.Month == 1 && CkAppShared.ckMng.dtDatum.Day == 1 && CkAppShared.ckMng.dtDatum.TimeOfDay.Equals(new TimeSpan(00, 00, 00))) { // New Year
+        showSupportInfo();
+      }
+
       // Check portrait of new players
       if (CkAppShared.ckMng.dtDatum.TimeOfDay.Equals(new TimeSpan(13, 15, 00))) { //  13:15 Uhr (after new jouth player)
         foreach (CornerkickManager.Player p in CkAppShared.ckMng.ltPlayer) {
@@ -1199,6 +1213,17 @@
     sText += "<br />Du kannst dieses Fenster über den Link unter <i>Nachrichten</i> erneut öffnen.";
 
     CkDialog.ckDialog.Show("Beförderung!", sText, sButtonCancelText2: "", actionOnOk: actOnOk);
+  }
+
+  private void showSupportInfo()
+  {
+    string sText = "Bitte unterstütze die Entwicklung von Cornerkick über einen der folgenden Links:<br /><br />";
+    sText += "<p><a href='https://ko-fi.com/B2F720Q0OO' target='_blank'><img height='36' style='border:0px;height:36px;' src='https://storage.ko-fi.com/cdn/kofi5.png?v=6' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a></p>";
+    sText += "<p><iframe src='https://github.com/sponsors/ToniTurek/button' title='Sponsor ToniTurek' height='32' width='114' style='border: 0; border-radius: 6px;'></iframe></p>";
+
+    sText += "Vielen Dank!";
+
+    CkDialog.ckDialog.Show("<i class=\"fa-solid fa-heart\" style=\"color: red\"></i> Unterstütze uns!", sText, sButtonCancelText2: "");
   }
 
   private void SetStadium(int i)
