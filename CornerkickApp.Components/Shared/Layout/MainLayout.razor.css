@@ -81,6 +81,19 @@ div.user-stars-mobile {
   display: none;
 }
 
+.cup-emblem_wide {
+  display: block;
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  text-align: left;
+  width: 15%;
+}
+
+.cup-emblem_mobile {
+  display: none;
+}
+
 @media (max-width: 640.98px) {
   .top-row {
     justify-content: flex-end;
@@ -97,6 +110,16 @@ div.user-stars-mobile {
 
   div.user-stars-mobile {
     display: block;
+  }
+
+  .cup-emblem_wide {
+    display: none;
+  }
+
+  .cup-emblem_mobile {
+    display: block;
+    height: 3rem;
+    margin-right: 0.5rem;
   }
 }
 

@@ -162,13 +162,22 @@
       <Blazorise.Modal @ref="modalGameIni">
         <Blazorise.ModalContent Centered Size="Blazorise.ModalSize.ExtraLarge">
           <Blazorise.ModalHeader>
-            <Blazorise.ModalTitle>Spielvorschau</Blazorise.ModalTitle>
+            <Blazorise.ModalTitle>
+              <div style="display: flex; align-items: center">
+                @if (giPreviewGame != null) {
+                  <div class="cup-emblem_mobile">
+                    @((MarkupString)giPreviewGame.sCupEmblem)
+                  </div>
+                }
+                <div>Spielvorschau</div>
+              </div>
+            </Blazorise.ModalTitle>
             <Blazorise.CloseButton />
           </Blazorise.ModalHeader>
           <Blazorise.ModalBody>
             @if (giPreviewGame != null) {
               <div style="position: relative; width: 100%; max-width: 1000px; height: auto;">
-                <div style="position: absolute; top: 0px; left: 0px; text-align: left; width: 15%;">
+                <div class="cup-emblem_wide">
                   @*
                   @if (giPreviewGame.bCupEmblem != null && giPreviewGame.bCupEmblem.Length > 0) {
                     <img style="width: 100%; object-fit: contain" src="data:image/*;base64,@Convert.ToBase64String(giPreviewGame.bCupEmblem)" onerror="this.onerror=null;this.src='@sErrorImg'" />
