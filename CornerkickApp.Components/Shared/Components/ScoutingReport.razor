@@ -3,13 +3,13 @@
 <Blazorise.Modal @ref="modalSkillDetails">
   <Blazorise.ModalContent Centered Size="Blazorise.ModalSize.ExtraLarge">
     <Blazorise.ModalHeader>
-      <Blazorise.ModalTitle>Scouting-Bericht für: @sPlName</Blazorise.ModalTitle>
+      <Blazorise.ModalTitle>Scouting-Bericht für: <b>@sPlName</b></Blazorise.ModalTitle>
       <Blazorise.CloseButton />
     </Blazorise.ModalHeader>
     <Blazorise.ModalBody>
       @if (_ltScData != null) {
         <div style="position: relative; width: 100%; height: auto; overflow: auto">
-          <ul>
+          <ul style="text-align: left">
             <li><b>Beob. Fähigkeit: </b>@sSkillName</li>
             <li><b>Anzahl Beobachtungen: </b>@_ltScData.Count.ToString()</li>
             <li><b>Durchschnittswert: </b>@fScSkillAve.ToString("0.00")</li>
