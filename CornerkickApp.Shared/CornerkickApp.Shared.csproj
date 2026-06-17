@@ -42,8 +42,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="CornerkickGame" Version="1.0.3" />
-    <PackageReference Include="CornerkickManager" Version="1.0.1" />
+    <PackageReference Include="CornerkickGame" Version="1.0.5" />
+    <PackageReference Include="CornerkickManager" Version="1.0.2" />
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="9.0.4" />
     <PackageReference Include="Microsoft.AspNetCore.Authorization" Version="9.0.4" />
     <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="9.0.4" />
