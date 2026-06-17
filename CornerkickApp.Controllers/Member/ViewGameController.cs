@@ -1228,7 +1228,7 @@ namespace CornerkickApp.Controllers.Member
 
         // Passes
         CornerkickGame.Game.Pass pass = state.pass;
-        if (pass.plPasser != null && pass.plPasser.iHA == jHA) {
+        if (pass?.plPasser != null && pass.plPasser.iHA == jHA) {
           if (pass.plReceiver == null) gD.iPassesBad[jHA]++;
           else if (pass.plReceiver.iHA != pass.plPasser.iHA) gD.iPassesBad[jHA]++;
           else if (pass.plReceiver != pass.plPasser) gD.iPassesGood[jHA]++;
