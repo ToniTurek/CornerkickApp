@@ -567,6 +567,7 @@ namespace CornerkickApp.Controllers.Member
         */
         lr.sText = "Dies ist das Ende des 1. Teils des Tutorials. Starte nun den Zeitablauf in dem du oben rechts auf \"weiter <i class=\"fa fa-play\"></i>\" klickst.";
         lr.sText += "<br><br>Für alles weitere, schau dir die <a href=\"/Home/UserManual\" target=\"_blank\">Anleitung</a> an oder stell deine Frage an <a href=\"mailto:mail@cornerkick-manager.de?subject=Cornerkick Frage\">mail@cornerkick-manager.de</a>.";
+        lr.sText += "<br><br>Weitere Infos über das Spiel und zur Community findest du <a href=\"/info\">hier</a>.";
         //lr.sText += "<br><br>Du kannst dieses Tutorial später noch einmal starten, indem du oben rechts auf deine e-mail klickst und anschließend unter \"Optionen\" den Haken bei \"Tutorial zeigen\" setzt.";
 
         //setLevel(false, 999);
