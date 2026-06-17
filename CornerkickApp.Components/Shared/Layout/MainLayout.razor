@@ -154,7 +154,6 @@
     <Tutorial @ref="tutorial"></Tutorial>
     <CkDialog></CkDialog>
     <CkProgressBar @ref="ckProgressBar"></CkProgressBar>
-    <ScoutingReport @ref="ckScoutingReport"></ScoutingReport>
     @if (CkAppShared.ckMng?.ltUser != null && CkAppShared.ckMng.ltUser.Count > 1 && _usr != null) {
       <div style="position: fixed; right: 4px; bottom: 2px">@_usr.sFirstname @_usr.sSurname</div>
     }
@@ -317,7 +316,6 @@
   public NavMenu? navMenu { get; set; }
 
   public static CkProgressBar? ckProgressBar;
-  public static ScoutingReport? ckScoutingReport;
   public static Blazorise.Modal? modalGameIni;
   private int iCorruptReferee = 0;
   //private float fCorruptReferee = 0f;
