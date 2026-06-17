@@ -226,26 +226,27 @@ namespace CornerkickApp.Controllers.Member
       return null;
     }
 
-    public static string getStringRecordGame(CornerkickManager.Club clb, int iGameType, sbyte iWDD, byte iHA, int iGameType2 = -1, int iGameType3 = -1)
+    public static string? getStringRecordGame(CornerkickManager.Club clb, int iGameType, sbyte iWDD, byte iHA, int iGameType2 = -1, int iGameType3 = -1)
     {
-      CornerkickGame.Game.Data gdRecord = CornerkickManager.UI.getRecordGame(clb, iGameType, iWDD, iHA, iGameType2: iGameType2, iGameType3: iGameType3);
+      CornerkickManager.Club.RecordGame? rg = CornerkickManager.UI.getRecordGame(clb, iGameType, iWDD, iHA, iGameType2: iGameType2, iGameType3: iGameType3);
 
-      if (gdRecord != null) {
-        string sTeamH = gdRecord.team[0].sTeam;
-        string sTeamA = gdRecord.team[1].sTeam;
+      if (rg == null) return null;
 
-        CornerkickManager.Club? clbH = ckMng.ltClubs.Find(c => c.iId == gdRecord.team[0].iTeamId);
-        CornerkickManager.Club? clbA = ckMng.ltClubs.Find(c => c.iId == gdRecord.team[1].iTeamId);
-        if (string.IsNullOrEmpty(sTeamH) && clbH != null) sTeamH = clbH.sName;
-        if (string.IsNullOrEmpty(sTeamA) && clbA != null) sTeamA = clbA.sName;
+      CornerkickManager.Club? clbH = ckMng.ltClubs.Find(c => c.iId == rg.iClubIdH);
+      CornerkickManager.Club? clbA = ckMng.ltClubs.Find(c => c.iId == rg.iClubIdA);
+      if (clbH == null) return null;
+      if (clbA == null) return null;
 
-        string sTeamOpp = sTeamA;
-        if (clb.iId == gdRecord.team[1].iTeamId) sTeamOpp = sTeamH;
+      string sTeamH = clbH.sName;
+      string sTeamA = clbA.sName;
 
-        return gdRecord.team[0].iGoals.ToString() + ":" + gdRecord.team[1].iGoals.ToString() + " vs. " + sTeamOpp + ", " + gdRecord.dt.ToString("d", MemberController.getCi(clb));
-      }
+      if (string.IsNullOrEmpty(sTeamH) && clbH != null) sTeamH = clbH.sName;
+      if (string.IsNullOrEmpty(sTeamA) && clbA != null) sTeamA = clbA.sName;
 
-      return "-";
+      string sTeamOpp = sTeamA;
+      if (clb.iId == rg.iClubIdA) sTeamOpp = sTeamH;
+
+      return rg.iGoalsH.ToString() + ":" + rg.iGoalsA.ToString() + " vs. " + sTeamOpp + ", " + rg.dt.ToString("d", MemberController.getCi(clb));
     }
 
     public static List<DataPointSD>[] getAttrFtr(int iClubId)
