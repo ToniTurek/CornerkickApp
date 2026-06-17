@@ -1,5 +1,7 @@
 ﻿@page "/member/viewgame/{id}"
 
+@implements IAsyncDisposable
+
 @using System.Text.Json
 @using System.Text.Json.Serialization
 @using CornerkickApp.Shared.Models
@@ -202,10 +204,45 @@
           }
         </div>
 
-        <div id="divDrawGameContainer2" style="position: relative; width: 100%; min-height: 28px; margin-bottom: 4px; height: auto;">
-          <div id="divDrawGameContainer" style="position: relative; width: 100%; height: 100%; display: block; top: 0px; left: 0px; z-index: 0;">
+        <div style="position: relative; width: 100%; min-height: 28px; margin-bottom: 4px; height: auto; display: flex; align-items: center">
+          <div id="divDrawGameContainer" style="position: relative; width: 100%; height: 100%; display: block; top: 0px; left: 0px; z-index: 0;" @ref=refFieldContainer>
             <img id="imgGame" style="position: relative; width: 100%; height: auto;" src="@CornerkickApp.Shared.Models.CkAppShared.sContentDir/Images/stadium/field_full.png" alt="">
-            <div id="divDrawGame" style="position: absolute; margin-left: 5%; width: 90%; height: 84%; top: 8%" @ref=refField>
+
+            @* Shoots *@
+            @{
+              if (ltShootLines != null && ltShootLines.Count > 0) {
+                <svg style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:3"
+                     viewBox="0 0 @edFieldContainer.Width @edFieldContainer.Height" preserveAspectRatio="none">
+                  @{
+                    int iShoot = 0;
+                    foreach (var line in ltShootLines) {
+                      List<float[]> path = new List<float[]>();
+                      path.Add(new float[] { line.x0, line.y0 });
+                      path.Add(new float[] { line.x1, line.y1 });
+                      <defs>
+                        <marker id="circle_@iShoot" markerWidth="8" markerHeight="8" refX="4" refY="4">
+                          <circle cx="4" cy="4" r="2" fill="@line.sColor" />
+                        </marker>
+                        <marker id='head_@iShoot'
+                                orient="auto"
+                                markerWidth='6'
+                                markerHeight='6'
+                                refX='5'
+                                refY='3'>
+                          <path d='M0,0 V6 L6,3 Z' fill="@line.sColor" />
+                        </marker>
+                      </defs>
+                      <path d="@GetPathSvg(path)" stroke="@line.sColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" marker-start="url(#circle_@iShoot)" marker-end='url(#head_@iShoot)' />
+
+                      iShoot++;
+                    }
+                  }
+                </svg>
+              }
+            }
+
+            @*<div id="divDrawGame" style="position: absolute; margin-left: 5%; width: 90%; height: 84%; top: 8%" @ref=refField>*@
+            <div id="divDrawGame" style="position: absolute; margin-left: 5%; width: 90%; aspect-ratio: 1.57895; top: 8%" @ref=refField>
               @if (gd != null) {
                 @* Hexagonnetz SVG-Overlay *@
                 <ViewGameGrid @ref="grid" edField="@edField" ptPitch="@gd.ptPitch"></ViewGameGrid>
@@ -254,111 +291,6 @@
 
                 <ViewGamePlayer @ref="player" ptPitch="gd.ptPitch" GameFinished="bFinished"></ViewGamePlayer>
                 <ViewGameBall @ref="ball" ptPitch="gd.ptPitch"></ViewGameBall>
-              }
-
-              @* Half-time information & continue button *@
-              @if (state != null && (state.evt != null || state.bFinished)) {
-                if ((state.evt != null && (state.evt == ViewGameModel.State.Event.NotStarted || state.evt == ViewGameModel.State.Event.HalfTime || state.evt == ViewGameModel.State.Event.FullTime || state.evt == ViewGameModel.State.Event.PenaltyShootout)) || state.bFinished) {
-                  <div style="position: absolute; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; bottom: 4px">
-                    <div style="display: flex; flex-direction: column; height: fit-content; max-height: 100%; background-color: white; padding: 0.5rem; z-index: 10">
-                      @* Half-time information *@
-                      @if (ltScoutedPlayer != null) {
-                        <h5><img src="@CkAppShared.sContentDir/Icons/menu/binoculars.svg" height="20" width="20" /> Spielerbeobachtungen</h5>
-                        <div style="overflow-y: auto">
-                          <table style="border: 1px solid black">
-                            <thead>
-                              <tr style="background-color: lightgrey">
-                                <th class="scouting-row-details">Nr.</th>
-                                <th class="scouting-row-details">Spieler</th>
-                                <th class="scouting-row-details">Min.</th>
-                                <th class="scouting-row-details">Fertigkeit</th>
-                                <th class="scouting-row-details">Wert</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              @foreach (var pd in ltScoutedPlayer) {
-                                if (pd.ltDetails != null && pd.ltDetails.Count > 0) {
-                                  @for (int ipd = 0; ipd < pd.ltDetails.Count; ipd++) {
-                                    var pdd = pd.ltDetails[ipd];
-                                    string sSkillName = pdd.iSkillIx.ToString();
-                                    if (CornerkickManager.Names.sSkills != null && pdd.iSkillIx >= 0 && pdd.iSkillIx < CornerkickManager.Names.sSkills.Length) {
-                                      sSkillName = CornerkickManager.Names.sSkills[pdd.iSkillIx];
-                                    }
-
-                                    <tr style="@(ipd == 0 ? "border-top: 1px solid black" : "")">
-                                      @if (ipd == 0) {
-                                        <th class="scouting-row-details" rowspan="@pd.ltDetails.Count">@pd.pl.iNr</th>
-                                        <th class="scouting-row-details" rowspan="@pd.ltDetails.Count">
-                                          @{
-                                            string sPlName = pd.pl.sName;
-                                            string sPlSurname = "";
-
-                                            string[] sPlNameSplit = pd.pl.sName.Split();
-                                            if (sPlNameSplit.Length > 1) {
-                                              for (int i = 0; i < sPlNameSplit.Length - 1; i++) sPlSurname += sPlNameSplit[i] + " ";
-                                              sPlName = sPlNameSplit[sPlNameSplit.Length - 1];
-                                            }
-                                          }
-                                          <span class="player-name">@sPlSurname</span>
-                                          @sPlName
-                                        </th>
-                                      }
-                                      <td class="scouting-row-details">@(pdd.dt.Minute + 1).</td>
-                                      <td class="scouting-row-details">@sSkillName</td>
-                                      <td class="scouting-row-details">@pdd.iSkill</td>
-                                    </tr>
-                                  }
-                                }
-                              }
-                            </tbody>
-                          </table>
-                        </div>
-                        @*
-                        <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; flex-wrap: wrap; align-content: center; justify-content: center; align-items: center">
-                          @foreach (var pd in ltScoutedPlayer) {
-                            if (pd.ltDetails != null && pd.ltDetails.Count > 0) {
-                              <table>
-                                @for (int ipd = 0; ipd < pd.ltDetails.Count; ipd++) {
-                                  var pdd = pd.ltDetails[ipd];
-                                  string sSkillName = pdd.iSkillIx.ToString();
-                                  if (CornerkickManager.Names.sSkills != null && pdd.iSkillIx >= 0 && pdd.iSkillIx < CornerkickManager.Names.sSkills.Length) {
-                                    sSkillName = CornerkickManager.Names.sSkills[pdd.iSkillIx];
-                                  }
-
-                                  <tr style="border: 1px solid black;">
-                                    @if (ipd == 0) {
-                                      <th rowspan="@pd.ltDetails.Count" style="border: 1px solid black;">@pd.pl.sName</th>
-                                    }
-                                    <td style="font-size: 60%; padding: 0">@pdd.dt.ToShortTimeString()</td>
-                                    <td style="font-size: 60%; padding: 0">@sSkillName</td>
-                                    <td style="font-size: 60%; padding: 0">@pdd.iSkill</td>
-                                  </tr>
-                                }
-                              </table>
-                            }
-                          }
-                        </div>
-                        *@
-                      }
-
-                      <button class="btn btn-primary continue" style="background-color: rgb(@CkAppShared.sClCkRgb2)" @onclick="() => state.bFinished ? GoToDesk() : updateState(bImediately: true)">
-                        @{
-                          string s = "";
-                          if (state.bFinished) {
-                            s = "Zurück zum Schreibtisch";
-                          } else {
-                            <img src="@CornerkickApp.Shared.Models.CkAppShared.sContentDir/Icons/whistle-32-white.png" style="margin-right: 4px" />
-                            s = "Anstoß 2. HZ";
-                            if      (state.evt == ViewGameModel.State.Event.FullTime)        s = "Anstoß Verlängerung";
-                            else if (state.evt == ViewGameModel.State.Event.PenaltyShootout) s = "Start Elfmeterschießen";
-                            else if (!StartGameOnEnter && !bRunning && state.evt == ViewGameModel.State.Event.NotStarted) s = "Anpfiff";
-                          }
-                        }
-                        @s
-                      </button>
-                    </div>
-                  </div>
-                }
               }
             </div>
 
@@ -410,38 +342,55 @@
                     </Blazorise.AccordionHeader>
                     <Blazorise.AccordionBody Style="background-color: rgb(255,255,255,0.25)">
                       <div id="divOptions" style="position: relative; left: 0px; width: fit-content; display: flex; flex-direction: column">
+                        <label style="margin-left:8px">
+                          <input type="checkbox" @onchange="ToggleHexGrid" />
+                          Spielfelder
+                        </label>
                         @if (bFinished) {
+                          <label>
+                            Spielerpos.:
+                            <Blazorise.Select SelectedValue="@model.iPositions" SelectedValueChanged="(i) => SetPlayerPos(i)" TValue="int" Style="width: 100px; margin-right: 4px">
+                              @foreach (LayoutModel.SelectListItem sli in model.ddlPositions) {
+                                <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+                              }
+                            </Blazorise.Select>
+                          </label>
                           <label>
                             Schüsse:
                             <Blazorise.Select SelectedValue="@model.iShoots" SelectedValueChanged="(i) => SetShootLines(i)" TValue="int" Style="width: 100px; margin-right: 4px">
-                              @foreach (LayoutModel.SelectListItem sli in model.ddlHeatmap) {
+                              @foreach (LayoutModel.SelectListItem sli in model.ddlShoots) {
                                 <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
                               }
                             </Blazorise.Select>
                           </label>
                           <label>
                             Heatmap:
-                            <Blazorise.Select SelectedValue="@model.iHeatmap" SelectedValueChanged="(i) => SetHeatmap(i)" TValue="int" Style="width: 100px; margin-right: 4px">
+                            <Blazorise.Select SelectedValue="@model.iHeatmap" SelectedValueChanged="(i) => SetHeatmap(i, 0)" TValue="int" Style="width: 100px; margin-right: 4px">
                               @foreach (LayoutModel.SelectListItem sli in model.ddlHeatmap) {
                                 <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
                               }
                             </Blazorise.Select>
                           </label>
+                        } else {
+                          <label style="margin-left:8px">
+                            <input type="checkbox" @onchange="TogglePlayerPath" />
+                            Zielpositionen
+                          </label>
+                          <label style="margin-left:8px">
+                            <input type="checkbox" @onchange="ToggleOffsiteWait" />
+                            Warte bei Abseits
+                          </label>
                         }
-
-                        <label style="margin-left:8px">
-                          <input type="checkbox" @onchange="ToggleHexGrid" />
-                          Spielfelder
-                        </label>
-                        <label style="margin-left:8px">
-                          <input type="checkbox" @onchange="TogglePlayerPath" />
-                          Zielpositionen
-                        </label>
-                        <label style="margin-left:8px">
-                          <input type="checkbox" @onchange="ToggleOffsiteWait" />
-                          Warte bei Abseits
-                        </label>
-                        
+                        @if (CkAppShared.debug && !bFinished) {
+                          <label>
+                            Gegnerdruck:
+                            <Blazorise.Select SelectedValue="@model.iOppThreat" SelectedValueChanged="(i) => SetHeatmap(i, 1)" TValue="int" Style="width: 100px; margin-right: 4px">
+                              @foreach (LayoutModel.SelectListItem sli in model.ddlOppThreat) {
+                                <Blazorise.SelectItem Value="@sli.Value">@sli.Text</Blazorise.SelectItem>
+                              }
+                            </Blazorise.Select>
+                          </label>
+                        }
                       </div>
                     </Blazorise.AccordionBody>
                   </Blazorise.AccordionItem>
@@ -454,6 +403,114 @@
             </div>
             *@
           </div>
+
+          @* Half-time information & continue button *@
+          @if (state != null && (state.evt != null || state.bFinished) && !(bHideScoutingData && state.bFinished)) {
+            if ((state.evt != null && (state.evt == ViewGameModel.State.Event.NotStarted || state.evt == ViewGameModel.State.Event.HalfTime || state.evt == ViewGameModel.State.Event.FullTime || state.evt == ViewGameModel.State.Event.PenaltyShootout)) || state.bFinished) {
+              <div style="position: absolute; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; bottom: 4px">
+                <div style="display: flex; flex-direction: column; height: fit-content; max-height: 100%; background-color: white; padding: 0.5rem; z-index: 10">
+                  @* Half-time information *@
+                  @if (ltScoutedPlayer != null && !bHideScoutingData) {
+                    <div style="display: flex; justify-content: space-between; align-items: center">
+                      <h5><img src="@CkAppShared.sContentDir/Icons/menu/binoculars.svg" height="20" width="20" /> Spielerbeobachtungen</h5>
+                      <button @onclick="@(() => bHideScoutingData = true)">X</button>
+                    </div>
+                    <div style="overflow-y: auto">
+                      <table style="border: 1px solid black">
+                        <thead>
+                          <tr style="background-color: lightgrey">
+                            <th class="scouting-row-details">Nr.</th>
+                            <th class="scouting-row-details">Spieler</th>
+                            <th class="scouting-row-details">Min.</th>
+                            <th class="scouting-row-details">Fertigkeit</th>
+                            <th class="scouting-row-details">Wert</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @foreach (var pd in ltScoutedPlayer) {
+                            if (pd.ltDetails != null && pd.ltDetails.Count > 0) {
+                              @for (int ipd = 0; ipd < pd.ltDetails.Count; ipd++) {
+                                var pdd = pd.ltDetails[ipd];
+                                string sSkillName = pdd.iSkillIx.ToString();
+                                if (CornerkickManager.Names.sSkills != null && pdd.iSkillIx >= 0 && pdd.iSkillIx < CornerkickManager.Names.sSkills.Length) {
+                                  sSkillName = CornerkickManager.Names.sSkills[pdd.iSkillIx];
+                                }
+
+                                <tr style="@(ipd == 0 ? "border-top: 1px solid black" : "")">
+                                  @if (ipd == 0) {
+                                    <th class="scouting-row-details" rowspan="@pd.ltDetails.Count">@pd.pl.iNr</th>
+                                    <th class="scouting-row-details" rowspan="@pd.ltDetails.Count">
+                                      @{
+                                        string sPlName = pd.pl.sName;
+                                        string sPlSurname = "";
+
+                                        string[] sPlNameSplit = pd.pl.sName.Split();
+                                        if (sPlNameSplit.Length > 1) {
+                                          for (int i = 0; i < sPlNameSplit.Length - 1; i++) sPlSurname += sPlNameSplit[i] + " ";
+                                          sPlName = sPlNameSplit[sPlNameSplit.Length - 1];
+                                        }
+                                      }
+                                      <span class="player-name">@sPlSurname</span>
+                                      @sPlName
+                                    </th>
+                                  }
+                                  <td class="scouting-row-details">@(pdd.dt.Minute + 1).</td>
+                                  <td class="scouting-row-details">@sSkillName</td>
+                                  <td class="scouting-row-details">@pdd.iSkill</td>
+                                </tr>
+                              }
+                            }
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                    @*
+                        <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; flex-wrap: wrap; align-content: center; justify-content: center; align-items: center">
+                          @foreach (var pd in ltScoutedPlayer) {
+                            if (pd.ltDetails != null && pd.ltDetails.Count > 0) {
+                              <table>
+                                @for (int ipd = 0; ipd < pd.ltDetails.Count; ipd++) {
+                                  var pdd = pd.ltDetails[ipd];
+                                  string sSkillName = pdd.iSkillIx.ToString();
+                                  if (CornerkickManager.Names.sSkills != null && pdd.iSkillIx >= 0 && pdd.iSkillIx < CornerkickManager.Names.sSkills.Length) {
+                                    sSkillName = CornerkickManager.Names.sSkills[pdd.iSkillIx];
+                                  }
+
+                                  <tr style="border: 1px solid black;">
+                                    @if (ipd == 0) {
+                                      <th rowspan="@pd.ltDetails.Count" style="border: 1px solid black;">@pd.pl.sName</th>
+                                    }
+                                    <td style="font-size: 60%; padding: 0">@pdd.dt.ToShortTimeString()</td>
+                                    <td style="font-size: 60%; padding: 0">@sSkillName</td>
+                                    <td style="font-size: 60%; padding: 0">@pdd.iSkill</td>
+                                  </tr>
+                                }
+                              </table>
+                            }
+                          }
+                        </div>
+                        *@
+                  }
+
+                  <button class="btn btn-primary continue" style="background-color: rgb(@CkAppShared.sClCkRgb2)" @onclick="() => state.bFinished ? GoToDesk() : updateState(bImediately: true)">
+                    @{
+                      string s = "";
+                      if (state.bFinished) {
+                        s = "Zurück zum Schreibtisch";
+                      } else {
+                        <img src="@CornerkickApp.Shared.Models.CkAppShared.sContentDir/Icons/whistle-32-white.png" style="margin-right: 4px" />
+                        s = "Anstoß 2. HZ";
+                        if (state.evt == ViewGameModel.State.Event.FullTime) s = "Anstoß Verlängerung";
+                        else if (state.evt == ViewGameModel.State.Event.PenaltyShootout) s = "Start Elfmeterschießen";
+                        else if (!StartGameOnEnter && !bRunning && state.evt == ViewGameModel.State.Event.NotStarted) s = "Anpfiff";
+                      }
+                    }
+                    @s
+                  </button>
+                </div>
+              </div>
+            }
+          }
         </div>
 
         <ViewGameComments @ref="comments"></ViewGameComments>
@@ -722,7 +779,7 @@
   CornerkickApp.Components.Pages.Templates.ViewGameBall? ball { get; set; }
   CornerkickApp.Components.Pages.Templates.ViewGameComments? comments { get; set; }
 
-  static RadzenChart? chartPlayerFresh { get; set; }
+  RadzenChart? chartPlayerFresh { get; set; }
   TimeSpan step = TimeSpan.FromMinutes(15);
 
   public static int iClIxH = 0;
@@ -739,6 +796,7 @@
   bool bTeamInfos;
 
   // Element references of field
+  ElementReference refFieldContainer;
   ElementReference refField;
 
   // Grid
@@ -751,6 +809,7 @@
 
   // Heatmap
   ElemDimension edField = new ElemDimension();
+  ElemDimension edFieldContainer = new ElemDimension();
   List<ViewGameModel.HeatmapPoint> ltHeatmap = new List<ViewGameModel.HeatmapPoint>();
 
   // Shoot / Pass lines
@@ -764,6 +823,7 @@
 
   // Player scouting data
   List<CornerkickManager.Main.Staff.Scout.PlayerData>? ltScoutedPlayer = null;
+  bool bHideScoutingData = false;
 
   class DataItem
   {
@@ -931,9 +991,10 @@
       */
 
       edField = await JS.InvokeAsync<ElemDimension>("getElemDimensions", refField);
+      edFieldContainer = await JS.InvokeAsync<ElemDimension>("getElemDimensions", refFieldContainer);
       //int Height = dimension.Height;
       //int Width = dimension.Width;
-      InvokeAsync(StateHasChanged);
+      //InvokeAsync(StateHasChanged);
 
 #if !_WebApp
       bInterruptLiveGame = false;
@@ -1000,6 +1061,8 @@
       iBalanceSecretStart = clb.iBalanceSecret;
     }
 
+    bHideScoutingData = false;
+
     while (!bFinished) {
       if (bStop) {
         bRunning = false;
@@ -1041,6 +1104,7 @@
             // Break for game pause
             if (state.evt == ViewGameModel.State.Event.HalfTime || state.evt == ViewGameModel.State.Event.FullTime || state.evt == ViewGameModel.State.Event.PenaltyShootout) {
               ltScoutedPlayer = Controllers.Member.ViewGameController.GetScoutedPlayer(_usr, model.game.data.dt);
+              bHideScoutingData = false;
               /*
               // Scout home player
               if (clbH.user != null && clbH.ltPlayer != null) {
@@ -1074,6 +1138,7 @@
             if (comments != null)               await comments.update(state.ltComments);
 
             if (bShowPlayerPath) UpdatePath();
+            if (model.iOppThreat >= 0) await GetHeatmap(1);
 
             if (CkAppShared.debug) {
               slRecv = new List<CornerkickApp.Shared.Models.LayoutModel.SelectListItem>();
@@ -1270,7 +1335,7 @@
 
     await getGameData();
     setChartData();
-    await GetHeatmap();
+    await GetHeatmap(model.iOppThreat);
     await GetShootLines();
 
     await InvokeAsync(StateHasChanged);
@@ -1321,15 +1386,35 @@
     }
   }
 
+  private async Task SetPlayerPos(int iPos)
+  {
+    if (model == null) return;
+    model.iPositions = iPos;
+
+    if (player != null && ball != null) {
+      if (iPos < 0) {
+        await player.clear();
+        await ball.clear();
+      } else if (_usr != null && gd != null) {
+        state = await CornerkickApp.Controllers.Member.ViewGameController.getState(_usr, bAverage: iPos == 1);
+        await player.update(state.ltPlayer, gd.sJerseyColors, _sPlActive: sPlActive);
+        await ball.update(state.gBall, 0);
+      }
+    }
+
+    //await InvokeAsync(StateHasChanged);
+  }
+
   private async Task SetShootLines(int iSl)
   {
     if (model == null) return;
     model.iShoots = iSl;
 
+    // Hide players when showing shoot lines
+    if (iSl >= 0) await SetPlayerPos(-1);
+
     ltShootLines.Clear();
     await GetShootLines();
-
-    //if (player   != null) await player.clear();
 
     await InvokeAsync(StateHasChanged);
   }
@@ -1364,15 +1449,19 @@
     */
   }
 
-  private Task SetHeatmap(int iHm)
+  private Task SetHeatmap(int iHm, int iType)
   {
     if (model == null) return Task.CompletedTask;
-    model.iHeatmap = iHm;
+
+    model.iHeatmap   = -1;
+    model.iOppThreat = -1;
+    if      (iType == 0) model.iHeatmap   = iHm;
+    else if (iType == 1) model.iOppThreat = iHm;
 
     ltHeatmap.Clear();
     StateHasChanged();
 
-    GetHeatmap();
+    GetHeatmap(iType);
 
     //if (player   != null) player.clear();
 
@@ -1380,19 +1469,23 @@
 
     return Task.CompletedTask;
   }
-  private Task GetHeatmap()
+  private Task GetHeatmap(int iType)
   {
     if (model == null) return Task.CompletedTask;
 
-    if (model.iHeatmap < 0) return Task.CompletedTask;
-    
+    int iValue = -1;
+    if (iType == 0) iValue = model.iHeatmap;
+    if (iType == 1) iValue = model.iOppThreat;
+    if (iValue < 0) return Task.CompletedTask;
+
     //gd = await CornerkickApp.Controllers.Member.ViewGameController.getStatistics(_usr, iState: iState, iHeatmap: iHm, bAddFMList: false);
     if (gd == null) return Task.CompletedTask;
 
     byte iHA = 0;
     int iPlIx = -1;
-    Controllers.Member.ViewGameController.getStatisticHAPlayerIx(model.iHeatmap, gd.nPlStart, out iHA, out iPlIx);
-    ltHeatmap = Controllers.Member.ViewGameController.getDivHeatmap(_usr, iHA, iState, iPlIx);
+    if      (iType == 0) Controllers.Member.ViewGameController.getStatisticHAPlayerIx(iValue, gd.nPlStart, out iHA, out iPlIx);
+    else if (iType == 1) iHA = (byte)iValue;
+    ltHeatmap = Controllers.Member.ViewGameController.getDivHeatmap(_usr, iHA, iState, iPlIx, iType: iType);
 
     return Task.CompletedTask;
   }
@@ -1539,6 +1632,19 @@
     }
     return sb.ToString();
   }
+  private string GetPathSvg(List<float[]> xy)
+  {
+    if (gd == null || edField.Width == 0 || edField.Height == 0 || xy == null || xy.Count < 2) return string.Empty;
+
+    var sb = new System.Text.StringBuilder();
+    for (int i = 0; i < xy.Count; i++) {
+      float x = (xy[i][0] * edField.Width)  + ((edFieldContainer.Width  - edField.Width ) / 2);
+      float y = (xy[i][1] * edField.Height) + ((edFieldContainer.Height - edField.Height) / 2);
+      if (i == 0) sb.Append($"M{x.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)},{y.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)} ");
+      else        sb.Append($"L{x.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)},{y.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)} ");
+    }
+    return sb.ToString();
+  }
 
   private string[] convertPointToSvgPix(System.Drawing.Point pt)
   {
@@ -1646,4 +1752,30 @@
     return Task.CompletedTask;
   }
 
+  public async ValueTask DisposeAsync()
+  {
+    // Fordere laufende Update-Schleifen zum Stoppen auf
+    bStop = true;
+
+    // Warte kurz auf das Ende der Schleifen (sicherer Abbruch)
+    for (int i = 0; i < 50 && bRunning; i++) {
+      await Task.Delay(100).ConfigureAwait(false);
+    }
+
+    // Dispose JS-Module sicher
+    if (moduleSite != null) {
+      try { await moduleSite.DisposeAsync().ConfigureAwait(false); } catch { }
+      moduleSite = null;
+    }
+    if (module != null) {
+      try { await module.DisposeAsync().ConfigureAwait(false); } catch { }
+      module = null;
+    }
+
+    // Entferne statische UI-Referenzen, damit GC greifen kann
+    chartPlayerFresh = null;
+
+    // Optional: Reset globaler Flags
+    MainLayout.bOnViewGamePage = false;
+  }
 }

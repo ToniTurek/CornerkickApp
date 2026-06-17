@@ -1,9 +1,12 @@
-﻿@using System.Text.Json
+﻿@implements IDisposable
+
+@using System.Text.Json
 @using System.Text.Json.Serialization
 @using CornerkickApp.Shared.Models
 @using CornerkickApp.Controllers.Member
 @using CornerkickApp.Components.Shared.Components
 @using Radzen.Blazor
+@using System.Diagnostics
 
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
@@ -297,6 +300,12 @@
     @*<RadzenComponents @rendermode="RenderMode.InteractiveAuto" />*@
     <RadzenComponents />
     <RadzenDialog />
+
+    @if (CkAppShared.show_memory) {
+      <div id="divDebug" style="position: fixed; bottom: 0px; right: 0px; background-color: white; color: black; font-size: 12px; z-index: 9999">
+        @(managed_mem.ToString("F1") + " / " + process_mem.ToString("F1") + (native_mem > 0d ? " / " + native_mem.ToString("F1") : "")) MB
+      </div>
+    }
   </main>
 
   <script src="./_content/CornerkickApp.Components/js/site.js"></script>
@@ -358,6 +367,14 @@
 #if DEBUG
   string sDocDir { get; set; } = "";
 #endif
+
+  // Display memory consumption
+  private double managed_mem = 0.0;
+  private double process_mem = 0.0;
+  private double native_mem = 0.0;
+  private PeriodicTimer? timer;
+  private CancellationTokenSource? cts;
+  private bool memoryShowing = false;
 
   /*
   private string _userId;
@@ -449,6 +466,8 @@
       SetStadium(iSelectedStadium);
     }
 
+    ShowMemory();
+
 #if DEBUG
     sDocDir = Controllers.App.getDocumentsDir;
 #endif
@@ -460,6 +479,39 @@
       await JS.InvokeAsync<IJSObjectReference>("import", "./_content/CornerkickApp.Components/js/draw.js");
       await JS.InvokeAsync<IJSObjectReference>("import", "./_content/CornerkickApp.Components/js/Formation.js");
     }
+  }
+
+  public void Dispose()
+  {
+    cts?.Cancel();
+    timer?.Dispose();
+    cts?.Dispose();
+  }
+
+  // Display memory consumption every second
+  public void ShowMemory()
+  {
+    if (!CkAppShared.show_memory) return;
+    if (memoryShowing) return;
+
+    memoryShowing = true;
+
+    cts = new CancellationTokenSource();
+    timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+
+    _ = Task.Run(async () => {
+      while (await timer.WaitForNextTickAsync(cts.Token)) {
+        var process = Process.GetCurrentProcess();
+
+        managed_mem = GC.GetTotalMemory(false) / 1024d / 1024d;
+        process_mem = (process.WorkingSet64 / 1024d / 1024d);
+#if ANDROID
+        native_mem = Android.OS.Debug.GetNativeHeapAllocatedSize() / 1024d / 1024d;
+#endif
+
+        await InvokeAsync(StateHasChanged);
+      }
+    });
   }
 
   void setLiveGame()
@@ -504,6 +556,7 @@
 
     if (navMenu != null) navMenu.close();
     if (tutorial != null) tutorial.Close();
+    ShowMemory();
   }
 
   public static async Task showPreviewGame(IJSRuntime JS, PreviewGameModel.GameInfo? gi, bool bButtonKickoff, TeamModel.Player[][]? ltPlayerGameIni = null)

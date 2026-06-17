@@ -85,12 +85,6 @@
               </label>
             </td>
           </tr>
-          <tr>
-            <td><b>Debug mode:</b></td>
-            <td>
-              <input type="checkbox" @bind-value="CkAppShared.debug" style="cursor: pointer" checked="@CkAppShared.debug">
-            </td>
-          </tr>
           @if (CkAppShared.debug && _usr != null) {
             <tr>
               <td><b>User resp. level:</b></td>
@@ -174,6 +168,26 @@
             </td>
           </tr>
           *@
+        </tbody>
+      </table>
+    </div>
+
+    <div>
+      <h4>Debug Einstellungen</h4>
+      <table cellpadding="6" style="white-space: nowrap">
+        <tbody>
+          <tr>
+            <td><b>Debug Modus:</b></td>
+            <td>
+              <input type="checkbox" @bind-value="CkAppShared.debug" style="cursor: pointer" checked="@CkAppShared.debug">
+            </td>
+          </tr>
+          <tr>
+            <td><b>Speicherverbrauch:</b></td>
+            <td>
+              <input type="checkbox" @bind-value="CkAppShared.show_memory" style="cursor: pointer" checked="@CkAppShared.show_memory">
+            </td>
+          </tr>
         </tbody>
       </table>
     </div>

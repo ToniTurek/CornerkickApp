@@ -608,7 +608,7 @@ namespace CornerkickApp.Controllers.Member
           }
 
           // Foul
-          if (gameState.duel.plDef != null && gameState.duel.iResult > 1) {
+          if (gameState.duel?.plDef != null && gameState.duel.iResult > 1) {
             state.evt = gameState.duel.iResult > 3 ? ViewGameModel.State.Event.RedCard : ViewGameModel.State.Event.Foul;
           }
 
@@ -665,7 +665,7 @@ namespace CornerkickApp.Controllers.Member
               gPlayer.bKeeper = CornerkickGame.Tool.checkPlayerIsKeeper(pl, gd2.game.tc[iHA].formation, gd2.game.ptPitch);
               gPlayer.sName = pl.sName;
 
-              if (gameState.duel.plDef != null && gameState.duel.iResult > 2) {
+              if (gameState.duel?.plDef != null && gameState.duel.iResult > 2) {
                 gPlayer.bShowCard = gameState.duel.plDef.iId == pl.iId;
                 if (gPlayer.bShowCard) {
                   if      (pl.iSuspension[gd2.game.iSuspensionIx] > 0) gPlayer.iCard = 3;  // Red card
@@ -921,12 +921,12 @@ namespace CornerkickApp.Controllers.Member
       if (random.NextDouble() < (0.3 / usr.scout.nDataPerScouting) + 0.6) return;
 
       // Scout defence player in duel
-      if (gameState.duel.plDef != null && CornerkickManager.PlayerTool.ownPlayer(clb, gameState.duel.plDef)) {
+      if (gameState.duel?.plDef != null && CornerkickManager.PlayerTool.ownPlayer(clb, gameState.duel.plDef)) {
         AddToScoutedPlayerList(usr, gameState.duel.plDef, dtNow, dtGameStart, CornerkickGame.Game.iSkillIxDuelDef);
       }
 
       // Scout offence player in duel
-      if (gameState.duel.plOff != null && CornerkickManager.PlayerTool.ownPlayer(clb, gameState.duel.plOff)) {
+      if (gameState.duel?.plOff != null && CornerkickManager.PlayerTool.ownPlayer(clb, gameState.duel.plOff)) {
         AddToScoutedPlayerList(usr, gameState.duel.plOff, dtNow, dtGameStart, CornerkickGame.Game.iSkillIxDuelOff);
       }
 
@@ -958,7 +958,7 @@ namespace CornerkickApp.Controllers.Member
       }
 
       // Scout player passing
-      if (gameState.pass.plPasser != null && CornerkickManager.PlayerTool.ownPlayer(clb, gameState.pass.plPasser)) {
+      if (gameState.pass != null && gameState.pass.plPasser != null && CornerkickManager.PlayerTool.ownPlayer(clb, gameState.pass.plPasser)) {
         AddToScoutedPlayerList(usr, gameState.pass.plPasser, dtNow, dtGameStart, gameState.ball.bLow ? CornerkickGame.Game.iSkillIxLowPassPower : CornerkickGame.Game.iSkillIxHighPassPower);
         AddToScoutedPlayerList(usr, gameState.pass.plPasser, dtNow, dtGameStart, gameState.ball.bLow ? CornerkickGame.Game.iSkillIxLowPassAcc   : CornerkickGame.Game.iSkillIxHighPassAcc);
       }
@@ -1235,8 +1235,8 @@ namespace CornerkickApp.Controllers.Member
         }
 
         // Duels
-        CornerkickGame.Game.Duel duel = state.duel;
-        if (duel.plDef != null && duel.plDef.iHA == jHA) {
+        CornerkickGame.Game.Duel? duel = state.duel;
+        if (duel?.plDef != null && duel.plDef.iHA == jHA) {
           if (duel.iResult > 2) {
             string sCardDesc = "<b>" + CornerkickManager.UI.getMinuteString(duel.tsMinute, false) + " Min.:</b> " +
                                 sTeam +
@@ -1552,9 +1552,11 @@ namespace CornerkickApp.Controllers.Member
 
         drawLine.x0 = plShoot.ptPos.X;
         drawLine.y0 = plShoot.ptPos.Y;
-        if (state.shoot.result == CornerkickGame.Game.Shoot.Result.SaveBounce) { // keeper
+        if (state.shoot.result == CornerkickGame.Game.Shoot.Result.SaveBounce || state.shoot.result == CornerkickGame.Game.Shoot.Result.SaveCornerkick) { // keeper
+          // Draw two lines for saved shoot
           CornerkickGame.Player plKeeper = CornerkickGame.Tool.getKeeper(game.player[1 - plShoot.iHA], game.iSuspensionIx, game.tc[plShoot.iHA].formation, game.ptPitch, game.data.nPlStart);
 
+          // 1st: shoot --> keeper
           drawLine.x1 = plKeeper.ptPos.X;
           drawLine.y1 = plKeeper.ptPos.Y;
           drawLine.sColor = "yellow";
@@ -1569,9 +1571,10 @@ namespace CornerkickApp.Controllers.Member
 
           ltDrawLine.Add(drawLine);
 
+          // 2nd line: keeper --> ball position after save
           drawLine = new ViewGameModel.drawLine();
-          drawLine.x0 = ltDrawLine[0].x1;
-          drawLine.y0 = ltDrawLine[0].y1;
+          drawLine.x0 = plKeeper.ptPos.X;
+          drawLine.y0 = plKeeper.ptPos.Y;
         } else if (state.shoot.result == CornerkickGame.Game.Shoot.Result.Post) { // post
           drawLine.x1 = (1 - state.shoot.iHA) * game.ptPitch.X;
           drawLine.y1 = -2;
@@ -1749,7 +1752,7 @@ namespace CornerkickApp.Controllers.Member
       return gD;
     }
 
-    public static List<ViewGameModel.HeatmapPoint> getDivHeatmap(CornerkickManager.User? usr, byte iHA = 0, int iStateMax = 0, int iPlayer = -1)
+    public static List<ViewGameModel.HeatmapPoint> getDivHeatmap(CornerkickManager.User? usr, byte iHA = 0, int iStateMax = 0, int iPlayer = -1, int iType = 0)
     {
       List<ViewGameModel.HeatmapPoint> ltHp = new List<ViewGameModel.HeatmapPoint>();
 
@@ -1759,10 +1762,29 @@ namespace CornerkickApp.Controllers.Member
 
       if (gd2?.game == null) return ltHp;
 
-      float fHeatmapMax = 0f;
-      float[][] fHeatmap = ckMng.ui.getHeatmap(gd2.game, iHA, ref fHeatmapMax, iStateMax, iPlayer);
+      List<CornerkickGame.Player> plOpp = new List<CornerkickGame.Player>();
+      for (int iPl = 0; iPl < gd2.game.data.nPlStart; iPl++) {
+        CornerkickGame.Player pl = gd2.game.player[1 - iHA][iPl];
+        if (pl.checkPlayerValid(gd2.game.iSuspensionIx)) plOpp.Add(pl);
+      }
 
-      string sDiv = "";
+      float fHeatmapMin = float.MaxValue;
+      float fHeatmapMax = float.MinValue;
+      float[][] fHeatmap = new float[gd2.game.ptPitch.X][];
+      if (iType == 0) {
+        fHeatmap = ckMng.ui.getHeatmap(gd2.game, iHA, ref fHeatmapMax, iStateMax, iPlayer);
+      } else if (iType == 1) {
+        for (int iX = 0; iX < gd2.game.ptPitch.X; iX++) {
+          fHeatmap[iX] = new float[2 * gd2.game.ptPitch.Y];
+          for (int iY = -gd2.game.ptPitch.Y; iY < gd2.game.ptPitch.Y; iY++) {
+            fHeatmap[iX][iY + gd2.game.ptPitch.Y] = (float)CornerkickGame.Tool.GetOpponentThreateningFactorTotal(new System.Drawing.Point(iX, iY), iHA, plOpp.ToArray(), gd2.game.ptPitch.X);
+            if (fHeatmap[iX][iY + gd2.game.ptPitch.Y] < fHeatmapMin) fHeatmapMin = fHeatmap[iX][iY + gd2.game.ptPitch.Y];
+            if (fHeatmap[iX][iY + gd2.game.ptPitch.Y] > fHeatmapMax) fHeatmapMax = fHeatmap[iX][iY + gd2.game.ptPitch.Y];
+          }
+        }
+      }
+
+      //string sDiv = "";
 
       for (int iX = 0; iX < fHeatmap.Length; iX++) {
         float fXper = iX / (float)(fHeatmap.Length - 1);
@@ -1774,6 +1796,10 @@ namespace CornerkickApp.Controllers.Member
           fYper -= 0.015f; // - 1.5% (half height)
 
           float fHeat = fHeatmap[iX][iY];
+          if (iType == 1) {
+            //fHeat = 0.5f * (fHeat - fHeatmapMin) / (fHeatmapMax - fHeatmapMin);
+            fHeat = 0.5f * fHeat / fHeatmapMax;
+          }
 
 #if DEBUG
           /*
@@ -1787,7 +1813,7 @@ namespace CornerkickApp.Controllers.Member
           */
 #endif
 
-          if (fHeat == 0f) continue;
+          if (fHeat <= 0f) continue;
 
           int iZindex = 8;
 

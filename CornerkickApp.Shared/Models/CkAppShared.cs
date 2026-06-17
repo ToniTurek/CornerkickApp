@@ -84,6 +84,7 @@ namespace CornerkickApp.Shared.Models
 #else
     public static bool debug = false;
 #endif
+    public static bool show_memory = false;
 
     public static string sCkInstanceName = "";
     public static int iUserActive; // Current active user index

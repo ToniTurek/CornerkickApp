@@ -60,6 +60,8 @@ namespace CornerkickApp.Shared.Models
     public List<SelectListItem> ddlAnimations { get; set; }
 
     public List<CornerkickGame.Game.Shoot>[] ltShoots { get; set; }
+    public int iOppThreat { get; set; }
+    public List<SelectListItem> ddlOppThreat { get; set; }
 
     public int iGameSpeed { get; set; }
 
@@ -375,12 +377,18 @@ namespace CornerkickApp.Shared.Models
       iShoots  = -1;
       iDuels   = -1;
       iPasses  = -1;
+      iOppThreat = -1;
 
       // Positions select
       ddlPositions = new List<SelectListItem>();
-      ddlPositions.Add(new SelectListItem { Text = "aus",         Value = "-1" });
-      ddlPositions.Add(new SelectListItem { Text = "tatsächlich", Value =  "0" });
-      ddlPositions.Add(new SelectListItem { Text = "gemittelt",   Value =  "1" });
+      ddlPositions.Add(new SelectListItem { Text = "aus",       Value = "-1" });
+      ddlPositions.Add(new SelectListItem { Text = "letzte",    Value =  "0" });
+      ddlPositions.Add(new SelectListItem { Text = "gemittelt", Value =  "1" });
+
+      ddlOppThreat = new List<SelectListItem>();
+      ddlOppThreat.Add(new SelectListItem { Text = "aus", Value = "-1" });
+      ddlOppThreat.Add(new SelectListItem { Text = "Heim", Value = "0" });
+      ddlOppThreat.Add(new SelectListItem { Text = "Auswärts", Value = "1" });
 
       iPositions = 0;
     }
