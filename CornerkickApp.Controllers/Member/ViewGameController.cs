@@ -608,7 +608,7 @@ namespace CornerkickApp.Controllers.Member
           }
 
           // Foul
-          if (gameState.duel.plDef != null && gameState.duel.iResult > 1) {
+          if (gameState.duel?.plDef != null && gameState.duel.iResult > 1) {
             state.evt = gameState.duel.iResult > 3 ? ViewGameModel.State.Event.RedCard : ViewGameModel.State.Event.Foul;
           }
 
@@ -665,7 +665,7 @@ namespace CornerkickApp.Controllers.Member
               gPlayer.bKeeper = CornerkickGame.Tool.checkPlayerIsKeeper(pl, gd2.game.tc[iHA].formation, gd2.game.ptPitch);
               gPlayer.sName = pl.sName;
 
-              if (gameState.duel.plDef != null && gameState.duel.iResult > 2) {
+              if (gameState.duel?.plDef != null && gameState.duel.iResult > 2) {
                 gPlayer.bShowCard = gameState.duel.plDef.iId == pl.iId;
                 if (gPlayer.bShowCard) {
                   if      (pl.iSuspension[gd2.game.iSuspensionIx] > 0) gPlayer.iCard = 3;  // Red card
@@ -921,12 +921,12 @@ namespace CornerkickApp.Controllers.Member
       if (random.NextDouble() < (0.3 / usr.scout.nDataPerScouting) + 0.6) return;
 
       // Scout defence player in duel
-      if (gameState.duel.plDef != null && CornerkickManager.PlayerTool.ownPlayer(clb, gameState.duel.plDef)) {
+      if (gameState.duel?.plDef != null && CornerkickManager.PlayerTool.ownPlayer(clb, gameState.duel.plDef)) {
         AddToScoutedPlayerList(usr, gameState.duel.plDef, dtNow, dtGameStart, CornerkickGame.Game.iSkillIxDuelDef);
       }
 
       // Scout offence player in duel
-      if (gameState.duel.plOff != null && CornerkickManager.PlayerTool.ownPlayer(clb, gameState.duel.plOff)) {
+      if (gameState.duel?.plOff != null && CornerkickManager.PlayerTool.ownPlayer(clb, gameState.duel.plOff)) {
         AddToScoutedPlayerList(usr, gameState.duel.plOff, dtNow, dtGameStart, CornerkickGame.Game.iSkillIxDuelOff);
       }
 
@@ -958,7 +958,7 @@ namespace CornerkickApp.Controllers.Member
       }
 
       // Scout player passing
-      if (gameState.pass.plPasser != null && CornerkickManager.PlayerTool.ownPlayer(clb, gameState.pass.plPasser)) {
+      if (gameState.pass != null && gameState.pass.plPasser != null && CornerkickManager.PlayerTool.ownPlayer(clb, gameState.pass.plPasser)) {
         AddToScoutedPlayerList(usr, gameState.pass.plPasser, dtNow, dtGameStart, gameState.ball.bLow ? CornerkickGame.Game.iSkillIxLowPassPower : CornerkickGame.Game.iSkillIxHighPassPower);
         AddToScoutedPlayerList(usr, gameState.pass.plPasser, dtNow, dtGameStart, gameState.ball.bLow ? CornerkickGame.Game.iSkillIxLowPassAcc   : CornerkickGame.Game.iSkillIxHighPassAcc);
       }
@@ -1235,8 +1235,8 @@ namespace CornerkickApp.Controllers.Member
         }
 
         // Duels
-        CornerkickGame.Game.Duel duel = state.duel;
-        if (duel.plDef != null && duel.plDef.iHA == jHA) {
+        CornerkickGame.Game.Duel? duel = state.duel;
+        if (duel?.plDef != null && duel.plDef.iHA == jHA) {
           if (duel.iResult > 2) {
             string sCardDesc = "<b>" + CornerkickManager.UI.getMinuteString(duel.tsMinute, false) + " Min.:</b> " +
                                 sTeam +
