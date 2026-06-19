@@ -367,7 +367,17 @@
 #if !_WebApp
   int iCalSpeed = 10;
   private bool bMultiUser = false;
-  private static bool bCalendarRunning = false;
+  bool _b;
+  private bool bCalendarRunning {
+    get { return _b; }
+    set {
+      _b = value;
+      if (navMenu != null) {
+        navMenu.saveButtonDisabled = _b;
+        _ = navMenu.refresh();
+      }
+    }
+  }
 #endif
   public static bool bOnViewGamePage = false;
 
@@ -616,10 +626,12 @@
     }
   }
 
+  /*
   public static void StopCalendar()
   {
     bCalendarRunning = false;
   }
+  */
 
   private async Task checkNextStepAndContinueWork()
   {
