@@ -321,9 +321,11 @@
 
 @code {
   private bool bLiveGame = false;
-
+#if _WebApp
+  public static NavMenu? navMenu { get; set; }
+#else
   public NavMenu? navMenu { get; set; }
-
+#endif
   public static CkProgressBar? ckProgressBar;
   public static Blazorise.Modal? modalGameIni;
   private int iCorruptReferee = 0;
