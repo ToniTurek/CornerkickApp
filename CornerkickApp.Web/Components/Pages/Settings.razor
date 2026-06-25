@@ -13,6 +13,7 @@
   <h3>Settings</h3>
 
   <a href="/web/log">Log</a>
+  <a href="/web/database">Database</a>
   <p></p>
 
   @if (ModelLoaded) {
@@ -199,8 +200,7 @@
       }
     </select>
     <button class="btn btn-light" style="width:180px" @onclick="ShiftCupAsync">Shift club to league</button>
-  }
-  else {
+  } else {
     <p>Loading...</p>
   }
 </body>

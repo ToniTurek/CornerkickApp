@@ -1,0 +1,83 @@
+﻿@page "/web/database"
+
+@using Microsoft.AspNetCore.Identity
+
+@inject CornerkickApp.Web.Components.Account.IdentityUserAccessor UserAccessor
+@inject UserManager<CornerkickApp.Web.Data.CornerkickAppUser> UserManager
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width" />
+  <title>Database</title>
+</head>
+<body>
+  <h3>Database</h3>
+
+  <a href="/web/settings">Settings</a>
+  <a href="/web/log">Log</a>
+  <p></p>
+
+  @if (lt_users != null) {
+    <p>Nb. of users: @lt_users.Count()</p>
+    <button @onclick="CleanupDbUsers">Clean-up users</button>
+    <table>
+      <thead>
+        <tr>
+          <th style="text-align: center">User</th>
+          <th style="text-align: center">Email</th>
+          <th style="text-align: center">Vorname</th>
+          <th style="text-align: center">Nachname</th>
+          <th style="text-align: center">Vereinsname</th>
+        </tr>
+      </thead>
+      <tbody>
+        @foreach (var user in lt_users) {
+          <tr>
+            <td>@user.UserName</td>
+            <td>@user.Email</td>
+            <td>@user.Vorname</td>
+            <td>@user.Nachname</td>
+            <td>@user.Vereinsname</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</body>
+</html>
+
+@code {
+  private List<CornerkickApp.Web.Data.CornerkickAppUser>? lt_users = default!;
+
+  protected override async Task OnInitializedAsync()
+  {
+    // List users in database
+    lt_users = UserManager.Users.ToList();
+  }
+
+  private async Task CleanupDbUsers()
+  {
+    if (UserManager == null) return;
+    if (lt_users == null) return;
+
+    for (int i = 0; i < lt_users.Count; i++) {
+      var user = lt_users[i];
+      if (string.IsNullOrEmpty(user.Vorname) &&
+          string.IsNullOrEmpty(user.Nachname) &&
+          string.IsNullOrEmpty(user.Vereinsname)) {
+        var result = await UserManager.DeleteAsync(user);
+        if (result.Succeeded) {
+          CornerkickApp.Shared.Models.CkAppShared.ckMng.tl.writeLog($"Deleted user {user.UserName} ({user.Email}) from database.");
+          lt_users.RemoveAt(i);
+          i--;
+          StateHasChanged();
+        } else {
+          CornerkickApp.Shared.Models.CkAppShared.ckMng.tl.writeLog($"Error deleting user {user.UserName} ({user.Email}) from database.", bError: true);
+        }
+      }
+    }
+
+    lt_users = UserManager.Users.ToList();
+  }
+}
