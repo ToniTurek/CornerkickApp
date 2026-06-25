@@ -1,0 +1,347 @@
+﻿@page "/web/settings"
+@using System.Net.Http.Json
+@using CornerkickApp.Shared.Models
+@inject HttpClient Http
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width" />
+  <title>Settings</title>
+</head>
+<body>
+  <h3>Settings</h3>
+
+  <a href="/web/log">Log</a>
+  <p></p>
+
+  @if (ModelLoaded) {
+    <div style="position: relative; width: 100%; margin-bottom: 10px; display: flex; flex-wrap: wrap; justify-content: left">
+      <form onsubmit="event.preventDefault();">
+        <div style="position: relative; width: 100%; margin-bottom: 10px">
+          <input id="fCalendarInterval" @bind="Model.fCalendarInterval" placeholder="calendar interval" autocomplete="off" autofocus style="width:120px" type="tel" />
+          <input id="sStartHour" @bind="Model.sStartHour" placeholder="start hour" autocomplete="off" style="width:120px" type="number" />
+          <input id="iGameSpeed" @bind="Model.iGameSpeed" placeholder="game speed" autocomplete="off" style="width:120px" type="number" />
+        </div>
+
+        <button @onclick="StartOrUpdateCalendarAsync" class="btn btn-light" style="position: relative; width: 180px">
+          @(Model.bTimer ? "Update" : "Start")
+        </button>
+      </form>
+    </div>
+
+    <div style="position: relative; width: 100%; margin-bottom: 10px; display: flex; flex-wrap: wrap; justify-content: left">
+      <button @onclick="StopCalendarAsync" class="btn btn-light" style="position: relative; width: 180px; margin: 4px">Stop</button>
+      <button @onclick="OneStepAsync" class="btn btn-light" style="position: relative; width: 180px; margin: 4px">Next</button>
+      <button @onclick="StepBackAsync" class="btn btn-light" style="position: relative; width: 180px; margin: 4px">Back</button>
+    </div>
+
+    <div style="margin-bottom:10px">
+      <button @onclick="() => SetCalInterval(1)" id="bnSetWeeks1" class="btn btn-light" style="width:180px;margin:4px">1 Day -> 1 Week</button>
+      <button @onclick="() => SetCalInterval(2)" id="bnSetWeeks2" class="btn btn-light" style="width:180px;margin:4px">1 Day -> 2 Weeks</button>
+    </div>
+
+    <p></p>
+    <div>
+      <div>System time: @DateTime.Now.ToString()</div>
+      <div>running: @Model.bCk</div>
+      <div>timer: @Model.bTimer</div>
+      <div>interval: @($"{Model.fCalendarInterval} s")</div>
+      <div>hour: @Model.sStartHour</div>
+      <div>save timer: @Model.bTimerSave</div>
+      <div>No. of Teams: @Model.nClubs</div>
+      <div>No. of User: @Model.nUser</div>
+      <div>No. of Player: @Model.nPlayer</div>
+      <div>Current ck date: @Model.dtCkCurrent</div>
+      <div>Approach ck date: @Model.dtCkApproach</div>
+      <div>Approach interval: @Model.fIntervalAveToApproachTarget.ToString("0.000000")</div>
+    </div>
+
+    <div style="margin-top:8px">
+      <label><input type="checkbox" @bind="Model.bEmailCertification" id="bEmailCertification" /> Email Certification</label>
+      <label><input type="checkbox" @bind="Model.bRegisterDuringGame" id="bRegisterDuringGame" /> Register during game</label>
+      <label><input type="checkbox" @bind="Model.bLoginPossible" id="bLoginPossible" /> Login possible</label>
+      <label><input type="checkbox" @bind="Model.bMaintenance" id="bMaintenance" /> Maintenance</label>
+    </div>
+
+    <p></p>
+    <p style="margin:0px">Info Text</p>
+    <p>
+      <input id="sInfo" @bind="Model.sInfo" placeholder="User info" style="width:300px" />
+    </p>
+
+    <p></p>
+    <p style="margin:0px">Counter</p>
+    <p>
+      <input id="dtCounterStart" type="datetime-local" @bind="Model.dtCounterStart" />
+    </p>
+
+    <div style="margin-top:8px">
+      <button @onclick="RestartCkAsync" class="btn btn-light" style="width:180px">Restart Cornerkick</button>
+    </div>
+
+    <div style="position: relative; width: 50%; min-width: 300px; height: 75px; margin-top: 10px">
+      <button @onclick="DeleteLogAsync" class="btn btn-light" style="position: absolute; width: 180px" disabled="@( !Model.bLogExist )">delete Log</button>
+      <button @onclick="DeleteSaveFolderAsync" class="btn btn-light" style="position: absolute; width: 180px; left: 184px" disabled="@( !Model.bSaveDirExist )">delete save folder</button>
+    </div>
+
+    <div style="position: relative; width: 50%; min-width: 300px; height: 40px; margin-top:8px">
+      <button @onclick="SaveAutosaveAsync" class="btn btn-light" style="position: absolute; width: 180px">save autosave</button>
+      <button @onclick="DeleteAutosaveAsync" class="btn btn-light" style="position: absolute; width: 180px; left: 184px" disabled="@( !Model.bAutosaveExist )">delete autosave</button>
+    </div>
+
+    <div style="position: relative; width: 50%; min-width: 300px; height: 40px; margin-top:8px">
+      <select @bind="Model.sSelectedAutosaveFile" style="position:absolute; width:180px">
+        @foreach (var it in Model.ddlAutosaveFiles) {
+          <option value="@it.Value">@it.Text</option>
+        }
+      </select>
+      <button @onclick="LoadAutosaveAsync" class="btn btn-light" style="position: absolute; width: 180px; left: 184px" disabled="@( !Model.bAutosaveExist )">load autosave</button>
+    </div>
+
+    <div style="margin-top:8px">
+      <select @bind="Model.iSelectedClubAdmin" id="iSelectedClubAdmin" style="width:180px">
+        @foreach (var it in Model.ddlClubsAdmin) {
+          <option value="@it.Value">@it.Text</option>
+        }
+      </select>
+    </div>
+
+    <h3>Unfinished games</h3>
+    <table id="tblUg" class="table table-bordered" style="width:auto">
+      <thead>
+        <tr>
+          <th style="text-align: center">Wettbewerb</th>
+          <th style="text-align: center">Md</th>
+          <th style="text-align: center">Date</th>
+          <th style="text-align: center">Club home</th>
+          <th style="text-align: center">Club away</th>
+          <th style="text-align: center">Goals H</th>
+          <th style="text-align: center">Goals A</th>
+          <th style="text-align: center"></th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (UnfinishedGames != null) {
+          @foreach (var ug in UnfinishedGames) {
+            <tr>
+              <td>@ug.sCupName</td>
+              <td>@ug.iMd</td>
+              <td>@ug.sDate</td>
+              <td>@ug.sClubNameH</td>
+              <td>@ug.sClubNameA</td>
+              <td><input type="tel" @bind="ug.TempGoalsH" style="width:40px" /></td>
+              <td><input type="tel" @bind="ug.TempGoalsA" style="width:40px" /></td>
+              <td><button @onclick="() => SetUnfinishedGameResultAsync(ug)" style="width:40px">set</button></td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+
+    <input id="dtNewGameDate" type="datetime-local" @bind="dtNewGameDate" />
+
+    <h3>Users online</h3>
+    <table id="tblUsers" class="table table-bordered" style="width:auto; font-size: 90%">
+      <thead>
+        <tr>
+          <th style="text-align: center" colspan="2">User</th>
+          <th style="text-align: center">Club</th>
+          <th style="text-align: center">Date</th>
+          <th style="text-align: center">Days</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (Users != null) {
+          @foreach (var u in Users.OrderByDescending(u => u.dtClubStart)) {
+            <tr>
+              <td>@u.sFirstname</td>
+              <td>@u.sSurname</td>
+              <td>@u.club.sName</td>
+              <td style="color:@(((DateTime.Now - u.dtClubStart).TotalDays > 60) ? "red" : "inherit")">@u.dtClubStart.ToString()</td>
+              <td>@((DateTime.Now - u.dtClubStart).TotalDays.ToString("0.0"))</td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+
+    <h3>File Explorer</h3>
+    <div>Home Dir 1: @Model.sHomeDir</div>
+    <div>Home Dir 2: @Model.sHomeDirCk</div>
+    <div>Current Dir: <span id="txtCurDir">@CurrentDir</span></div>
+    <input id="itCurDir" style="width:30%" type="text" readonly value="@CurrentDir" />
+
+    <p></p>
+    <input id="itCd" style="width:30%" type="text" autocomplete="off" @bind="CurrentDirInput" />
+    <button id="bnCd" type="button" class="btn btn-light" @onclick="ChangeDirAsync">Change Dir</button>
+    <div id="divFileExplorer"></div>
+
+    <h3>Transfer money</h3>
+    <select @bind="Model.iClubTransferMoney" style="width:180px">
+      @foreach (var it in Model.ddlClubsTransferMoney) {
+        <option value="@it.Value">@it.Text</option>
+      }
+    </select>
+    <input id="iTransferMoney" @bind="TransferMoneyString" placeholder="value" style="width:120px; text-align:right" />
+    <input id="sTransferMoneySubject" @bind="TransferMoneySubject" placeholder="subject" style="width:120px" />
+    <button class="btn btn-light" style="width:180px" @onclick="TransferMoneyAsync">Transfer money</button>
+
+    <h3>Shift league</h3>
+    <select @bind="Model.iSelectedClub" style="width:180px">
+      @foreach (var it in Model.ddlClubs) {
+        <option value="@it.Value">@it.Text</option>
+      }
+    </select>
+    <select @bind="Model.iSelectedCup" style="width:180px">
+      @foreach (var it in Model.ddlCups) {
+        <option value="@it.Value">@it.Text</option>
+      }
+    </select>
+    <button class="btn btn-light" style="width:180px" @onclick="ShiftCupAsync">Shift club to league</button>
+  }
+  else {
+    <p>Loading...</p>
+  }
+</body>
+</html>
+
+@code {
+  private AdminViewModel Model = new();
+  private bool ModelLoaded = false;
+  private List<CornerkickManager.User>? Users;
+  private List<UnfinishedGame>? UnfinishedGames;
+  private string CurrentDir = ".";
+  private string CurrentDirInput = ".";
+  private DateTime dtNewGameDate { get; set; } = DateTime.Now;
+
+  // transfer money helpers
+  private string TransferMoneyString { get; set; } = "0";
+  private string TransferMoneySubject { get; set; } = "";
+
+  protected override async Task OnInitializedAsync()
+  {
+    // Lade Model und Hilfsdaten vom Server (API-Endpunkte anpassen falls nötig)
+    try {
+      Model = Controllers.AdminController.Settings(); // Initial load from server
+      //Users = await Http.GetFromJsonAsync<List<CornerkickManager.User>>("/Admin/GetUsers");
+      //UnfinishedGames = await Http.GetFromJsonAsync<List<UnfinishedGame>>("/Admin/GetUnfinishedGames");
+    } catch { /* Logging optional */ }
+
+    ModelLoaded = true;
+  }
+
+  private async Task StartOrUpdateCalendarAsync()
+  {
+    Model = Controllers.AdminController.StartCalendar(Model);
+    StateHasChanged();
+  }
+
+  private async Task StopCalendarAsync()
+  {
+    Model = Controllers.AdminController.StopCalendar();
+    StateHasChanged();
+  }
+
+  private async Task OneStepAsync()
+  {
+    Controllers.AdminController.OneStep();
+    StateHasChanged();
+  }
+
+  private async Task StepBackAsync()
+  {
+    Controllers.AdminController.StepBack();
+    StateHasChanged();
+  }
+
+  private void SetCalInterval(int weeks)
+  {
+    var fInterval = (60.0 * 60.0 * 24.0) / (weeks * 4.0 * 24.0 * 7.0);
+    Model.fCalendarInterval = fInterval;
+  }
+
+  private async Task RestartCkAsync()
+  {
+    Controllers.AdminController.RestartCk();
+    StateHasChanged();
+  }
+
+  private async Task DeleteLogAsync()
+  {
+    Controllers.AdminController.DeleteLog();
+    StateHasChanged();
+  }
+
+  private async Task DeleteSaveFolderAsync()
+  {
+    Controllers.AdminController.DeleteSaveFolder();
+    StateHasChanged();
+  }
+
+  private async Task SaveAutosaveAsync()
+  {
+    Controllers.AdminController.SaveAutosave();
+    StateHasChanged();
+  }
+
+  private async Task DeleteAutosaveAsync()
+  {
+    Controllers.AdminController.DeleteAutosave();
+    StateHasChanged();
+  }
+
+  private async Task LoadAutosaveAsync()
+  {
+    Controllers.AdminController.LoadAutosave(Model);
+    StateHasChanged();
+  }
+
+  private async Task ChangeDirAsync()
+  {
+    CurrentDir = CurrentDirInput;
+    var files = await Http.GetStringAsync($"/Admin/getFilesInDirectory?sDir={Uri.EscapeDataString(CurrentDir)}");
+    // Show results in 'divFileExplorer' by JS or populate server-side structure
+    //await JSRuntimeInvoke("setFileExplorerHtml", files);
+  }
+
+  private async Task TransferMoneyAsync()
+  {
+    if (!int.TryParse(TransferMoneyString, out var value)) value = 0;
+    var res = await Http.GetAsync($"/Admin/TransferMoney?iClubTransferMoney={Model.iClubTransferMoney}&iTransferMoney={value}&sTransferMoneySubject={Uri.EscapeDataString(TransferMoneySubject)}");
+  }
+
+  private async Task ShiftCupAsync()
+  {
+    await Http.GetAsync($"/Admin/ShiftClubToLeague?iClub={Model.iSelectedClub}&iCup={Model.iSelectedCup}");
+  }
+
+  private async Task SetUnfinishedGameResultAsync(UnfinishedGame ug)
+  {
+    var dt = dtNewGameDate;
+    await Http.GetAsync($"/Admin/setUnfinishedGameResult?iCupId1={ug.iCupId1}&iCupId2={ug.iCupId2}&iCupId3={ug.iCupId3}&iMd={ug.iMd}&iClubIdH={ug.iClubIdH}&iClubIdA={ug.iClubIdA}&iGoalsH={ug.TempGoalsH}&iGoalsA={ug.TempGoalsA}&dtNewGameDate={Uri.EscapeDataString(dt.ToString("yyyy-MM-ddTHH:mm"))}");
+    // optional: refresh table
+    UnfinishedGames = await Http.GetFromJsonAsync<List<UnfinishedGame>>("/Admin/GetUnfinishedGames");
+  }
+
+  // Helper to call minimal JS for file explorer update
+  [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
+  //private ValueTask JSRuntimeInvoke(string fn, string data) => JSRuntime.InvokeVoidAsync("eval", $"document.getElementById('divFileExplorer').innerHTML = {JsonSerializer.Serialize(data)}");
+
+  // Minimal DTOs for client-side binding (erweitern nach Bedarf)
+  public class UnfinishedGame {
+    public string sCupName { get; set; } = "";
+    public int iMd { get; set; }
+    public string sDate { get; set; } = "";
+    public string sClubNameH { get; set; } = "";
+    public string sClubNameA { get; set; } = "";
+    public int iCupId1 { get; set; }
+    public int iCupId2 { get; set; }
+    public int iCupId3 { get; set; }
+    public int iClubIdH { get; set; }
+    public int iClubIdA { get; set; }
+    // temporary fields for UI
+    public int TempGoalsH { get; set; } = -1;
+    public int TempGoalsA { get; set; } = -1;
+  }
+}

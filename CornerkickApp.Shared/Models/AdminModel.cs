@@ -34,7 +34,7 @@ namespace CornerkickApp.Shared.Models
     }
   }
 
-  public class AdminViewModel
+  public class AdminViewModel : LayoutModel
   {
     public bool bCk { get; set; }
     public bool bTimer { get; set; }
@@ -67,29 +67,28 @@ namespace CornerkickApp.Shared.Models
     public bool bSaveDirExist { get; set; }
 
     public string sSelectedAutosaveFile { get; set; }
-    //public List<SelectListItem> ddlAutosaveFiles { get; set; }
+    public List<SelectListItem> ddlAutosaveFiles { get; set; }
 
     // CPU Clubs to be selected by admin
-    //public List<SelectListItem> ddlClubsAdmin { get; set; }
+    public List<SelectListItem> ddlClubsAdmin { get; set; }
     public int iSelectedClubAdmin { get; set; }
 
     // Transfer Money
-    //public List<SelectListItem> ddlClubsTransferMoney { get; set; }
+    public List<SelectListItem> ddlClubsTransferMoney { get; set; }
     public int iClubTransferMoney { get; set; }
     public int iTransferMoney { get; set; }
     public string sTransferMoneySubject { get; set; }
 
     // CPU Clubs to be selected by admin
-    //public List<SelectListItem> ddlClubs { get; set; }
+    public List<SelectListItem> ddlClubs { get; set; }
     public int iSelectedClub { get; set; }
-    //public List<SelectListItem> ddlCups { get; set; }
+    public List<SelectListItem> ddlCups { get; set; }
     public int iSelectedCup { get; set; }
 
     public AdminViewModel()
     {
-      /*
       ddlAutosaveFiles = new List<SelectListItem>();
-      DirectoryInfo d = new DirectoryInfo(Path.Combine(App.getHomeDir(), "App_Data", "save"));
+      DirectoryInfo d = new DirectoryInfo(Path.Combine(CkAppShared.sAppDataDir, "save"));
       if (d.Exists) {
         FileInfo[] ltCkxFiles = d.GetFiles("*.ckx");
         foreach (FileInfo ckx in ltCkxFiles) {
@@ -105,8 +104,8 @@ namespace CornerkickApp.Shared.Models
       ddlClubs = new List<SelectListItem>();
       ddlClubsAdmin = new List<SelectListItem>();
       ddlClubsTransferMoney = new List<SelectListItem>();
-      for (int iC = 0; iC < App.ckMng?.ltClubs?.Count; iC++) {
-        CornerkickManager.Club clb = App.ckMng.ltClubs[iC];
+      for (int iC = 0; iC < CkAppShared.ckMng?.ltClubs?.Count; iC++) {
+        CornerkickManager.Club clb = CkAppShared.ckMng.ltClubs[iC];
 
         SelectListItem sliClub = new SelectListItem {
           Text = clb.sName,
@@ -122,8 +121,8 @@ namespace CornerkickApp.Shared.Models
       }
 
       ddlCups = new List<SelectListItem>();
-      for (int iC = 0; iC < App.ckMng?.ltCups?.Count; iC++) {
-        CornerkickManager.Cup cup = App.ckMng.ltCups[iC];
+      for (int iC = 0; iC < CkAppShared.ckMng?.ltCups?.Count; iC++) {
+        CornerkickManager.Cup cup = CkAppShared.ckMng.ltCups[iC];
 
         SelectListItem sliCup = new SelectListItem {
           Text = cup.sName,
@@ -131,7 +130,6 @@ namespace CornerkickApp.Shared.Models
         };
         ddlCups.Add(sliCup);
       }
-      */
     }
   }
 }
