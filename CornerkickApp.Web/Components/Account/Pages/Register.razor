@@ -275,7 +275,7 @@
       user.Id = sUserAlreadyRegisteredId;
 
       //addUserToCk(appUser, App.ckMng.ltUser.Count == 0);
-      addUser(user, Input.iLand);
+      addUser(user, Input.iLand, bAdmin: CkAppShared.ckMng.ltUser.Count == 0);
 
       NavManager.NavigateTo("/member/desk");
       //RedirectManager.RedirectTo(ReturnUrl);
