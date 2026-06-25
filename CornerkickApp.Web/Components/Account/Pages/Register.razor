@@ -513,12 +513,16 @@
     clb.ltTactic.Add(new CornerkickGame.Tactic());
     clb.ltTactic[0].formation = CkAppShared.ckMng.ltFormationen[7];
 
+    // Create empty stadium
+    clb.stadium = new CornerkickGame.Stadium();
+    /*
     for (byte iB = 0; iB < 3; iB++) {
       clb.stadium.blocks[iB].iSeats = 2000;
       clb.stadium.blocks[iB].iType = 1;
     }
     for (byte iB = 3; iB < 5; iB++) clb.stadium.blocks[iB].iSeats = 3000;
     for (byte iB = 5; iB < 8; iB++) clb.stadium.blocks[iB].iSeats = 1000;
+    */
 
     // Clear sponsors
     clb.sponsorMain = new CornerkickManager.Finance.Sponsor();
