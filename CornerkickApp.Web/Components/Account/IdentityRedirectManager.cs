@@ -29,7 +29,7 @@ namespace CornerkickApp.Web.Components.Account
             // During static rendering, NavigateTo throws a NavigationException which is handled by the framework as a redirect.
             // So as long as this is called from a statically rendered Identity component, the InvalidOperationException is never thrown.
             navigationManager.NavigateTo(uri);
-            throw new InvalidOperationException($"{nameof(IdentityRedirectManager)} can only be used during static rendering.");
+            //throw new InvalidOperationException($"{nameof(IdentityRedirectManager)} can only be used during static rendering.");
         }
 
         [DoesNotReturn]
