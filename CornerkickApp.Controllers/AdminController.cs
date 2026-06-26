@@ -40,7 +40,7 @@ namespace CornerkickApp.Controllers
       modelAdmin.sInfo               = CkAppShared.settings.sInfo;
       if (CkAppShared.settings.dtCounterStart > DateTime.Now) modelAdmin.dtCounterStart = CkAppShared.settings.dtCounterStart;
       else modelAdmin.dtCounterStart = null;
-      modelAdmin.sHomeDir   = Path.Combine(CkAppShared.sAppDataDir);
+      modelAdmin.sHomeDir   = Path.Combine(App.getHomeDir());
       modelAdmin.sHomeDirCk = CkAppShared.ckMng.settings.sHomeDir;
 
       // Statistics
@@ -59,6 +59,20 @@ namespace CornerkickApp.Controllers
       //FileInfo[] ltCkxFiles = d.GetFiles("*.ckx");
       modelAdmin.bSaveDirExist  = Directory.Exists(Path.Combine(modelAdmin.sHomeDir, "save"));
       if (modelAdmin.bSaveDirExist) modelAdmin.bAutosaveExist = System.IO.File.Exists(Path.Combine(modelAdmin.sHomeDir, "save", ".autosave.ckx"));
+
+      DirectoryInfo d = new DirectoryInfo(Path.Combine(App.getHomeDir(), "save"));
+      if (d.Exists) {
+        FileInfo[] ltCkxFiles = d.GetFiles("*.ckx");
+        foreach (FileInfo ckx in ltCkxFiles) {
+          modelAdmin.ddlAutosaveFiles.Add(
+            new CornerkickApp.Shared.Models.LayoutModel.SelectListItem {
+              Text = ckx.Name,
+              Value = ckx.Name
+            }
+          );
+        }
+      }
+
 
       if (CkAppShared.clubAdmin != null) modelAdmin.iSelectedClubAdmin = CkAppShared.clubAdmin.iId;
 #endif
@@ -159,25 +173,25 @@ namespace CornerkickApp.Controllers
 
     public static void DeleteAutosave()
     {
-      string sFileAutosave = Path.Combine(CkAppShared.sAppDataDir, "save", ".autosave.ckx");
+      string sFileAutosave = Path.Combine(App.getHomeDir(), "save", ".autosave.ckx");
       if (System.IO.File.Exists(sFileAutosave)) System.IO.File.Delete(sFileAutosave);
     }
 
     public static void DeleteSaveFolder()
     {
       // Delete save directory
-      string sDirSave = Path.Combine(CkAppShared.sAppDataDir, "save");
+      string sDirSave = Path.Combine(App.getHomeDir(), "save");
       if (System.IO.Directory.Exists(sDirSave)) System.IO.Directory.Delete(sDirSave, true);
 
       // Delete laststate.txt file
-      string sFileLaststate = Path.Combine(CkAppShared.sAppDataDir, "laststate.txt");
+      string sFileLaststate = Path.Combine(App.getHomeDir(), "laststate.txt");
       if (System.IO.File.Exists(sFileLaststate)) System.IO.File.Delete(sFileLaststate);
     }
 
     public static void LoadAutosave(AdminViewModel modelAdmin)
     {
 #if _WebApp
-      string sFileAutosave = Path.Combine(CkAppShared.sAppDataDir, "save", modelAdmin.sSelectedAutosaveFile);
+      string sFileAutosave = Path.Combine(App.getHomeDir(), "save", modelAdmin.sSelectedAutosaveFile);
       if (System.IO.File.Exists(sFileAutosave)) {
         CkAppShared.timerCkCalender.Enabled = false;
 
@@ -255,7 +269,7 @@ namespace CornerkickApp.Controllers
       */
 
       // Log
-      string sFileLog = Path.Combine(CkAppShared.sAppDataDir, "log", CornerkickManager.Main.sLogFile);
+      string sFileLog = Path.Combine(App.getHomeDir(), "log", CornerkickManager.Main.sLogFile);
       try {
         // Create an instance of StreamReader to read from a file.
         // The using statement also closes the StreamReader.
@@ -274,7 +288,7 @@ namespace CornerkickApp.Controllers
       }
 
       // Error
-      string sFileErr = Path.Combine(CkAppShared.sAppDataDir, "log", CornerkickManager.Main.sErrorFile);
+      string sFileErr = Path.Combine(App.getHomeDir(), "log", CornerkickManager.Main.sErrorFile);
       try {
         // Create an instance of StreamReader to read from a file.
         // The using statement also closes the StreamReader.
@@ -297,7 +311,7 @@ namespace CornerkickApp.Controllers
 
     public static void DeleteLog()
     {
-      var diLog = new DirectoryInfo(Path.Combine(CkAppShared.sAppDataDir, "log"));
+      var diLog = new DirectoryInfo(Path.Combine(App.getHomeDir(), "log"));
       foreach (var file in diLog.EnumerateFiles("*.log")) {
         file.Delete();
       }
@@ -305,7 +319,7 @@ namespace CornerkickApp.Controllers
         file.Delete();
       }
 
-      string sFileLogZip = Path.Combine(CkAppShared.sAppDataDir, "log.zip");
+      string sFileLogZip = Path.Combine(App.getHomeDir(), "log.zip");
       if (System.IO.File.Exists(sFileLogZip)) System.IO.File.Delete(sFileLogZip);
     }
 

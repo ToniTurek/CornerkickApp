@@ -88,19 +88,6 @@ namespace CornerkickApp.Shared.Models
     public AdminViewModel()
     {
       ddlAutosaveFiles = new List<SelectListItem>();
-      DirectoryInfo d = new DirectoryInfo(Path.Combine(CkAppShared.sAppDataDir, "save"));
-      if (d.Exists) {
-        FileInfo[] ltCkxFiles = d.GetFiles("*.ckx");
-        foreach (FileInfo ckx in ltCkxFiles) {
-          ddlAutosaveFiles.Add(
-            new SelectListItem {
-              Text  = ckx.Name,
-              Value = ckx.Name
-            }
-          );
-        }
-      }
-
       ddlClubs = new List<SelectListItem>();
       ddlClubsAdmin = new List<SelectListItem>();
       ddlClubsTransferMoney = new List<SelectListItem>();
