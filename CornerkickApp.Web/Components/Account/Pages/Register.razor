@@ -12,16 +12,16 @@
 @inject UserManager<CornerkickAppUser> UserManager
 @inject IUserStore<CornerkickAppUser> UserStore
 @inject SignInManager<CornerkickAppUser> SignInManager
-@inject IEmailSender<CornerkickAppUser> EmailSender
+@inject CornerkickApp.Web.Services.CkEmailSender EmailSender
 @inject ILogger<Register> Logger
 @inject NavigationManager NavigationManager
-@*@inject IdentityRedirectManager RedirectManager*@
+@inject IdentityRedirectManager RedirectManager
 @inject NavigationManager NavManager
 @inject IJSRuntime JS
 @inject Controllers.Shared.MyAuthenticationStateProvider _auth
 
-@*
 @rendermode InteractiveServer
+@*
 @rendermode InteractiveWebAssembly
 @rendermode InteractiveAuto
 *@
@@ -254,6 +254,8 @@
 
   public async Task RegisterUser(EditContext editContext)
   {
+    ReturnUrl ??= "/member/desk";
+
     CornerkickAppUser user = CreateUser();
     await UserStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
     var emailStore = GetEmailStore();
@@ -268,6 +270,7 @@
     user.sClA2 = Input.ClA2;
     user.sClA3 = Input.ClA3;
     user.Vereinsname = Input.ClubName;
+    user.iLand = Input.iLand;
 
     // User has already registered (is logged-in). Only add him to ck
     if (!string.IsNullOrEmpty(sUserAlreadyRegisteredId)) {
@@ -275,7 +278,7 @@
       user.Id = sUserAlreadyRegisteredId;
 
       //addUserToCk(appUser, App.ckMng.ltUser.Count == 0);
-      addUser(user, Input.iLand, bAdmin: CkAppShared.ckMng.ltUser.Count == 0);
+      addUser(user, bAdmin: CkAppShared.ckMng.ltUser.Count == 0);
 
       NavManager.NavigateTo("/member/desk");
       //RedirectManager.RedirectTo(ReturnUrl);
@@ -292,27 +295,53 @@
 
     Logger.LogInformation("User created a new account with password.");
 
-    var userId = await UserManager.GetUserIdAsync(user);
-    var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
-    code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
-    var callbackUrl = NavigationManager.GetUriWithQueryParameters(
-        NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
-        new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code, ["returnUrl"] = ReturnUrl });
+    if (CkAppShared.ckMng.ltUser.Count == 0/* && bAdminFirst && App.ckMng.ltClubs.Count == 0*/) { // admin user
+      addUser(user, bAdmin: true);
 
-    await EmailSender.SendConfirmationLinkAsync(user, Input.Email, HtmlEncoder.Default.Encode(callbackUrl));
+      NavManager.NavigateTo(ReturnUrl);
+      //return LocalRedirect(ReturnUrl);
+      // END Initialize dummy club
+    } else { // no admin
+      if (UserManager.Options.SignIn.RequireConfirmedAccount) {
+        var userId = await UserManager.GetUserIdAsync(user);
+        var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
+        code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+        var callbackUrl = NavigationManager.GetUriWithQueryParameters(
+            NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
+            new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code, ["returnUrl"] = ReturnUrl });
 
-    if (UserManager.Options.SignIn.RequireConfirmedAccount) {
-      NavManager.NavigateTo("/Account/RegisterConfirmation");
-      /*
-      RedirectManager.RedirectTo(
-          "Account/RegisterConfirmation",
-          new() { ["email"] = Input.Email, ["returnUrl"] = ReturnUrl });
-      */
+        await EmailSender.SendConfirmationLinkAsync(user, Input.Email, HtmlEncoder.Default.Encode(callbackUrl));
+
+        // Send mail to admin
+        if (!string.IsNullOrEmpty(CornerkickApp.Shared.Models.AdminModel.sAdminEmail)) {
+          try {
+            await EmailSender.SendEmailAsync(CornerkickApp.Shared.Models.AdminModel.sAdminEmail, "User registered: " + user.Vorname + " " + user.Nachname, "New user " + user.Vorname + " " + user.Nachname + " has registered (email: " + Input.Email + ")<br/><br/>Confirmation link:<br/>" + callbackUrl);
+          } catch (Exception e) {
+            CkAppShared.ckMng.tl.writeLog("ERROR: Cannot send new user mail to admin. Message: " + e.Message + Environment.NewLine + e.StackTrace, bError: true);
+          }
+        }
+
+        /*
+        NavManager.NavigateTo("/Account/RegisterConfirmation");
+        */
+                RedirectManager.RedirectTo(
+                    "Account/RegisterConfirmation",
+                    new() { ["email"] = Input.Email, ["returnUrl"] = ReturnUrl });
+
+        return;
+      } else {
+        // Add user to game
+        addUser(user);
+
+        NavigationManager.NavigateTo("Account/Login", forceLoad: true);
+      }
+
+      //await SignInManager.SignInAsync(user, isPersistent: false);
+      if (!string.IsNullOrEmpty(ReturnUrl)) {
+        NavManager.NavigateTo(ReturnUrl);
+        //RedirectManager.RedirectTo(ReturnUrl);
+      }
     }
-
-    await SignInManager.SignInAsync(user, isPersistent: false);
-    if (!string.IsNullOrEmpty(ReturnUrl)) NavManager.NavigateTo(ReturnUrl);
-    //RedirectManager.RedirectTo(ReturnUrl);
   }
 
   private CornerkickAppUser CreateUser()
@@ -333,7 +362,7 @@
     return (IUserEmailStore<CornerkickAppUser>)UserStore;
   }
 
-  private void addUser(CornerkickAppUser appUser, int iLand, string sInvitedById = "", bool bAdmin = false, int iClubIdExist = -1/*, HttpPostedFileBase fileEmblem = null*/, byte iLevel = 1)
+  internal static void addUser(CornerkickAppUser appUser, string sInvitedById = "", bool bAdmin = false, int iClubIdExist = -1/*, HttpPostedFileBase fileEmblem = null*/, byte iLevel = 1)
   {
     CornerkickManager.Club? clubExist = null;
     Random rnd = new Random();
@@ -375,20 +404,20 @@
       return;
     }
 
+    if (appUser.iLand < 0) return;
+
     for (int iD = 9; iD >= 0; iD--) {
-      if (CkAppShared.ckMng.ltCups.Find(c => c.iId == CkAppShared.iCupIdLeague && c.iId2 == iLand && c.iId3 == iD) != null) {
+      if (CkAppShared.ckMng.ltCups.Find(c => c.iId == CkAppShared.iCupIdLeague && c.iId2 == appUser.iLand && c.iId3 == iD) != null) {
         iDivision = iD;
         break;
       }
     }
-
-    if (iLand < 0) return;
     if (iDivision < 0) return;
 
     //CornerkickManager.Cup league = CkAppShared.ckMng.tl.getCup(CkAppShared.iCupIdLeague, iLand, iDivision);
     //CornerkickManager.Cup cup    = CkAppShared.ckMng.tl.getCup(CkAppShared.iCupIdNatCup, iLand);
-    CornerkickManager.Cup? league = CkAppShared.ckMng.ltCups.Find(c => c.iId == CkAppShared.iCupIdLeague && c.iId2 == iLand && c.iId3 == iDivision);
-    CornerkickManager.Cup? cup    = CkAppShared.ckMng.ltCups.Find(c => c.iId == CkAppShared.iCupIdNatCup && c.iId2 == iLand);
+    CornerkickManager.Cup? league = CkAppShared.ckMng.ltCups.Find(c => c.iId == CkAppShared.iCupIdLeague && c.iId2 == appUser.iLand && c.iId3 == iDivision);
+    CornerkickManager.Cup? cup    = CkAppShared.ckMng.ltCups.Find(c => c.iId == CkAppShared.iCupIdNatCup && c.iId2 == appUser.iLand);
 
     CornerkickManager.User usr = createUser(appUser);
 
@@ -416,11 +445,11 @@
             clubCpu = null;
             */
 
-              // Retire all cpu player
+            // Retire all cpu player
             while (clubCpu.ltPlayer.Count      > 0) CkAppShared.ckMng.plt.retirePlayer(clubCpu.ltPlayer[0], clubCpu);
             while (clubCpu.ltPlayerJouth.Count > 0) CkAppShared.ckMng.plt.retirePlayer(clubCpu.ltPlayerJouth[0], clubCpu);
 
-            clb = createClub(appUser.Vereinsname, (byte)iLand, (byte)iDivision, usr.iLevel, clbReplace: clubCpu);
+            clb = createClub(appUser.Vereinsname, (byte)appUser.iLand, (byte)iDivision, usr.iLevel, clbReplace: clubCpu);
 
             // Assign club colors
             clubCpu.cl1[0] = System.Drawing.ColorTranslator.FromHtml(appUser.sClH1);
@@ -476,6 +505,8 @@
     }
 
     CornerkickApp.Controllers.AddUser.addUser(appUser.Vorname, appUser.Nachname, clb, iLevel, true, 0, true, sUserId: appUser.Id);
+
+    CornerkickApp.Controllers.App.save();
 
     // Update nav menu
     if (CornerkickApp.Components.Shared.Layout.MainLayout.navMenu != null) CornerkickApp.Components.Shared.Layout.MainLayout.navMenu.refresh(bGetUser: true);

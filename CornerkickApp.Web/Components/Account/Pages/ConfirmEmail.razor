@@ -8,41 +8,51 @@
 @inject UserManager<CornerkickAppUser> UserManager
 @inject IdentityRedirectManager RedirectManager
 
-<PageTitle>Confirm email</PageTitle>
+<PageTitle>Email bestätigt</PageTitle>
 
-<h1>Confirm email</h1>
+<h1>Email bestätigt</h1>
 <StatusMessage Message="@statusMessage" />
 
+<hr style="margin-top: 1rem; margin-bottom: 1rem">
+
+<p>
+  <a href="Account/Login">Zum Login</a>
+</p>
+
 @code {
-    private string? statusMessage;
+  private string? statusMessage;
 
-    [CascadingParameter]
-    private HttpContext HttpContext { get; set; } = default!;
+  [CascadingParameter]
+  private HttpContext HttpContext { get; set; } = default!;
 
-    [SupplyParameterFromQuery]
-    private string? UserId { get; set; }
+  [SupplyParameterFromQuery]
+  private string? UserId { get; set; }
 
-    [SupplyParameterFromQuery]
-    private string? Code { get; set; }
+  [SupplyParameterFromQuery]
+  private string? Code { get; set; }
 
-    protected override async Task OnInitializedAsync()
-    {
-        if (UserId is null || Code is null)
-        {
-            RedirectManager.RedirectTo("");
-        }
-
-        var user = await UserManager.FindByIdAsync(UserId);
-        if (user is null)
-        {
-            HttpContext.Response.StatusCode = StatusCodes.Status404NotFound;
-            statusMessage = $"Error loading user with ID {UserId}";
-        }
-        else
-        {
-            var code = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(Code));
-            var result = await UserManager.ConfirmEmailAsync(user, code);
-            statusMessage = result.Succeeded ? "Thank you for confirming your email." : "Error confirming your email.";
-        }
+  protected override async Task OnInitializedAsync()
+  {
+    if (UserId is null || Code is null) {
+      RedirectManager.RedirectTo("");
     }
+
+    var user = await UserManager.FindByIdAsync(UserId);
+    if (user is null) {
+      HttpContext.Response.StatusCode = StatusCodes.Status404NotFound;
+      statusMessage = $"Error loading user with ID {UserId}";
+    } else {
+      var code = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(Code));
+      var result = await UserManager.ConfirmEmailAsync(user, code);
+
+      if (result.Succeeded) {
+        statusMessage = "Vielen Dank für die Bestätigung Ihrer E-Mail.";
+
+        // Add user to game
+        Register.addUser(user);
+      } else {
+        statusMessage = "Fehler bei der Bestätigung Ihrer E-Mail.";
+      }
+    }
+  }
 }

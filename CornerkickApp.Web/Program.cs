@@ -65,7 +65,11 @@ builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 //Needed for external clients to log in
 builder.Services.AddIdentityApiEndpoints<CornerkickAppUser>(options =>
 {
+#if DEBUG
+  options.SignIn.RequireConfirmedAccount = false;
+#else
   options.SignIn.RequireConfirmedAccount = true;
+#endif
 
   // Customize password requirements
   options.Password.RequireDigit = false;
@@ -82,6 +86,9 @@ builder.Services.AddSingleton<IEmailSender<CornerkickAppUser>, IdentityNoOpEmail
 builder.Services.AddScoped<CornerkickApp.Controllers.Shared.MyAuthenticationStateProvider>();
 builder.Services.AddScoped<CornerkickApp.Controllers.App.TriggerService>();
 builder.Services.AddSingleton<CornerkickApp.Controllers.Shared.Components.Headline.HeadlineController>();
+
+// Configure e-mail service
+builder.Services.AddTransient<CkEmailSender>();
 
 // Radzen
 /*

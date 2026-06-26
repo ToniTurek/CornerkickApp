@@ -5,6 +5,11 @@ namespace CornerkickApp.Web.Data
   // Add profile data for application users by adding properties to the CornerkickAppUser class
   public class CornerkickAppUser : IdentityUser
   {
+    public CornerkickAppUser()
+    {
+      iLand = -1;
+    }
+
     [PersonalData]
     public string Vorname { get; set; } = "";
 
