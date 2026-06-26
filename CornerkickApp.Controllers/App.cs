@@ -641,7 +641,7 @@ namespace CornerkickApp.Controllers
 
     private static void timerSave_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
     {
-      save(CkAppShared.timerCkCalender, true);
+      save(bForce: true);
     }
 
     public static bool performCalendarStep(bool bSave = true)
@@ -746,7 +746,7 @@ namespace CornerkickApp.Controllers
 
       // Save .autosave
       if (bSave && CkAppShared.ckMng.dtDatum.Minute == 0 && CkAppShared.ckMng.dtDatum.Hour % 2 == 0) {
-        save(CkAppShared.timerCkCalender);
+        save(CkAppShared.timerCkCalender.Interval);
       }
 
       if ((CkAppShared.ckMng.dtDatum.Equals(CkAppShared.ckMng.dtSeasonStart) || CkAppShared.ckMng.dtDatum.Year < 1900) &&
@@ -1242,17 +1242,17 @@ namespace CornerkickApp.Controllers
     }
     */
 
-    internal bool saveAsync(System.Timers.Timer timerCkCalender, bool bForce = false)
+    internal bool saveAsync(double timerCalenderInterval = 10000.0, bool bForce = false)
     {
-      Task<bool> tkSave = Task.Run(() => save(timerCkCalender, bForce: bForce));
+      Task<bool> tkSave = Task.Run(() => save(timerCalenderInterval, bForce: bForce));
       //tkSave.Wait();
 
       return tkSave.Result;
     }
-    internal static bool save(System.Timers.Timer timerCkCalender, bool bForce = false)
+    public static bool save(double timerCalenderInterval = 10000.0, bool bForce = false)
     {
       // Don't save if calendar to fast
-      if (timerCkCalender.Interval < 10000 && !bForce) return false;
+      if (timerCalenderInterval < 10000.0 && !bForce) return false;
 
       string sHomeDir = Path.Combine(getHomeDir(), "App_Data");
       if (string.IsNullOrEmpty(sHomeDir)) sHomeDir = CkAppShared.ckMng.settings.sHomeDir;
