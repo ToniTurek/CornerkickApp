@@ -68,20 +68,20 @@ namespace CornerkickApp.Web.Services
 #if RESEND
       IResend resend = ResendClient.Create(sApiKey);
 
+      /* for testing
       var resp = await resend.EmailSendAsync(new EmailMessage() {
         From = "onboarding@resend.dev",
         To = "s.jan@web.de",
         Subject = subject,
         HtmlBody = message,
       });
-      /*
+       */
       var resp = await resend.EmailSendAsync(new EmailMessage() {
         From = sCkFromEmail,
         To = sEmailTo,
         Subject = subject,
         HtmlBody = message,
       });
-       */
 #endif
     }
 
