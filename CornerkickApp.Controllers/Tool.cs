@@ -341,11 +341,13 @@ namespace CornerkickApp.Controllers
       return sNewImageFile;
     }
 
-    public static byte[] resizeImage(byte[]? bImgDatum, int iNewImageWidth)
+    public static byte[] resizeImage(byte[]? bImgDatum, int iNewImageWidth, bool bShrinkOnly = false)
     {
       if (bImgDatum == null) return [];
 
       using (Image imgResized = Image.Load(bImgDatum)) {
+        if (bShrinkOnly && imgResized.Width <= iNewImageWidth) return bImgDatum;
+
         int iHeight = (int)(imgResized.Height * iNewImageWidth / (double)imgResized.Width);
         imgResized.Mutate(x => x.Resize(iNewImageWidth, iHeight));
         return ConvertImageToBytes(imgResized);
