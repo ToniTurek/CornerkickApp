@@ -2798,6 +2798,11 @@ namespace CornerkickApp.Controllers
     }
 #endif
 
+#if _WebApp
+    public const byte nDivisionsDefault = 2;
+#else
+    public const byte nDivisionsDefault = 1;
+#endif
     public static CornerkickManager.Main getCkMngDefault(bool bContinuingTime = false)
     {
       CornerkickManager.Main ckMngDefault = new CornerkickManager.Main(sHomeDir: CkAppShared.sHomeDir,
@@ -2819,8 +2824,6 @@ namespace CornerkickApp.Controllers
       DateTime dtLeagueStart;
       DateTime dtLeagueEnd;
       ckMngDefault.setSeasonStartEndDates(out dtLeagueStart, out dtLeagueEnd);
-
-      const byte nDivisions = 1;
 
       /////////////////////////////////////////////////////////////////////
       // Create nat. Cups and Leagues
@@ -2851,7 +2854,7 @@ namespace CornerkickApp.Controllers
           if (CornerkickManager.Main.sLand != null && CornerkickManager.Main.sLand.Length > iLand) cupIndoor.sName += " " + CornerkickManager.Main.sLand[iLand];
           cupIndoor.settings.fAttraction = 0.5f;
           cupIndoor.settings.iNeutral = 1;
-          cupIndoor.settings.nGroups = 4 * nDivisions;
+          cupIndoor.settings.nGroups = 4 * nDivisionsDefault;
           cupIndoor.settings.nQualifierKo = 2;
 
           cupIndoor.settings.nGameMin = 12;
@@ -2870,7 +2873,7 @@ namespace CornerkickApp.Controllers
           ckMngDefault.ltCups.Add(cupIndoor);
 
           // Create leagues
-          for (byte iD = 0; iD < nDivisions; iD++) {
+          for (byte iD = 0; iD < nDivisionsDefault; iD++) {
             progress.Report([iLand, iD, iCount]);
 
             CornerkickManager.Cup league = new CornerkickManager.Cup(nGroups: 1, bGroupsTwoGames: true);

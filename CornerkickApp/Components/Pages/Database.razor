@@ -157,7 +157,7 @@
   {
     string sDbInfo = "Standard Datensatz - ";
     foreach (int iN in CornerkickApp.Services.StartGameService.iNationsDefaultDb) {
-      sDbInfo += CornerkickManager.Main.sLandShort[iN] + "(2), ";
+      sDbInfo += CornerkickManager.Main.sLandShort[iN] + (CornerkickApp.Controllers.App.nDivisionsDefault > 1 ? "(2)" : "") + ", ";
     }
     sDbInfo = sDbInfo.Trim();
     sDbInfo = sDbInfo.Remove(sDbInfo.Length - 1, 1);
