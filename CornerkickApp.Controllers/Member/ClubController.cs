@@ -105,20 +105,22 @@ namespace CornerkickApp.Controllers.Member
     {
       if (!string.IsNullOrEmpty(sStyle)) sStyle = " style=\"" + sStyle + "\"";
 
-      return "<img src=\"" + getClubEmblemImgSrc(clb, bTiny: bTiny) + "\"" + sStyle + " title=\"" + (clb != null ? clb.sName : "") + "\" alt=\"Wappen\" />";
+      return "<img src=\"" + getClubEmblemImgSrc(clb, bTiny: bTiny) + "\"" + sStyle + " title=\"" + (clb != null ? clb.sName : "") + "\" alt=\"Wappen\" onerror=\"this.src='" + sContentDir + "/Images/club_default.png';\" />";
     }
 
     public static string getClubEmblemImgSrc(CornerkickManager.Club? clb, bool bTiny = false)
     {
 #if _WebApp
-      string sEmblem = sContentDir + "/Uploads/emblems/";
-      if (clb == null) return sEmblem + "0.png\" alt=\"Wappen\" ";
+      if (clb == null || clb.user == null) return sContentDir + "/Images/club_default.png\" alt=\"Wappen\" ";
+
+      if (bTiny) return sContentDir + "/Uploads/emblems/" + clb.iId.ToString() + "_tiny.png";
+
+      return sContentDir + "/Uploads/emblems/" + clb.iId.ToString() + ".png";
 #else
       string sEmblemDefault = sContentDir + "/Uploads/emblems/0.png";
       if (clb == null) return sEmblemDefault;
 
       string sEmblem;
-#endif
 
       byte[]? bEmblem = getClubEmblemFile(clb, bTiny: bTiny);
 
@@ -126,11 +128,7 @@ namespace CornerkickApp.Controllers.Member
         bEmblem = getClubEmblemFile(clb, bTiny: false);
 
         if (bEmblem != null) {
-#if _WebApp
-          string sTinyEmblemDir = sContentDir + "/Uploads/emblems/.tiny";
-#else
           string sTinyEmblemDir = Path.Combine(App.getMediaDir(ckMng.sDatabaseName), "images", "emblems", ".tiny");
-#endif
           if (!Directory.Exists(sTinyEmblemDir)) {
             Directory.CreateDirectory(sTinyEmblemDir);
           }
@@ -158,30 +156,17 @@ namespace CornerkickApp.Controllers.Member
         bTiny = false;
       } else {
         if (bEmblem != null) {
-#if _WebApp
-          sEmblem += clb.iId.ToString();
-#else
           // style=\"height: 100%; width: 100%; object-fit: contain\"
           sEmblem = "data:image/*;base64," + @Convert.ToBase64String(bEmblem);
-#endif
         } else {
           bTiny = false;
 
-#if _WebApp
-          sEmblem += "0";
-#else
           return sEmblemDefault;
-#endif
         }
       }
 
-#if _WebApp
-      if (bTiny) sEmblem += "_tiny";
-
-      sEmblem += ".png";
-#endif
-
       return sEmblem;
+#endif
     }
     public static byte[]? getClubEmblemFile(CornerkickManager.Club clb, bool bTiny = false)
     {
