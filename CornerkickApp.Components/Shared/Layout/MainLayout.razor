@@ -321,9 +321,11 @@
 
 @code {
   private bool bLiveGame = false;
-
+#if _WebApp
+  public static NavMenu? navMenu { get; set; }
+#else
   public NavMenu? navMenu { get; set; }
-
+#endif
   public static CkProgressBar? ckProgressBar;
   public static Blazorise.Modal? modalGameIni;
   private int iCorruptReferee = 0;
@@ -367,13 +369,19 @@
 #if !_WebApp
   int iCalSpeed = 10;
   private bool bMultiUser = false;
-  private static bool bCalendarRunning = false;
+  bool _b;
+  private bool bCalendarRunning {
+    get { return _b; }
+    set {
+      _b = value;
+      if (navMenu != null) {
+        navMenu.saveButtonDisabled = _b;
+        _ = navMenu.refresh();
+      }
+    }
+  }
 #endif
   public static bool bOnViewGamePage = false;
-
-#if DEBUG
-  string sDocDir { get; set; } = "";
-#endif
 
   // Display memory consumption
   private double managed_mem = 0.0;
@@ -474,10 +482,6 @@
     }
 
     ShowMemory();
-
-#if DEBUG
-    sDocDir = Controllers.App.getDocumentsDir;
-#endif
   }
 
   protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -616,10 +620,12 @@
     }
   }
 
+  /*
   public static void StopCalendar()
   {
     bCalendarRunning = false;
   }
+  */
 
   private async Task checkNextStepAndContinueWork()
   {

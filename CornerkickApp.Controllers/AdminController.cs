@@ -9,7 +9,7 @@ namespace CornerkickApp.Controllers
 {
   public class AdminController
   {
-    public AdminViewModel Settings()
+    public static AdminViewModel Settings()
     {
       AdminViewModel modelAdmin = new AdminViewModel();
 #if _WebApp
@@ -40,7 +40,7 @@ namespace CornerkickApp.Controllers
       modelAdmin.sInfo               = CkAppShared.settings.sInfo;
       if (CkAppShared.settings.dtCounterStart > DateTime.Now) modelAdmin.dtCounterStart = CkAppShared.settings.dtCounterStart;
       else modelAdmin.dtCounterStart = null;
-      modelAdmin.sHomeDir   = Path.Combine(App.getHomeDir(), "App_Data");
+      modelAdmin.sHomeDir   = Path.Combine(CkAppShared.sAppDataDir);
       modelAdmin.sHomeDirCk = CkAppShared.ckMng.settings.sHomeDir;
 
       // Statistics
@@ -60,13 +60,27 @@ namespace CornerkickApp.Controllers
       modelAdmin.bSaveDirExist  = Directory.Exists(Path.Combine(modelAdmin.sHomeDir, "save"));
       if (modelAdmin.bSaveDirExist) modelAdmin.bAutosaveExist = System.IO.File.Exists(Path.Combine(modelAdmin.sHomeDir, "save", ".autosave.ckx"));
 
+      DirectoryInfo d = new DirectoryInfo(Path.Combine(CkAppShared.sAppDataDir, "save"));
+      if (d.Exists) {
+        FileInfo[] ltCkxFiles = d.GetFiles("*.ckx");
+        foreach (FileInfo ckx in ltCkxFiles) {
+          modelAdmin.ddlAutosaveFiles.Add(
+            new CornerkickApp.Shared.Models.LayoutModel.SelectListItem {
+              Text = ckx.Name,
+              Value = ckx.Name
+            }
+          );
+        }
+      }
+
+
       if (CkAppShared.clubAdmin != null) modelAdmin.iSelectedClubAdmin = CkAppShared.clubAdmin.iId;
 #endif
 
       return modelAdmin;
     }
 
-    public void StartCalendar(AdminViewModel modelAdmin)
+    public static AdminViewModel StartCalendar(AdminViewModel modelAdmin)
     {
 #if _WebApp
       /*
@@ -82,7 +96,7 @@ namespace CornerkickApp.Controllers
 
       if (modelAdmin.fCalendarInterval < 1E-6) {
         CkAppShared.timerCkCalender.Enabled = false;
-        return;
+        return Settings();
       }
 
       /*
@@ -103,6 +117,8 @@ namespace CornerkickApp.Controllers
       // Save last state
       App.saveLaststate(CkAppShared.ckMng.settings.sHomeDir);
 #endif
+
+      return Settings();
     }
 
     public static void setGameSpeedToAllUsers(int iGameSpeed)
@@ -113,7 +129,7 @@ namespace CornerkickApp.Controllers
       }
     }
 
-    public void StopCalendar(AdminModel modelAdmin)
+    public static AdminViewModel StopCalendar()
     {
 #if _WebApp
       CkAppShared.timerCkCalender.Enabled = false;
@@ -122,9 +138,11 @@ namespace CornerkickApp.Controllers
       // Save last state
       App.saveLaststate(CkAppShared.ckMng.settings.sHomeDir);
 #endif
+
+      return Settings();
     }
 
-    public void OneStep()
+    public static void OneStep()
     {
 #if _WebApp
       // Do one step now
@@ -132,12 +150,12 @@ namespace CornerkickApp.Controllers
 #endif
     }
 
-    public void StepBack()
+    public static void StepBack()
     {
       CkAppShared.ckMng.dtDatum = CkAppShared.ckMng.dtDatum.AddMinutes(-15);
     }
 
-    public void RestartCk(AdminModel modelAdmin)
+    public static void RestartCk()
     {
 #if _WebApp
       if (CkAppShared.timerCkCalender != null) CkAppShared.timerCkCalender.Enabled = false;
@@ -146,34 +164,34 @@ namespace CornerkickApp.Controllers
 #endif
     }
 
-    public void SaveAutosave()
+    public static void SaveAutosave()
     {
 #if _WebApp
-      App.save(CkAppShared.timerCkCalender, true);
+      App.save(bForce: true);
 #endif
     }
 
-    public void DeleteAutosave()
+    public static void DeleteAutosave()
     {
-      string sFileAutosave = Path.Combine(App.getHomeDir(), "App_Data", "save", ".autosave.ckx");
+      string sFileAutosave = Path.Combine(CkAppShared.sAppDataDir, "save", ".autosave.ckx");
       if (System.IO.File.Exists(sFileAutosave)) System.IO.File.Delete(sFileAutosave);
     }
 
-    public void DeleteSaveFolder()
+    public static void DeleteSaveFolder()
     {
       // Delete save directory
-      string sDirSave = Path.Combine(App.getHomeDir(), "App_Data", "save");
+      string sDirSave = Path.Combine(CkAppShared.sAppDataDir, "save");
       if (System.IO.Directory.Exists(sDirSave)) System.IO.Directory.Delete(sDirSave, true);
 
       // Delete laststate.txt file
-      string sFileLaststate = Path.Combine(App.getHomeDir(), "App_Data", "laststate.txt");
+      string sFileLaststate = Path.Combine(CkAppShared.sAppDataDir, "laststate.txt");
       if (System.IO.File.Exists(sFileLaststate)) System.IO.File.Delete(sFileLaststate);
     }
 
-    public void LoadAutosave(AdminViewModel modelAdmin)
+    public static void LoadAutosave(AdminViewModel modelAdmin)
     {
 #if _WebApp
-      string sFileAutosave = Path.Combine(App.getHomeDir(), "App_Data", "save", modelAdmin.sSelectedAutosaveFile);
+      string sFileAutosave = Path.Combine(CkAppShared.sAppDataDir, "save", modelAdmin.sSelectedAutosaveFile);
       if (System.IO.File.Exists(sFileAutosave)) {
         CkAppShared.timerCkCalender.Enabled = false;
 
@@ -184,7 +202,7 @@ namespace CornerkickApp.Controllers
 #endif
     }
 
-    public string TransferMoney(int iClubTransferMoney, int iTransferMoney, string sTransferMoneySubject)
+    public static string TransferMoney(int iClubTransferMoney, int iTransferMoney, string sTransferMoneySubject)
     {
       if (iTransferMoney == 0) return "";
 
@@ -202,7 +220,7 @@ namespace CornerkickApp.Controllers
       return "";
     }
 
-    public string ShiftClubToLeague(int iClub, int iCup)
+    public static string ShiftClubToLeague(int iClub, int iCup)
     {
       CornerkickManager.Club? clb = CkAppShared.ckMng.ltClubs.Find(c => c.iId == iClub);
       if (clb == null) return "";
@@ -219,7 +237,7 @@ namespace CornerkickApp.Controllers
       return "Club " + clb.sName + " in Liga " + cup.sName + " verschoben";
     }
 
-    public void setSettings(bool bEmailCertification, bool bRegisterDuringGame, bool bLoginPossible, bool bMaintenance, string sInfo, DateTime dtCounterStart)
+    public static void setSettings(bool bEmailCertification, bool bRegisterDuringGame, bool bLoginPossible, bool bMaintenance, string sInfo, DateTime dtCounterStart)
     {
        CkAppShared.settings.bEmailCertification = bEmailCertification;
        CkAppShared.settings.bRegisterDuringGame = bRegisterDuringGame;
@@ -229,7 +247,7 @@ namespace CornerkickApp.Controllers
        CkAppShared.settings.dtCounterStart      = dtCounterStart;
     }
 
-    public AdminViewModel Log()
+    public static AdminViewModel Log()
     {
       AdminViewModel modelAdmin = new AdminViewModel();
 
@@ -251,7 +269,7 @@ namespace CornerkickApp.Controllers
       */
 
       // Log
-      string sFileLog = Path.Combine(App.getHomeDir(), "App_Data", "log", CornerkickManager.Main.sLogFile);
+      string sFileLog = Path.Combine(CkAppShared.sAppDataDir, "log", CornerkickManager.Main.sLogFile);
       try {
         // Create an instance of StreamReader to read from a file.
         // The using statement also closes the StreamReader.
@@ -270,7 +288,7 @@ namespace CornerkickApp.Controllers
       }
 
       // Error
-      string sFileErr = Path.Combine(App.getHomeDir(), "App_Data", "log", CornerkickManager.Main.sErrorFile);
+      string sFileErr = Path.Combine(CkAppShared.sAppDataDir, "log", CornerkickManager.Main.sErrorFile);
       try {
         // Create an instance of StreamReader to read from a file.
         // The using statement also closes the StreamReader.
@@ -291,9 +309,9 @@ namespace CornerkickApp.Controllers
       return modelAdmin;
     }
 
-    public void DeleteLog()
+    public static void DeleteLog()
     {
-      var diLog = new DirectoryInfo(Path.Combine(App.getHomeDir(), "App_Data", "log"));
+      var diLog = new DirectoryInfo(Path.Combine(CkAppShared.sAppDataDir, "log"));
       foreach (var file in diLog.EnumerateFiles("*.log")) {
         file.Delete();
       }
@@ -301,17 +319,17 @@ namespace CornerkickApp.Controllers
         file.Delete();
       }
 
-      string sFileLogZip = Path.Combine(App.getHomeDir(), "App_Data", "log.zip");
+      string sFileLogZip = Path.Combine(CkAppShared.sAppDataDir, "log.zip");
       if (System.IO.File.Exists(sFileLogZip)) System.IO.File.Delete(sFileLogZip);
     }
 
-    public string getFilesInDirectory(string sDir = ".")
+    public static string getFilesInDirectory(string sDir = ".")
     {
       //if (string.IsNullOrEmpty(sDir) || sDir.Equals(".")) sDir = Server.MapPath("~");
       if (string.IsNullOrEmpty(sDir)) {
         sDir = ".";
       } else {
-        sDir = Path.Combine(App.getHomeDir(), sDir);
+        sDir = Path.Combine(CkAppShared.sHomeDir, sDir);
       }
 
       DirectoryInfo d = new DirectoryInfo(sDir);
@@ -349,7 +367,7 @@ namespace CornerkickApp.Controllers
       public string sClubNameH { get; set; } = "";
       public string sClubNameA { get; set; } = "";
     }
-    public List<UnfinishedGame> GetUnfinishedGames()
+    public static List<UnfinishedGame> GetUnfinishedGames()
     {
       List<UnfinishedGame> ltUg = new List<UnfinishedGame>();
 
@@ -421,7 +439,7 @@ namespace CornerkickApp.Controllers
       return new { result = false, message = "Clubs not found!" };
     }
 
-    public void SetAdminClub(int iClubIx)
+    public static void SetAdminClub(int iClubIx)
     {
       CkAppShared.clubAdmin = null;
 
@@ -478,14 +496,8 @@ namespace CornerkickApp.Controllers
         while (usr.club.ltPlayer.Count < 22) CkAppShared.ckMng.plt.newPlayer(club: usr.club);
 
         // Delete emblem
-        string sBaseDir = CkAppShared.sWwwRootDir;
-        if (string.IsNullOrEmpty(sBaseDir)) sBaseDir = App.getHomeDir();
-#if !DEBUG
-        sBaseDir = System.IO.Directory.GetParent(sBaseDir).FullName;
-#endif
-
         foreach (string sFileExt in new string[3] { ".png", ".jpg", ".gif" }) {
-          string sFilenameLocal = Path.Combine(sBaseDir, "Content", "Uploads", "emblems", usr.club.iId.ToString() + sFileExt);
+          string sFilenameLocal = Path.Combine(CkAppShared.sAppDataDir, "Content", "Uploads", "emblems", usr.club.iId.ToString() + sFileExt);
           try {
             System.IO.File.Delete(sFilenameLocal);
           } catch {

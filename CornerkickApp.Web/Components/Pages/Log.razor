@@ -1,0 +1,62 @@
+﻿@page "/web/log"
+@using CornerkickApp.Shared.Models
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width" />
+  <title>Settings</title>
+</head>
+<body>
+  <h3>Log</h3>
+
+  <a href="/web/settings">Settings</a>
+  <a href="/web/database">Database</a>
+  <p></p>
+  <div style="position: absolute; top: 0px; right: 0px">
+    <label>
+      <input type="checkbox" @bind="cbDownUploadLogs" value="false">
+      Down-/Upload logs
+    </label>
+  </div>
+  <table id="tblLog" style="width: 100%">
+    <tbody style="display: block; border: 1px solid black; height: 300px; overflow: scroll">
+      @if (Model.ltLog != null) {
+        foreach (var log in Model.ltLog) {
+          <tr>
+            <td>@log</td>
+          </tr>
+        }
+      }
+    </tbody>
+  </table>
+
+  <h3>Error</h3>
+  <table id="tblErr" style="width: 100%">
+    <tbody style="display: block; border: 1px solid black; height: 300px; overflow: scroll">
+      @if (Model.ltErr != null) {
+        foreach (var err in Model.ltErr) {
+          <tr>
+            <td>@err</td>
+          </tr>
+        }
+      }
+    </tbody>
+  </table>
+</body>
+</html>
+
+@code {
+  private AdminViewModel Model = new();
+  bool cbDownUploadLogs = false;
+
+  protected override async Task OnInitializedAsync()
+  {
+    // Lade Model und Hilfsdaten vom Server (API-Endpunkte anpassen falls nötig)
+    try {
+      Model = Controllers.AdminController.Log(); // Initial load from server
+      //Users = await Http.GetFromJsonAsync<List<CornerkickManager.User>>("/Admin/GetUsers");
+      //UnfinishedGames = await Http.GetFromJsonAsync<List<UnfinishedGame>>("/Admin/GetUnfinishedGames");
+    } catch { /* Logging optional */ }
+  }
+}

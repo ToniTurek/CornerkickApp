@@ -368,7 +368,7 @@
 
   public bool saveButtonHidden = false;
   public bool saveAsButtonHidden = false;
-  bool saveButtonDisabled = false;
+  public bool saveButtonDisabled = false;
 
   int iUserRespLevel = 0;
 
@@ -445,7 +445,7 @@
       }
 
 #if !_WebApp
-      setSaveButtonVisibility();
+      _ = setSaveButtonVisibility();
 #endif
     }
     await InvokeAsync(StateHasChanged);
@@ -482,7 +482,7 @@
   {
     saveButtonHidden = string.IsNullOrEmpty(CkAppShared.sFileCk) || Controllers.Member.MemberController.checkUserGame2(_usr);
     saveAsButtonHidden = Controllers.Member.MemberController.checkUserGame2(_usr);
-    StateHasChanged();
+    //StateHasChanged();
     return Task.CompletedTask;
   }
 

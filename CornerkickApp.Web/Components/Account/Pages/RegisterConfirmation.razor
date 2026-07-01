@@ -12,10 +12,11 @@
 
 <PageTitle>Register confirmation</PageTitle>
 
-<h1>Register confirmation</h1>
+<h1>Registrierung bestätigen</h1>
 
 <StatusMessage Message="@statusMessage" />
 
+@*
 @if (emailConfirmationLink is not null)
 {
     <p>
@@ -23,46 +24,59 @@
         Normally this would be emailed: <a href="@emailConfirmationLink">Click here to confirm your account</a>
     </p>
 }
-else
-{
-    <p role="alert">Please check your email to confirm your account.</p>
-}
+*@
+<p>
+  In den nächsten Minuten solltest du eine e-mail bekommen. Bitte überprüfe deine e-mails um dein CORNERKICK-MANAGER Konto zu bestätigen!
+</p>
+<p>
+  Bekommst du innerhalb der nächsten 30 Minuten keine mail, schreibe bitte an <a href="mailto:mail@cornerkick-manager.de">mail@cornerkick-manager.de</a>.
+</p>
+
+<hr style="margin-top: 1rem; margin-bottom: 1rem">
+
+<p>
+  <a href="home">Zur Startseite</a>
+</p>
+
+<p>
+  <a href="Account/ResendEmailConfirmation">Bestätigungsemail erneut senden</a>
+</p>
 
 @code {
-    private string? emailConfirmationLink;
-    private string? statusMessage;
+  //private string? emailConfirmationLink;
+  private string? statusMessage;
 
-    [CascadingParameter]
-    private HttpContext HttpContext { get; set; } = default!;
+  [CascadingParameter]
+  private HttpContext HttpContext { get; set; } = default!;
 
-    [SupplyParameterFromQuery]
-    private string? Email { get; set; }
+  [SupplyParameterFromQuery]
+  private string? Email { get; set; }
 
-    [SupplyParameterFromQuery]
-    private string? ReturnUrl { get; set; }
+  [SupplyParameterFromQuery]
+  private string? ReturnUrl { get; set; }
 
-    protected override async Task OnInitializedAsync()
-    {
-        if (Email is null)
-        {
-            RedirectManager.RedirectTo("");
-        }
-
-        var user = await UserManager.FindByEmailAsync(Email);
-        if (user is null)
-        {
-            HttpContext.Response.StatusCode = StatusCodes.Status404NotFound;
-            statusMessage = "Error finding user for unspecified email";
-        }
-        else if (EmailSender is IdentityNoOpEmailSender)
-        {
-            // Once you add a real email sender, you should remove this code that lets you confirm the account
-            var userId = await UserManager.GetUserIdAsync(user);
-            var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
-            code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
-            emailConfirmationLink = NavigationManager.GetUriWithQueryParameters(
-                NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
-                new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code, ["returnUrl"] = ReturnUrl });
-        }
+  protected override async Task OnInitializedAsync()
+  {
+    if (string.IsNullOrEmpty(Email)) {
+      RedirectManager.RedirectTo("");
     }
+
+    var user = await UserManager.FindByEmailAsync(Email);
+    if (user is null) {
+      HttpContext.Response.StatusCode = StatusCodes.Status404NotFound;
+      statusMessage = "Error finding user for unspecified email";
+      /*
+      } else if (EmailSender is IdentityNoOpEmailSender) {
+      // Once you add a real email sender, you should remove this code that lets you confirm the account
+      var userId = await UserManager.GetUserIdAsync(user);
+      var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
+      code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+      emailConfirmationLink = NavigationManager.GetUriWithQueryParameters(
+      NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
+      new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code, ["returnUrl"] = ReturnUrl });
+      */
+    } else {
+      statusMessage = "Bestätigungsemail an " + Email + " gesendet.";
+    }
+  }
 }

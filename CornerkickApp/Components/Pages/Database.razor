@@ -157,7 +157,7 @@
   {
     string sDbInfo = "Standard Datensatz - ";
     foreach (int iN in CornerkickApp.Services.StartGameService.iNationsDefaultDb) {
-      sDbInfo += CornerkickManager.Main.sLandShort[iN] + "(2), ";
+      sDbInfo += CornerkickManager.Main.sLandShort[iN] + (CornerkickApp.Controllers.App.nDivisionsDefault > 1 ? "(2)" : "") + ", ";
     }
     sDbInfo = sDbInfo.Trim();
     sDbInfo = sDbInfo.Remove(sDbInfo.Length - 1, 1);
@@ -243,7 +243,7 @@
           // so we can read it.
           stream.Seek(0, SeekOrigin.Begin);
 
-          string sDbDir = Path.Combine(Controllers.App.getDocumentsDir, "database");
+          string sDbDir = Path.Combine(CkAppShared.sAppDataDir, "database");
           if (!Directory.Exists(sDbDir)) Directory.CreateDirectory(sDbDir);
           using (FileStream DestinationStream = File.Create(Path.Combine(sDbDir, Path.GetFileName(file.Name)))) {
             await stream.CopyToAsync(DestinationStream);
@@ -319,7 +319,7 @@
       SelectedFolderName = Path.GetFileName(SelectedFolder);
     }
 
-    string sDbDir = Path.Combine(Controllers.App.getDocumentsDir, "database");
+    string sDbDir = Path.Combine(CkAppShared.sAppDataDir, "database");
     if (!Directory.Exists(sDbDir)) Directory.CreateDirectory(sDbDir);
 
     string sTargetDir = Path.Combine(sDbDir, SelectedFolderName);

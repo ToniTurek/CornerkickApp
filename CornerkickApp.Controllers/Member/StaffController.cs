@@ -115,8 +115,7 @@ namespace CornerkickApp.Controllers.Member
     }
     private string getDrImg(int iDrId, string sDrName)
     {
-      string sBaseDir = App.getHomeDir();
-      string sPortraitFile = System.IO.Path.Combine(sBaseDir, "Content", "Images", "portraits", "doctors", iDrId.ToString() + ".png");
+      string sPortraitFile = System.IO.Path.Combine(CkAppShared.sHomeDir, "Content", "Images", "portraits", "doctors", iDrId.ToString() + ".png");
       if (System.IO.File.Exists(sPortraitFile)) {
         return "<img src=\"/Content/Images/portraits/doctors/" + iDrId.ToString() + ".png\" alt=\"Portrait\" style=\"width:100%\" title=\"" + sDrName + "\" >";
       }
@@ -204,8 +203,7 @@ namespace CornerkickApp.Controllers.Member
     }
     private string getScoutImg(int iScoutId, string sScoutName)
     {
-      string sBaseDir = App.getHomeDir();
-      string sPortraitFile = System.IO.Path.Combine(sBaseDir, "Content", "Images", "portraits", "scouts", iScoutId.ToString() + ".png");
+      string sPortraitFile = System.IO.Path.Combine(CkAppShared.sHomeDir, "Content", "Images", "portraits", "scouts", iScoutId.ToString() + ".png");
       if (System.IO.File.Exists(sPortraitFile)) {
         return "<img src=\"/Content/Images/portraits/scouts/" + iScoutId.ToString() + ".png\" alt=\"Portrait\" style=\"width:100%\" title=\"" + sScoutName + "\" >";
       }

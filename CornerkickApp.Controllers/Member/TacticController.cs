@@ -9,7 +9,8 @@ namespace CornerkickApp.Controllers.Member
     public static TacticModel Model(CornerkickManager.User _usr)
     {
       TacticModel mdTc = new TacticModel();
-      CornerkickManager.Club clb = MemberController.ckClub(_usr);
+      CornerkickManager.Club? clb = MemberController.ckClub(_usr);
+      if (clb == null) return mdTc;
 
       if (clb.iTactic >= clb.ltTactic.Count) clb.iTactic = 0;
       mdTc.tactic = clb.ltTactic[clb.iTactic];

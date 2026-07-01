@@ -38,8 +38,8 @@ namespace CornerkickApp.Services
       List<string[]> ltFiles = new List<string[]>();
 
       DirectoryInfo d;
-      if (bDatabase) d = new DirectoryInfo(Path.Combine(Controllers.App.getDocumentsDir, "database"));
-      else           d = new DirectoryInfo(Path.Combine(Controllers.App.getDocumentsDir, "save"));
+      if (bDatabase) d = new DirectoryInfo(Path.Combine(CkAppShared.sAppDataDir, "database"));
+      else           d = new DirectoryInfo(Path.Combine(CkAppShared.sAppDataDir, "save"));
 
       if (d.Exists) {
         string[] ltFileExt;
@@ -356,7 +356,6 @@ namespace CornerkickApp.Services
           //return View("Log");
         }
       }
-      CkAppShared.sContentDirAbs = Path.Combine(ckMng.settings.sHomeDir, "wwwroot", "_content", "CornerkickApp.Components", "Content");
 
       // Set staff level based on club division
       foreach (CornerkickManager.Club clb in ckMng.ltClubs) {

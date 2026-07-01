@@ -27,11 +27,11 @@ namespace CornerkickApp.Controllers
 
     //public static CornerkickManager.Main ckMng;
     public static AmazonS3FileTransfer? as3;
-    private readonly string _sHomeDir = ".";
 
-    public App(IConfiguration config, string sHomeDir = "")
+    public App(IConfiguration config, string sHomeDir, string sAppDataDir)
     {
-      if (!string.IsNullOrEmpty(sHomeDir)) _sHomeDir = sHomeDir;
+      CkAppShared.sHomeDir    = sHomeDir;
+      CkAppShared.sAppDataDir = sAppDataDir;
 
       as3 = new AmazonS3FileTransfer(config);
 
@@ -83,7 +83,7 @@ namespace CornerkickApp.Controllers
 #else
       //ckMng = new CornerkickManager.Main(sHomeDir: Path.Combine(getHomeDir(), "App_Data"), sLogDir: DocumentsDir, bArchiveCups: false);
       // Create new cornerkick manager instance
-      CkAppShared.ckMng = GetIniCkMng(_sHomeDir);
+      CkAppShared.ckMng = GetIniCkMng();
 #endif
 
       // Apply default stadiums
@@ -94,16 +94,14 @@ namespace CornerkickApp.Controllers
 #if _USE_AMAZON_S3
       if (as3 != null && CkAppShared.ckMng != null) CkAppShared.ckMng.tl.writeLog("Ck instance name was set to '" + as3.sCkInstanceName + "'");
 #endif
-
-      CkAppShared.sContentDirAbs = Path.Combine(CkAppShared.ckMng.settings.sHomeDir, "wwwroot", "_content", "CornerkickApp.Components", "Content");
     }
 
-    public static CornerkickManager.Main GetIniCkMng(string sHomeDir)
+    public static CornerkickManager.Main GetIniCkMng()
     {
       //CornerkickGame.Models.Microsoft_ML.DecisionMaking.LoadModel(Path.Combine(getDocumentsDir, "mlmodels", "actionModel.zip"));
 
-      return new CornerkickManager.Main(sHomeDir: sHomeDir,
-                                        sLogDir: getDocumentsDir,
+      return new CornerkickManager.Main(sHomeDir: CkAppShared.sHomeDir,
+                                        sLogDir: CkAppShared.sAppDataDir,
                                         bContinuingTime: false,
                                         iTrainingsPerDay: 3,
                                         iTrainingsPerDayMax: 3,
@@ -142,17 +140,16 @@ namespace CornerkickApp.Controllers
 #if _WebApp
     internal static void newCk(bool bLoadGame = true)
     {
-      string sHomeDir = getHomeDir();
-
       // Create new cornerkick manager instance
-      CkAppShared.ckMng = new CornerkickManager.Main(sHomeDir: sHomeDir,
-                                         bContinuingTime: true,
-                                         iTrainingsPerDay: 3,
-                                         iTrainingsPerDayMax: 3,
-                                         bPlayerTransferOnlyOncePerSeason: true,
-                                         iWriteGamesToDisk: 0,
-                                         bArchiveCups: true,
-                                         fMoralMin: 0.4f
+      CkAppShared.ckMng = new CornerkickManager.Main(sHomeDir: CkAppShared.sHomeDir,
+                                                     sLogDir: CkAppShared.sAppDataDir,
+                                                     bContinuingTime: true,
+                                                     iTrainingsPerDay: 3,
+                                                     iTrainingsPerDayMax: 3,
+                                                     bPlayerTransferOnlyOncePerSeason: true,
+                                                     iWriteGamesToDisk: 0,
+                                                     bArchiveCups: true,
+                                                     fMoralMin: 0.4f
                                          );
 
       CkAppShared.ckMng.tl.writeLog("WebMvc START");
@@ -218,7 +215,7 @@ namespace CornerkickApp.Controllers
       // Load ck game
       if (bLoadGame) {
         CkAppShared.iLoadState = 1;
-        loadAsync(sHomeDir, iDelay: (int)CkAppShared.fLoadDelay);
+        loadAsync(CkAppShared.sAppDataDir, iDelay: (int)CkAppShared.fLoadDelay);
         /*
         CkAppShared.timerLoad = new CkAppShared.TimerLoad {
           Interval = CkAppShared.fLoadDelay,
@@ -641,7 +638,7 @@ namespace CornerkickApp.Controllers
 
     private static void timerSave_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
     {
-      save(CkAppShared.timerCkCalender, true);
+      save(bForce: true);
     }
 
     public static bool performCalendarStep(bool bSave = true)
@@ -650,10 +647,10 @@ namespace CornerkickApp.Controllers
       CornerkickManager.Cup cupSilver = CkAppShared.ckMng.tl.getCup(CkAppShared.iCupIdInt, iId2: 1);
       CornerkickManager.Cup cupBronze = CkAppShared.ckMng.tl.getCup(CkAppShared.iCupIdInt, iId2: 2);
 
-      CornerkickManager.Club clb0 = CkAppShared.ckMng.ltClubs.Find(c => c.iId == 0);
+      CornerkickManager.Club? clb0 = CkAppShared.ckMng.ltClubs.Find(c => c.iId == 0);
 
       // Reset home dir
-      string sHomeDir = Path.Combine(getHomeDir(), "App_Data");
+      string sHomeDir = Path.Combine(CkAppShared.sHomeDir);
       if (sHomeDir != null && !sHomeDir.Equals(CkAppShared.ckMng.settings.sHomeDir)) {
         CkAppShared.ckMng.tl.writeLog("Reset ck home dir from " + CkAppShared.ckMng.settings.sHomeDir + " to " + sHomeDir);
         CkAppShared.ckMng.settings.sHomeDir = sHomeDir;
@@ -683,7 +680,7 @@ namespace CornerkickApp.Controllers
           CkAppShared.ckMng.doFormation(clbCpu);
 
           for (int iP = iClubCpuPlayerMax; iP < clbCpu.ltPlayer.Count; iP++) {
-            CornerkickManager.Club clbCpuTake = null;
+            CornerkickManager.Club? clbCpuTake = null;
 
             // Find cpu club with to few players
             for (int jC = 1; jC < CkAppShared.ckMng.ltClubs.Count; jC++) {
@@ -746,7 +743,7 @@ namespace CornerkickApp.Controllers
 
       // Save .autosave
       if (bSave && CkAppShared.ckMng.dtDatum.Minute == 0 && CkAppShared.ckMng.dtDatum.Hour % 2 == 0) {
-        save(CkAppShared.timerCkCalender);
+        save(CkAppShared.timerCkCalender.Interval);
       }
 
       if ((CkAppShared.ckMng.dtDatum.Equals(CkAppShared.ckMng.dtSeasonStart) || CkAppShared.ckMng.dtDatum.Year < 1900) &&
@@ -1242,20 +1239,19 @@ namespace CornerkickApp.Controllers
     }
     */
 
-    internal bool saveAsync(System.Timers.Timer timerCkCalender, bool bForce = false)
+    internal bool saveAsync(double timerCalenderInterval = 10000.0, bool bForce = false)
     {
-      Task<bool> tkSave = Task.Run(() => save(timerCkCalender, bForce: bForce));
+      Task<bool> tkSave = Task.Run(() => save(timerCalenderInterval, bForce: bForce));
       //tkSave.Wait();
 
       return tkSave.Result;
     }
-    internal static bool save(System.Timers.Timer timerCkCalender, bool bForce = false)
+    public static bool save(double timerCalenderInterval = 10000.0, bool bForce = false)
     {
       // Don't save if calendar to fast
-      if (timerCkCalender.Interval < 10000 && !bForce) return false;
+      if (timerCalenderInterval < 10000.0 && !bForce) return false;
 
-      string sHomeDir = Path.Combine(getHomeDir(), "App_Data");
-      if (string.IsNullOrEmpty(sHomeDir)) sHomeDir = CkAppShared.ckMng.settings.sHomeDir;
+      string sAppDataDir = CkAppShared.sAppDataDir;
 
       try {
 #if _DEPLOY_ON_AZURE
@@ -1265,7 +1261,7 @@ namespace CornerkickApp.Controllers
           CkAppShared.ckMng.tl.writeLog("save: unable to create sHomeDir from Server.MapPath", CornerkickManager.Main.sErrorFile);
           sHomeDir = "D:\\home\\site\\wwwroot";
 #endif
-        if (sHomeDir.EndsWith("\\")) sHomeDir = sHomeDir.Remove(sHomeDir.Length - 1);
+        if (sAppDataDir.EndsWith("\\")) sAppDataDir = sAppDataDir.Remove(sAppDataDir.Length - 1);
       } catch (Exception e) {
         CkAppShared.ckMng.tl.writeLog("save: HttpException: " + e.Message);
 #if _DEPLOY_ON_AZURE
@@ -1274,20 +1270,22 @@ namespace CornerkickApp.Controllers
       }
 
       // Write last ck state to file
-      saveLaststate(sHomeDir);
+      saveLaststate(sAppDataDir);
 
       // Clear CPU user news before saving
-      for (int iN = 0; iN < CkAppShared.ckMng.ltUser[0].ltNews.Count; iN++) {
-        if (CkAppShared.ckMng.ltUser[0].ltNews[iN].iType < 200) {
-          CkAppShared.ckMng.ltUser[0].ltNews.RemoveAt(iN);
-          iN--;
-          continue;
-        }
+      if (CkAppShared.ckMng.ltUser.Count > 0) {
+        for (int iN = 0; iN < CkAppShared.ckMng.ltUser[0].ltNews.Count; iN++) {
+          if (CkAppShared.ckMng.ltUser[0].ltNews[iN].iType < 200) {
+            CkAppShared.ckMng.ltUser[0].ltNews.RemoveAt(iN);
+            iN--;
+            continue;
+          }
 
-        if ((CkAppShared.ckMng.dtDatum - CkAppShared.ckMng.ltUser[0].ltNews[iN].dt).TotalDays > 7) {
-          CkAppShared.ckMng.ltUser[0].ltNews.RemoveAt(iN);
-          iN--;
-          continue;
+          if ((CkAppShared.ckMng.dtDatum - CkAppShared.ckMng.ltUser[0].ltNews[iN].dt).TotalDays > 7) {
+            CkAppShared.ckMng.ltUser[0].ltNews.RemoveAt(iN);
+            iN--;
+            continue;
+          }
         }
       }
 
@@ -1304,7 +1302,7 @@ namespace CornerkickApp.Controllers
 
       // Compose filename
       string sFilenameSave2 = ".autosave_" + CkAppShared.ckMng.dtDatum.ToString("yyyy-MM-dd_HH-mm") + ".ckx";
-      string sFileSave2 = Path.Combine(sHomeDir, "save", sFilenameSave2);
+      string sFileSave2 = Path.Combine(sAppDataDir, "save", sFilenameSave2);
       CkAppShared.ckMng.tl.writeLog("save file: " + sFileSave2);
 
       // Save
@@ -1322,7 +1320,7 @@ namespace CornerkickApp.Controllers
 #endif
 
         // Copy autosave file with datum to basic one (could use file link)
-        string sFileSave = sHomeDir + "/save/" + CkAppShared.sFilenameSave;
+        string sFileSave = sAppDataDir + "/save/" + CkAppShared.sFilenameSave;
         if (File.Exists(sFileSave)) {
           try {
             File.Delete(sFileSave);
@@ -1342,7 +1340,7 @@ namespace CornerkickApp.Controllers
 
 #if _USE_AMAZON_S3
       // Upload games
-      DirectoryInfo diGames = new DirectoryInfo(Path.Combine(sHomeDir, "save", "games"));
+      DirectoryInfo diGames = new DirectoryInfo(Path.Combine(sAppDataDir, "save", "games"));
       CkAppShared.ckMng.tl.writeLog("Directory info games: '" + diGames.FullName + "'. Exist: " + diGames.Exists.ToString());
 
       if (diGames.Exists) {
@@ -1362,7 +1360,7 @@ namespace CornerkickApp.Controllers
           if (iCupId == iCupIdTestgame) continue; // If game is test-game
 #endif
 
-          string sFileGameSave = Path.Combine(sHomeDir, "save", "games", ckg.Name);
+          string sFileGameSave = Path.Combine(sAppDataDir, "save", "games", ckg.Name);
           Task.Run(() => as3.uploadFileAsync(sFileGameSave, as3.sCkInstanceName + "save/games/" + ckg.Name, "application/zip"));
         }
       }
@@ -1376,11 +1374,11 @@ namespace CornerkickApp.Controllers
 
 #if _USE_AMAZON_S3
       // Upload wishlist
-      Task.Run(() => as3.uploadFileAsync(Path.Combine(sHomeDir, "wishlist.json"), as3.sCkInstanceName + "wishlist.json"));
+      Task.Run(() => as3.uploadFileAsync(Path.Combine(sAppDataDir, "wishlist.json"), "wishlist.json"));
 #endif
 
       // Save logs
-      Task.Run(() => SaveLogsAsync(sHomeDir));
+      Task.Run(() => SaveLogsAsync(sAppDataDir));
 
       return true;
     }
@@ -1452,24 +1450,28 @@ namespace CornerkickApp.Controllers
     {
       string sFileSettings = Path.Combine(sTargetDir, CkAppShared.sFilenameSettings);
 
-      using (StreamWriter fileSettings = new StreamWriter(sFileSettings)) {
-        fileSettings.WriteLine((CkAppShared.timerCkCalender.Interval / 1000.0).ToString("g", CultureInfo.InvariantCulture));
-        fileSettings.WriteLine(CkAppShared.timerCkCalender.Enabled.ToString());
-        fileSettings.WriteLine(DateTime.Now.ToString("s", CultureInfo.InvariantCulture));
-        fileSettings.WriteLine(getGameSpeedFromUsers().ToString());
-        fileSettings.WriteLine(CkAppShared.settings.bEmailCertification.ToString());
-        fileSettings.WriteLine(CkAppShared.settings.bRegisterDuringGame.ToString());
+      try {
+        using (StreamWriter fileSettings = new StreamWriter(sFileSettings)) {
+          fileSettings.WriteLine((CkAppShared.timerCkCalender.Interval / 1000.0).ToString("g", CultureInfo.InvariantCulture));
+          fileSettings.WriteLine(CkAppShared.timerCkCalender.Enabled.ToString());
+          fileSettings.WriteLine(DateTime.Now.ToString("s", CultureInfo.InvariantCulture));
+          fileSettings.WriteLine(getGameSpeedFromUsers().ToString());
+          fileSettings.WriteLine(CkAppShared.settings.bEmailCertification.ToString());
+          fileSettings.WriteLine(CkAppShared.settings.bRegisterDuringGame.ToString());
 
-        fileSettings.WriteLine(CkAppShared.settings.bMaintenance.ToString());
-        fileSettings.WriteLine(CkAppShared.settings.sInfo);
-        fileSettings.WriteLine(CkAppShared.settings.dtCounterStart.ToString("s", CultureInfo.InvariantCulture));
+          fileSettings.WriteLine(CkAppShared.settings.bMaintenance.ToString());
+          fileSettings.WriteLine(CkAppShared.settings.sInfo);
+          fileSettings.WriteLine(CkAppShared.settings.dtCounterStart.ToString("s", CultureInfo.InvariantCulture));
 
-        fileSettings.Close();
-      }
+          fileSettings.Close();
+        }
 
 #if _USE_AMAZON_S3
-      Task.Run(() => as3.uploadFileAsync(sFileSettings, as3.sCkInstanceName + CkAppShared.sFilenameSettings));
+        Task.Run(() => as3.uploadFileAsync(sFileSettings, as3.sCkInstanceName + CkAppShared.sFilenameSettings));
 #endif
+      } catch (Exception e) {
+        CkAppShared.ckMng.tl.writeLog("ERROR: could not save laststate to file " + sFileSettings + Environment.NewLine + e.Message + e.StackTrace, bError: true);
+      }
     }
 
     private static void saveMails()
@@ -2586,18 +2588,17 @@ namespace CornerkickApp.Controllers
         }
 
 #if _USE_AMAZON_S3
-        string sUploadsDir = Path.Combine(sAppDataDir, "..", "Content", "Uploads");
         // Download emblems
-        Task<bool> tkDownloadEmblems = Task.Run(async () => await downloadFilesAsync(as3.sCkInstanceName + "emblems/", sUploadsDir, ".png"));
+        Task<bool> tkDownloadEmblems = Task.Run(async () => await downloadFilesAsync(as3.sCkInstanceName + "emblems/", sAppDataDir, ".png"));
 
         // Download portraits
-        Task<bool> tkDownloadPortraits = Task.Run(async () => await downloadFilesAsync(as3.sCkInstanceName + "Portraits/", sUploadsDir, ".png"));
+        Task<bool> tkDownloadPortraits = Task.Run(async () => await downloadFilesAsync(as3.sCkInstanceName + "portraits/", sAppDataDir, ".png"));
 
         // Download mails
         Task<bool> tkDownloadMail = Task.Run(async () => await downloadMailsAsync(sAppDataDir));
 
         // Download wishlist
-        as3.downloadFile(as3.sCkInstanceName + "wishlist.json", Path.Combine(sAppDataDir, "wishlist.json"));
+        as3.downloadFile("wishlist.json", Path.Combine(sAppDataDir, "wishlist.json"));
 
         // Download archive cups
         if (!Directory.Exists(Path.Combine(sAppDataDir, "archive"))) Directory.CreateDirectory(Path.Combine(sAppDataDir, "archive"));
@@ -2797,9 +2798,15 @@ namespace CornerkickApp.Controllers
     }
 #endif
 
+#if _WebApp
+    public const byte nDivisionsDefault = 2;
+#else
+    public const byte nDivisionsDefault = 1;
+#endif
     public static CornerkickManager.Main getCkMngDefault(bool bContinuingTime = false)
     {
-      CornerkickManager.Main ckMngDefault = new CornerkickManager.Main(sHomeDir: getHomeDir(),
+      CornerkickManager.Main ckMngDefault = new CornerkickManager.Main(sHomeDir: CkAppShared.sHomeDir,
+                                                                       sLogDir: CkAppShared.sAppDataDir,
                                                                        bContinuingTime: bContinuingTime,
                                                                        iTrainingsPerDay: 3,
                                                                        iTrainingsPerDayMax: 3,
@@ -2817,8 +2824,6 @@ namespace CornerkickApp.Controllers
       DateTime dtLeagueStart;
       DateTime dtLeagueEnd;
       ckMngDefault.setSeasonStartEndDates(out dtLeagueStart, out dtLeagueEnd);
-
-      const byte nDivisions = 1;
 
       /////////////////////////////////////////////////////////////////////
       // Create nat. Cups and Leagues
@@ -2849,7 +2854,7 @@ namespace CornerkickApp.Controllers
           if (CornerkickManager.Main.sLand != null && CornerkickManager.Main.sLand.Length > iLand) cupIndoor.sName += " " + CornerkickManager.Main.sLand[iLand];
           cupIndoor.settings.fAttraction = 0.5f;
           cupIndoor.settings.iNeutral = 1;
-          cupIndoor.settings.nGroups = 4 * nDivisions;
+          cupIndoor.settings.nGroups = 4 * nDivisionsDefault;
           cupIndoor.settings.nQualifierKo = 2;
 
           cupIndoor.settings.nGameMin = 12;
@@ -2868,7 +2873,7 @@ namespace CornerkickApp.Controllers
           ckMngDefault.ltCups.Add(cupIndoor);
 
           // Create leagues
-          for (byte iD = 0; iD < nDivisions; iD++) {
+          for (byte iD = 0; iD < nDivisionsDefault; iD++) {
             progress.Report([iLand, iD, iCount]);
 
             CornerkickManager.Cup league = new CornerkickManager.Cup(nGroups: 1, bGroupsTwoGames: true);
@@ -2931,51 +2936,6 @@ namespace CornerkickApp.Controllers
       if (bDaughterClub) return (int)(fClubAttrFac * 500);
 
       return (int)(fClubAttrFac * 200);
-    }
-
-    public static string getHomeDir()
-    {
-#if _WebApp
-#if _DEPLOY_ON_HOST
-      return Path.Combine(HttpContext.Current.Server.MapPath("~"), "App_Data");
-#endif
-
-      //return HttpContext.Current.Server.MapPath("~");
-      //return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "wwwroot");
-      return AppDomain.CurrentDomain.BaseDirectory;
-#else
-      //if (OperatingSystem.IsAndroid()) return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Raw");
-
-      return AppDomain.CurrentDomain.BaseDirectory;
-#endif
-
-      //if (!string.IsNullOrEmpty(Startup.sWwwRootDir)) return Path.Combine(Startup.sWwwRootDir, "App_Data");
-      if (!string.IsNullOrEmpty(CkAppShared.sWwwRootDir)) return CkAppShared.sWwwRootDir;
-
-      string sCodeBase = Path.Combine(AssemblyDirectory, "wwwroot");
-      if (!string.IsNullOrEmpty(sCodeBase)) return sCodeBase;
-
-      return Environment.CurrentDirectory;
-    }
-
-    internal static string AssemblyDirectory {
-      get {
-#if _WebApp
-#if NET5_0_OR_GREATER
-        string codeBase = System.Reflection.Assembly.GetExecutingAssembly().Location;
-#else
-        string codeBase = System.Reflection.Assembly.GetExecutingAssembly().CodeBase;
-#endif
-
-        Console.WriteLine(AppDomain.CurrentDomain.BaseDirectory);
-        UriBuilder uri = new UriBuilder(codeBase);
-        string path = Uri.UnescapeDataString(uri.Path);
-
-        return Path.GetDirectoryName(path);
-#else
-        return AppDomain.CurrentDomain.BaseDirectory;
-#endif
-      }
     }
 
     public static CornerkickManager.Club? createClub(CornerkickManager.Main ckMngTmp, string sTeamname, byte iLand, byte iLiga, CornerkickManager.Club? clbReplace = null)
@@ -3412,12 +3372,8 @@ namespace CornerkickApp.Controllers
 
           pl.clSkin = System.Drawing.Color.FromArgb(b[0], b[1], 1);
 #else
-#if DEBUG
-          string sBaseDir = getHomeDir();
-#else
-          string sBaseDir = Directory.GetParent(CkAppShared.ckMng.settings.sHomeDir).FullName;
-#endif
-          string sDirPortrait = Path.Combine(sBaseDir, "Content", "Images", "Portraits");
+
+          string sDirPortrait = Path.Combine(CkAppShared.sHomeDir, "Content", "Images", "portraits");
 
           if (Directory.Exists(sDirPortrait)) {
             DirectoryInfo diPortrait = new DirectoryInfo(sDirPortrait);
@@ -3449,32 +3405,13 @@ namespace CornerkickApp.Controllers
       }
     }
 
-    public static string? sMauiHomeDir;
-    public static string getDocumentsDir {
-      get {
-        // Compose database directory
-#if ANDROID
-        string sDocDir = Android.OS.Environment.ExternalStorageDirectory.AbsolutePath;
-        //string sDocDir = FileSystem.AppDataDirectory.AbsolutePath;
-        string sCkDir = Path.Combine(sDocDir, "UserData");
-#else
-        string sDocDir = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-        if (OperatingSystem.IsAndroid() && !string.IsNullOrEmpty(sMauiHomeDir)) sDocDir = sMauiHomeDir;
-        string sCkDir = Path.Combine(sDocDir, "Cornerkick");
-#endif
-        if (!Directory.Exists(sCkDir)) Directory.CreateDirectory(sCkDir);
-
-        return sCkDir;
-      }
-    }
-
 #if !_WebApp
     public static string getMediaDir(string sDbFilename)
     {
       if (string.IsNullOrEmpty(sDbFilename)) return "";
 
       for (byte i = 0; i < 2; i++) {
-        foreach (string dirMedia in Directory.GetDirectories(Path.Combine(getDocumentsDir, "database"), "media_*", SearchOption.TopDirectoryOnly)) {
+        foreach (string dirMedia in Directory.GetDirectories(Path.Combine(CkAppShared.sAppDataDir, "database"), "media_*", SearchOption.TopDirectoryOnly)) {
           string? lastFolderName = Path.GetFileName(dirMedia);
           if (!string.IsNullOrEmpty(lastFolderName)) {
             if (i == 0 && sDbFilename.Equals  (lastFolderName.Replace("media_", "")) ||
@@ -3508,19 +3445,27 @@ namespace CornerkickApp.Controllers
       }
     }
 
-    public static bool uploadFile(Stream fileStream, string sFolder, int iFileId)
+    public static bool uploadFile(Stream fileStream, string sRootFolder, string sFolder, int iFileId)
+    {
+      return uploadFile(fileStream, sRootFolder, sFolder, iFileId.ToString());
+    }
+    public static bool uploadFile(Stream fileStream, string sRootFolder, string sFolder, string sFileId)
     {
 #if DEBUG
       //return false;
 #endif
 
+      if (as3 == null) return false;
+
       try {
         if (fileStream != null && fileStream.Length > 0) {
+          string sDirSave = Path.Combine(sRootFolder, sFolder);
+
           // Create directory if not existing
-          if (!Directory.Exists(sFolder)) Directory.CreateDirectory(sFolder);
+          if (!Directory.Exists(sDirSave)) Directory.CreateDirectory(sDirSave);
 
           // Compose temporary filename
-          string sFilePng = Path.Combine(sFolder, iFileId.ToString() + ".png");
+          string sFilePng = Path.Combine(sDirSave, sFileId + ".png");
           CkAppShared.ckMng.tl.writeLog("Save file to '" + sFilePng + "'");
 
           // Save to disk
@@ -3530,7 +3475,7 @@ namespace CornerkickApp.Controllers
 
 #if _WebApp
           // Upload to as3
-          Task.Run(() => as3.uploadFileAsync(sFilePng, as3.sCkInstanceName + sFolder + "/" + iFileId.ToString() + ".png", "image/custom"));
+          Task.Run(() => as3.uploadFileAsync(sFilePng, as3.sCkInstanceName + sFolder.Replace('\\', '/') + "/" + sFileId + ".png", "image/custom"));
 #endif
         }
 
@@ -3541,23 +3486,30 @@ namespace CornerkickApp.Controllers
       }
     }
 
-    public static bool uploadFile(byte[] b, string sFolder, int iId, int? iId2 = null, int? iId3 = null)
+    public static bool uploadFile(byte[] b, string sRootFolder, string sFolder, int iId, int? iId2 = null, int? iId3 = null, int iImageWidth = 0)
+    {
+      return uploadFile(b, sRootFolder, sFolder, iId.ToString() + (iId2 != null ? "_" + iId2.ToString() : "") + (iId3 != null ? "_" + iId3.ToString() : ""), iImageWidth);
+    }
+    public static bool uploadFile(byte[] b, string sRootFolder, string sFolder, string sFileId, int iImageWidth = 0)
     {
 #if DEBUG
       //return false;
 #endif
 
+      if (as3 == null) return false;
+
       try {
         if (b != null && b.Length > 0) {
+          string sDirSave = Path.Combine(sRootFolder, sFolder);
+
           // Create directory if not existing
-          if (!Directory.Exists(sFolder)) Directory.CreateDirectory(sFolder);
+          if (!Directory.Exists(sDirSave)) Directory.CreateDirectory(sDirSave);
 
           // Compose filename
-          string sFile = iId.ToString();
-          if (iId2 != null) sFile += "_" + iId2.ToString();
-          if (iId3 != null) sFile += "_" + iId3.ToString();
-          string sFilePng = Path.Combine(sFolder, sFile + ".png");
+          string sFilePng = Path.Combine(sDirSave, sFileId + ".png");
           CkAppShared.ckMng.tl.writeLog("Save file to '" + sFilePng + "'");
+
+          if (iImageWidth > 0) b = Tool.resizeImage(b, iImageWidth, bShrinkOnly: true);
 
           // Save to disk
           using (Image imgEmblem = Image.Load(b)) {
@@ -3566,7 +3518,7 @@ namespace CornerkickApp.Controllers
 
 #if _WebApp
           // Upload to as3
-          Task.Run(() => as3.uploadFileAsync(sFilePng, as3.sCkInstanceName + sFolder + "/" + sFile + ".png", "image/custom"));
+          Task.Run(() => as3.uploadFileAsync(sFilePng, as3.sCkInstanceName + sFolder.Replace('\\', '/') + "/" + sFileId + ".png", "image/custom"));
 #endif
         }
 
@@ -3575,6 +3527,15 @@ namespace CornerkickApp.Controllers
         CkAppShared.ckMng.tl.writeLog("Error writing/uploading image." + Environment.NewLine + ex.Message + Environment.NewLine + ex.StackTrace, bError: true);
         return false;
       }
+    }
+
+    public static bool MoveFileOnS3(string sKey, string sDestKey)
+    {
+      if (as3 == null) return false;
+
+      Task<bool> tk = Task.Run(() => as3.CopyingObjectAsync(as3.sCkInstanceName + sKey, as3.sCkInstanceName + sDestKey));
+      if (tk.Result) Task.Run(() => as3.deleteFileAsync(as3.sCkInstanceName + sKey));
+      return true;
     }
 
     private static int iProgressLandCreated { get; set; } = 0;

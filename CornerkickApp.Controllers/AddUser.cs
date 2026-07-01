@@ -148,13 +148,13 @@ namespace CornerkickApp.Controllers
         //CornerkickManager.Club? clubExist = CkAppShared.ckMng.ltClubs.Find(c => c.iId == iClubIdExist);
 
         if (clubExist == null) {
-          CkAppShared.ckMng.tl.writeLog(Path.Combine(App.getDocumentsDir, "ckapp.err"), "ERROR: Cannot find club");
+          CkAppShared.ckMng.tl.writeLog(Path.Combine(CkAppShared.sAppDataDir, "ckapp.err"), "ERROR: Cannot find club");
           return null;
         }
 
         CornerkickManager.Cup? league = CkAppShared.ckMng.tl.getCup(CkAppShared.iCupIdLeague, clubExist.iLand, clubExist.iDivision);
         if (league == null) {
-          CkAppShared.ckMng.tl.writeLog(Path.Combine(App.getDocumentsDir, "ckapp.err"), "ERROR: Cannot get league");
+          CkAppShared.ckMng.tl.writeLog(Path.Combine(CkAppShared.sAppDataDir, "ckapp.err"), "ERROR: Cannot get league");
           return null;
         }
 
@@ -199,17 +199,17 @@ namespace CornerkickApp.Controllers
             clb.iBalance = 10000000;
             clb.iBalanceSecret = 0;
           } catch (Exception e) {
-            CkAppShared.ckMng.tl.writeLog(Path.Combine(Controllers.App.getDocumentsDir, "ckapp.err"), "ERROR: Cannot set club balance. Message: " + e.Message + Environment.NewLine + e.StackTrace);
+            CkAppShared.ckMng.tl.writeLog(Path.Combine(CkAppShared.sAppDataDir, "ckapp.err"), "ERROR: Cannot set club balance. Message: " + e.Message + Environment.NewLine + e.StackTrace);
           }
 
           usr.club = clb;
           try {
             usr.club.nextGame = CkAppShared.ckMng.tl.getNextGame(usr.club, CkAppShared.ckMng.dtDatum);
 
-            if (usr.club.nextGame == null) CkAppShared.ckMng.tl.writeLog(Path.Combine(Controllers.App.getDocumentsDir, "ckapp.err"), "ERROR: nextGame = null!");
+            if (usr.club.nextGame == null) CkAppShared.ckMng.tl.writeLog(Path.Combine(CkAppShared.sAppDataDir, "ckapp.err"), "ERROR: nextGame = null!");
             else usr.club.nextGame.iGameSpeed = CkAppShared.iOptionGameSpeedFast;
           } catch (Exception e) {
-            CkAppShared.ckMng.tl.writeLog(Path.Combine(Controllers.App.getDocumentsDir, "ckapp.err"), "ERROR: Cannot set nextGame. Message: " + e.Message + Environment.NewLine + e.StackTrace);
+            CkAppShared.ckMng.tl.writeLog(Path.Combine(CkAppShared.sAppDataDir, "ckapp.err"), "ERROR: Cannot set nextGame. Message: " + e.Message + Environment.NewLine + e.StackTrace);
           }
           usr.dtStart = CkAppShared.ckMng.dtDatum;
           usr.dtClubStart = CkAppShared.ckMng.dtDatum;
@@ -235,13 +235,13 @@ namespace CornerkickApp.Controllers
             try {
               CkAppShared.ckMng.ltUser.Add(usr);
             } catch (Exception e) {
-              CkAppShared.ckMng.tl.writeLog(Path.Combine(Controllers.App.getDocumentsDir, "ckapp.err"), "ERROR: Cannot add user to list. Message: " + e.Message + Environment.NewLine + e.StackTrace);
+              CkAppShared.ckMng.tl.writeLog(Path.Combine(CkAppShared.sAppDataDir, "ckapp.err"), "ERROR: Cannot add user to list. Message: " + e.Message + Environment.NewLine + e.StackTrace);
             }
 
             try {
               Controllers.Member.TutorialController.initialiteTutorial();
             } catch (Exception e) {
-              CkAppShared.ckMng.tl.writeLog(Path.Combine(Controllers.App.getDocumentsDir, "ckapp.err"), "ERROR: Cannot initialite tutorial. Message: " + e.Message + Environment.NewLine + e.StackTrace);
+              CkAppShared.ckMng.tl.writeLog(Path.Combine(CkAppShared.sAppDataDir, "ckapp.err"), "ERROR: Cannot initialite tutorial. Message: " + e.Message + Environment.NewLine + e.StackTrace);
             }
 #if DEBUG
           }
@@ -274,7 +274,7 @@ namespace CornerkickApp.Controllers
 
         return usr;
       } catch (Exception e) {
-        CkAppShared.ckMng.tl.writeLog(Path.Combine(Controllers.App.getDocumentsDir, "ckapp.log"), "ERROR in addUserToCk. Message: " + e.Message + Environment.NewLine + e.StackTrace);
+        CkAppShared.ckMng.tl.writeLog(Path.Combine(CkAppShared.sAppDataDir, "ckapp.log"), "ERROR in addUserToCk. Message: " + e.Message + Environment.NewLine + e.StackTrace);
       }
 
       return null;

@@ -39,44 +39,46 @@
 </div>
 
 @code {
-    private string? message;
-  private CornerkickAppUser user = default!;
-    private bool requirePassword;
+  private string? message;
+  private CornerkickAppUser? user = default!;
+  private bool requirePassword;
 
-    [CascadingParameter]
-    private HttpContext HttpContext { get; set; } = default!;
+  [CascadingParameter]
+  private HttpContext HttpContext { get; set; } = default!;
 
-    [SupplyParameterFromForm]
-    private InputModel Input { get; set; } = new();
+  [SupplyParameterFromForm]
+  private InputModel Input { get; set; } = new();
 
-    protected override async Task OnInitializedAsync()
-    {
-        Input ??= new();
-        user = await UserAccessor.GetRequiredUserAsync(HttpContext);
-        requirePassword = await UserManager.HasPasswordAsync(user);
+  protected override async Task OnInitializedAsync()
+  {
+    Input ??= new();
+    user = await UserAccessor.GetRequiredUserAsync(HttpContext);
+    if (user == null) return;
+
+    requirePassword = await UserManager.HasPasswordAsync(user);
+  }
+
+  private async Task OnValidSubmitAsync()
+  {
+    if (user == null) return;
+
+    if (requirePassword && !await UserManager.CheckPasswordAsync(user, Input.Password)) {
+      message = "Error: Incorrect password.";
+      return;
     }
 
-    private async Task OnValidSubmitAsync()
-    {
-        if (requirePassword && !await UserManager.CheckPasswordAsync(user, Input.Password))
-        {
-            message = "Error: Incorrect password.";
-            return;
-        }
-
-        var result = await UserManager.DeleteAsync(user);
-        if (!result.Succeeded)
-        {
-            throw new InvalidOperationException("Unexpected error occurred deleting user.");
-        }
-
-        await SignInManager.SignOutAsync();
-
-        var userId = await UserManager.GetUserIdAsync(user);
-        Logger.LogInformation("User with ID '{UserId}' deleted themselves.", userId);
-
-        RedirectManager.RedirectToCurrentPage();
+    var result = await UserManager.DeleteAsync(user);
+    if (!result.Succeeded) {
+      throw new InvalidOperationException("Unexpected error occurred deleting user.");
     }
+
+    await SignInManager.SignOutAsync();
+
+    var userId = await UserManager.GetUserIdAsync(user);
+    Logger.LogInformation("User with ID '{UserId}' deleted themselves.", userId);
+
+    RedirectManager.RedirectToCurrentPage();
+  }
 
     private sealed class InputModel
     {

@@ -98,7 +98,7 @@ namespace CornerkickApp
 #endif
 
       // Clean-up temporary files in app data directory (e.g. from old versions):
-      DirectoryInfo d_save = new DirectoryInfo(Path.Combine(Controllers.App.getDocumentsDir, "save"));
+      DirectoryInfo d_save = new DirectoryInfo(Path.Combine(DocumentsDir, "save"));
       if (d_save.Exists) {
         string[] tmp_dirs_to_delete = Directory.GetDirectories(d_save.FullName, ".*", SearchOption.TopDirectoryOnly);
         foreach (var d_to_delete in tmp_dirs_to_delete) {
@@ -106,10 +106,13 @@ namespace CornerkickApp
         }
       }
 
+#if DEBUG
+#if ANDROID
       setMauiHomeDir();
-      //Controllers.App appCk = new Controllers.App(builder.Configuration, sHomeDir: Controllers.App.getDocumentsDir);
-      Controllers.App appCk = new Controllers.App(builder.Configuration, sHomeDir: AppDomain.CurrentDomain.BaseDirectory);
-      //Controllers.App appCk = new Controllers.App(builder.Configuration, sHomeDir: FileSystem.Current.AppDataDirectory);
+#endif
+#endif
+
+      Controllers.App appCk = new Controllers.App(builder.Configuration, AppDomain.CurrentDomain.BaseDirectory, DocumentsDir);
       appCk.start();
 
       // Set Version
@@ -166,23 +169,40 @@ namespace CornerkickApp
       return builder.Build();
     }
 
-    private static void setMauiHomeDir()
-    {
+    public static string DocumentsDir {
+      get {
+        // Compose database directory
 #if ANDROID
-      var path = Android.OS.Environment.GetExternalStoragePublicDirectory(Android.OS.Environment.DirectoryDocuments);
-      if (path != null) Controllers.App.sMauiHomeDir = path.AbsolutePath;
-      //Controllers.App.sMauiHomeDir = Android.OS.Environment.DirectoryDocuments;
-      //Controllers.App.sMauiHomeDir = Android.OS.Environment.ExternalStorageDirectory.AbsolutePath;
+        string? sDocDir = Android.OS.Environment.GetExternalStoragePublicDirectory(Android.OS.Environment.DirectoryDocuments)?.AbsolutePath;
+#else
+        string? sDocDir = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
 #endif
+        if (string.IsNullOrEmpty(sDocDir)) sDocDir = ".";
+
+        string sCkDir = Path.Combine(sDocDir, "Cornerkick");
+        if (!Directory.Exists(sCkDir)) Directory.CreateDirectory(sCkDir);
+
+        return sCkDir;
+      }
     }
 
 #if DEBUG
+#if ANDROID
+    private static string sMauiHomeDir = "";
+    private static void setMauiHomeDir()
+    {
+      var path = Android.OS.Environment.GetExternalStoragePublicDirectory(Android.OS.Environment.DirectoryDocuments);
+      if (path != null) sMauiHomeDir = path.AbsolutePath;
+      //sMauiHomeDir = Android.OS.Environment.DirectoryDocuments;
+      //sMauiHomeDir = Android.OS.Environment.ExternalStorageDirectory.AbsolutePath;
+    }
+
     public static void CreateDemoMedia()
     {
-      string sDemoEmbDir = Path.Combine(Controllers.App.sMauiHomeDir, "media_demo", "images", "emblems");
+      string sDemoEmbDir = Path.Combine(sMauiHomeDir, "media_demo", "images", "emblems");
       Directory.CreateDirectory(sDemoEmbDir);
 
-      string sDemoPrtDir = Path.Combine(Controllers.App.sMauiHomeDir, "media_demo", "images", "portraits");
+      string sDemoPrtDir = Path.Combine(sMauiHomeDir, "media_demo", "images", "portraits");
       Directory.CreateDirectory(sDemoPrtDir);
 
       SixLabors.ImageSharp.Image img_demo = new Image<Rgba32>(100, 100);
@@ -200,6 +220,7 @@ namespace CornerkickApp
       for (int i = 0; i < 100; i++) img_demo.Save(Path.Combine(sDemoEmbDir, i.ToString() + ".png"));
       for (int i = 0; i < 100; i++) img_demo.Save(Path.Combine(sDemoPrtDir, i.ToString() + ".png"));
     }
+#endif
 #endif
   }
 }

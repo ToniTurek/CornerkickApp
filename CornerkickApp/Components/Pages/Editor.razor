@@ -3106,8 +3106,8 @@
     await InvokeAsync(StateHasChanged);
 
     try {
-      DirectoryInfo d = new DirectoryInfo(Path.Combine(CornerkickApp.Controllers.App.getDocumentsDir, "database"));
-      if (!d.Exists) Directory.CreateDirectory(Path.Combine(CornerkickApp.Controllers.App.getDocumentsDir, "database"));
+      DirectoryInfo d = new DirectoryInfo(Path.Combine(CkAppShared.sAppDataDir, "database"));
+      if (!d.Exists) Directory.CreateDirectory(Path.Combine(CkAppShared.sAppDataDir, "database"));
 
       // Order cups
       //CkAppShared.ckMng.ltCups = CkAppShared.ckMng.ltCups.OrderBy(c => c.iId2).ThenBy(c => c.iId3).ThenBy(c => c.iId).ToList();
@@ -3130,25 +3130,22 @@
         progressIndicatorCount = new Progress<int[]>(ReportProgressSaveDb);
       }
       string sFileExt = iFileFormat == 0 ? ".ckdbx" : "";
-      await CkAppShared.ckMng.io.saveAsync(Path.Combine(CornerkickApp.Controllers.App.getDocumentsDir, "database", dbfile2 + sFileExt), bDatabase: true, bParallel: bParallel, progress: progressIndicatorCount);
+      await CkAppShared.ckMng.io.saveAsync(Path.Combine(CkAppShared.sAppDataDir, "database", dbfile2 + sFileExt), bDatabase: true, bParallel: bParallel, progress: progressIndicatorCount);
       if (MainLayout.ckProgressBar != null) MainLayout.ckProgressBar.stop();
 
       foreach (CornerkickApp.Services.Emblem ce in ltCupEmblem) {
         if (ce?.bEmblem == null) continue;
-        string sFileParentDir = Path.Combine(CornerkickApp.Controllers.App.getMediaDir(dbfile2), "images", "cup_emblems");
-        CornerkickApp.Controllers.App.uploadFile(ce.bEmblem, sFileParentDir, ce.iId, iId2: ce.iId2, iId3: ce.iId3);
+        CornerkickApp.Controllers.App.uploadFile(ce.bEmblem, CornerkickApp.Controllers.App.getMediaDir(dbfile2), Path.Combine("images", "cup_emblems"), ce.iId, iId2: ce.iId2, iId3: ce.iId3);
       }
 
       foreach (CornerkickApp.Services.Emblem ce in ltClubEmblem) {
         if (ce?.bEmblem == null) continue;
-        string sFileParentDir = Path.Combine(CornerkickApp.Controllers.App.getMediaDir(dbfile2), "images", "emblems");
-        CornerkickApp.Controllers.App.uploadFile(ce.bEmblem, sFileParentDir, ce.iId);
+        CornerkickApp.Controllers.App.uploadFile(ce.bEmblem, CornerkickApp.Controllers.App.getMediaDir(dbfile2), Path.Combine("images", "cup_emblems"), ce.iId);
       }
 
       foreach (CornerkickApp.Services.Emblem pp in ltPlayerPortrait) {
         if (pp?.bEmblem == null) continue;
-        string sFileParentDir = Path.Combine(CornerkickApp.Controllers.App.getMediaDir(dbfile2), "images", "portraits");
-        CornerkickApp.Controllers.App.uploadFile(pp.bEmblem, sFileParentDir, pp.iId);
+        CornerkickApp.Controllers.App.uploadFile(pp.bEmblem, CornerkickApp.Controllers.App.getMediaDir(dbfile2), Path.Combine("images", "cup_emblems"), pp.iId);
       }
 
       dbfile = dbfile2 + sFileExt;
@@ -3181,7 +3178,7 @@
     CornerkickManager.Club? clb = CkAppShared.ckMng.ltClubs.Find(c => c.iId == iClubId);
     if (clb == null) return;
 
-    bool bOk = CornerkickManager.IOXml.save_club(Path.Combine(CornerkickApp.Controllers.App.getDocumentsDir, "database", dbfile2, "Clubs"), clb);
+    bool bOk = CornerkickManager.IOXml.save_club(Path.Combine(CkAppShared.sAppDataDir, "database", dbfile2, "Clubs"), clb);
 
     if (MainLayout.ckToast != null) {
       if (bOk) MainLayout.toastMessage = "Club <b>" + clb.sName + "</b> als XML gespeichert.";
@@ -3195,7 +3192,7 @@
     CornerkickManager.Player? pl = CkAppShared.ckMng.ltPlayer.Find(p => p.plGame.iId == iPlId);
     if (pl == null) return;
 
-    bool bOk = CornerkickManager.IOXml.save_player(Path.Combine(CornerkickApp.Controllers.App.getDocumentsDir, "database", dbfile2, "Players"), pl);
+    bool bOk = CornerkickManager.IOXml.save_player(Path.Combine(CkAppShared.sAppDataDir, "database", dbfile2, "Players"), pl);
 
     if (MainLayout.ckToast != null) {
       if (bOk) MainLayout.toastMessage = "Spieler <b>" + pl.plGame.sName + "</b> als XML gespeichert.";
@@ -3250,7 +3247,7 @@
           // so we can read it.
           stream.Seek(0, SeekOrigin.Begin);
 
-          string sDbTmpDir = Path.Combine(Controllers.App.getDocumentsDir, "database");
+          string sDbTmpDir = Path.Combine(CkAppShared.sAppDataDir, "database");
           string sDbFilename = Path.Combine(sDbTmpDir, Path.GetFileName(file.Name));
           if (!Directory.Exists(sDbTmpDir)) Directory.CreateDirectory(sDbTmpDir);
           using (FileStream DestinationStream = File.Create(sDbFilename)) {

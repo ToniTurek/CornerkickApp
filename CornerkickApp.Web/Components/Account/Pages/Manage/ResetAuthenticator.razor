@@ -31,22 +31,24 @@
 </div>
 
 @code {
-    [CascadingParameter]
-    private HttpContext HttpContext { get; set; } = default!;
+  [CascadingParameter]
+  private HttpContext HttpContext { get; set; } = default!;
 
-    private async Task OnSubmitAsync()
-    {
-        var user = await UserAccessor.GetRequiredUserAsync(HttpContext);
-        await UserManager.SetTwoFactorEnabledAsync(user, false);
-        await UserManager.ResetAuthenticatorKeyAsync(user);
-        var userId = await UserManager.GetUserIdAsync(user);
-        Logger.LogInformation("User with ID '{UserId}' has reset their authentication app key.", userId);
+  private async Task OnSubmitAsync()
+  {
+    var user = await UserAccessor.GetRequiredUserAsync(HttpContext);
+    if (user == null) return;
 
-        await SignInManager.RefreshSignInAsync(user);
+    await UserManager.SetTwoFactorEnabledAsync(user, false);
+    await UserManager.ResetAuthenticatorKeyAsync(user);
+    var userId = await UserManager.GetUserIdAsync(user);
+    Logger.LogInformation("User with ID '{UserId}' has reset their authentication app key.", userId);
 
-        RedirectManager.RedirectToWithStatus(
-            "Account/Manage/EnableAuthenticator",
-            "Your authenticator app key has been reset, you will need to configure your authenticator app using the new key.",
-            HttpContext);
-    }
+    await SignInManager.RefreshSignInAsync(user);
+
+    RedirectManager.RedirectToWithStatus(
+        "Account/Manage/EnableAuthenticator",
+        "Your authenticator app key has been reset, you will need to configure your authenticator app using the new key.",
+        HttpContext);
+  }
 }
