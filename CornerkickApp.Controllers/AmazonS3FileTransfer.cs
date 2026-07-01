@@ -19,11 +19,11 @@ namespace CornerkickApp.Controllers
 {
   public class AmazonS3FileTransfer
   {
-    private static string sBucketName = "ckamazonbucket";
-    private static RegionEndpoint bucketRegion = RegionEndpoint.EUCentral1;
-    private static string? sAwsKeyId     = "";
-    private static string? sAwsSecretKey = "";
-    private static IAmazonS3? client;
+    private const string sBucketName = "ckamazonbucket";
+    private RegionEndpoint bucketRegion = RegionEndpoint.EUCentral1;
+    private string? sAwsKeyId     = "";
+    private string? sAwsSecretKey = "";
+    private IAmazonS3? client;
 
     internal readonly string? sCkInstanceName;
 
@@ -165,9 +165,9 @@ namespace CornerkickApp.Controllers
 
     public async Task deleteFileAsync(string sKey)
     {
-#if _NO_UPLOAD
-      return;
-#else
+#if !_NO_UPLOAD
+      if (client == null) return;
+
       var deleteObjectRequest = new DeleteObjectRequest {
         BucketName = sBucketName,
         Key = sKey
@@ -220,6 +220,8 @@ namespace CornerkickApp.Controllers
 
     public async Task downloadAllFilesAsync(string sS3SubDir, string sTargetPath = "./", string sStartsWith = null, string sEndsWith = null, bool bForce = false)
     {
+      if (client == null) return;
+
       ListObjectsRequest request = new ListObjectsRequest();
       request.BucketName = sBucketName;
 
@@ -250,6 +252,27 @@ namespace CornerkickApp.Controllers
           request = null;
         }
       } while (request != null);
+    }
+
+    public async Task<bool> CopyingObjectAsync(string sKey, string sDestKey)
+    {
+      if (client == null) return false;
+
+      try {
+        CopyObjectRequest request = new CopyObjectRequest {
+          SourceBucket = sBucketName,
+          SourceKey = sKey,
+          DestinationBucket = sBucketName,
+          DestinationKey = sDestKey
+        };
+        CopyObjectResponse response = await client.CopyObjectAsync(request);
+        return response.HttpStatusCode == System.Net.HttpStatusCode.OK;
+      } catch (AmazonS3Exception e) {
+        Console.WriteLine("Error encountered on server. Message:'{0}' when writing an object", e.Message);
+      } catch (Exception e) {
+        Console.WriteLine("Unknown encountered on server. Message:'{0}' when writing an object", e.Message);
+      }
+      return false;
     }
 
     async Task ReadObjectDataAsync(string sKey)

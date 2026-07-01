@@ -3445,19 +3445,27 @@ namespace CornerkickApp.Controllers
       }
     }
 
-    public static bool uploadFile(Stream fileStream, string sFolder, int iFileId)
+    public static bool uploadFile(Stream fileStream, string sRootFolder, string sFolder, int iFileId)
+    {
+      return uploadFile(fileStream, sRootFolder, sFolder, iFileId.ToString());
+    }
+    public static bool uploadFile(Stream fileStream, string sRootFolder, string sFolder, string sFileId)
     {
 #if DEBUG
       //return false;
 #endif
 
+      if (as3 == null) return false;
+
       try {
         if (fileStream != null && fileStream.Length > 0) {
+          string sDirSave = Path.Combine(sRootFolder, sFolder);
+
           // Create directory if not existing
-          if (!Directory.Exists(sFolder)) Directory.CreateDirectory(sFolder);
+          if (!Directory.Exists(sDirSave)) Directory.CreateDirectory(sDirSave);
 
           // Compose temporary filename
-          string sFilePng = Path.Combine(sFolder, iFileId.ToString() + ".png");
+          string sFilePng = Path.Combine(sDirSave, sFileId + ".png");
           CkAppShared.ckMng.tl.writeLog("Save file to '" + sFilePng + "'");
 
           // Save to disk
@@ -3467,7 +3475,7 @@ namespace CornerkickApp.Controllers
 
 #if _WebApp
           // Upload to as3
-          Task.Run(() => as3.uploadFileAsync(sFilePng, as3.sCkInstanceName + sFolder + "/" + iFileId.ToString() + ".png", "image/custom"));
+          Task.Run(() => as3.uploadFileAsync(sFilePng, as3.sCkInstanceName + sFolder.Replace('\\', '/') + "/" + sFileId + ".png", "image/custom"));
 #endif
         }
 
@@ -3478,23 +3486,30 @@ namespace CornerkickApp.Controllers
       }
     }
 
-    public static bool uploadFile(byte[] b, string sFolder, int iId, int? iId2 = null, int? iId3 = null)
+    public static bool uploadFile(byte[] b, string sRootFolder, string sFolder, int iId, int? iId2 = null, int? iId3 = null, int iImageWidth = 0)
+    {
+      return uploadFile(b, sRootFolder, sFolder, iId.ToString() + (iId2 != null ? "_" + iId2.ToString() : "") + (iId3 != null ? "_" + iId3.ToString() : ""), iImageWidth);
+    }
+    public static bool uploadFile(byte[] b, string sRootFolder, string sFolder, string sFileId, int iImageWidth = 0)
     {
 #if DEBUG
       //return false;
 #endif
 
+      if (as3 == null) return false;
+
       try {
         if (b != null && b.Length > 0) {
+          string sDirSave = Path.Combine(sRootFolder, sFolder);
+
           // Create directory if not existing
-          if (!Directory.Exists(sFolder)) Directory.CreateDirectory(sFolder);
+          if (!Directory.Exists(sDirSave)) Directory.CreateDirectory(sDirSave);
 
           // Compose filename
-          string sFile = iId.ToString();
-          if (iId2 != null) sFile += "_" + iId2.ToString();
-          if (iId3 != null) sFile += "_" + iId3.ToString();
-          string sFilePng = Path.Combine(sFolder, sFile + ".png");
+          string sFilePng = Path.Combine(sDirSave, sFileId + ".png");
           CkAppShared.ckMng.tl.writeLog("Save file to '" + sFilePng + "'");
+
+          if (iImageWidth > 0) b = Tool.resizeImage(b, iImageWidth, bShrinkOnly: true);
 
           // Save to disk
           using (Image imgEmblem = Image.Load(b)) {
@@ -3503,7 +3518,7 @@ namespace CornerkickApp.Controllers
 
 #if _WebApp
           // Upload to as3
-          Task.Run(() => as3.uploadFileAsync(sFilePng, as3.sCkInstanceName + sFolder + "/" + sFile + ".png", "image/custom"));
+          Task.Run(() => as3.uploadFileAsync(sFilePng, as3.sCkInstanceName + sFolder.Replace('\\', '/') + "/" + sFileId + ".png", "image/custom"));
 #endif
         }
 
@@ -3512,6 +3527,15 @@ namespace CornerkickApp.Controllers
         CkAppShared.ckMng.tl.writeLog("Error writing/uploading image." + Environment.NewLine + ex.Message + Environment.NewLine + ex.StackTrace, bError: true);
         return false;
       }
+    }
+
+    public static bool MoveFileOnS3(string sKey, string sDestKey)
+    {
+      if (as3 == null) return false;
+
+      Task<bool> tk = Task.Run(() => as3.CopyingObjectAsync(as3.sCkInstanceName + sKey, as3.sCkInstanceName + sDestKey));
+      if (tk.Result) Task.Run(() => as3.deleteFileAsync(as3.sCkInstanceName + sKey));
+      return true;
     }
 
     private static int iProgressLandCreated { get; set; } = 0;
