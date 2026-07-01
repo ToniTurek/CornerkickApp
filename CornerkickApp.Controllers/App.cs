@@ -1273,17 +1273,19 @@ namespace CornerkickApp.Controllers
       saveLaststate(sAppDataDir);
 
       // Clear CPU user news before saving
-      for (int iN = 0; iN < CkAppShared.ckMng.ltUser[0].ltNews.Count; iN++) {
-        if (CkAppShared.ckMng.ltUser[0].ltNews[iN].iType < 200) {
-          CkAppShared.ckMng.ltUser[0].ltNews.RemoveAt(iN);
-          iN--;
-          continue;
-        }
+      if (CkAppShared.ckMng.ltUser.Count > 0) {
+        for (int iN = 0; iN < CkAppShared.ckMng.ltUser[0].ltNews.Count; iN++) {
+          if (CkAppShared.ckMng.ltUser[0].ltNews[iN].iType < 200) {
+            CkAppShared.ckMng.ltUser[0].ltNews.RemoveAt(iN);
+            iN--;
+            continue;
+          }
 
-        if ((CkAppShared.ckMng.dtDatum - CkAppShared.ckMng.ltUser[0].ltNews[iN].dt).TotalDays > 7) {
-          CkAppShared.ckMng.ltUser[0].ltNews.RemoveAt(iN);
-          iN--;
-          continue;
+          if ((CkAppShared.ckMng.dtDatum - CkAppShared.ckMng.ltUser[0].ltNews[iN].dt).TotalDays > 7) {
+            CkAppShared.ckMng.ltUser[0].ltNews.RemoveAt(iN);
+            iN--;
+            continue;
+          }
         }
       }
 
@@ -1448,24 +1450,28 @@ namespace CornerkickApp.Controllers
     {
       string sFileSettings = Path.Combine(sTargetDir, CkAppShared.sFilenameSettings);
 
-      using (StreamWriter fileSettings = new StreamWriter(sFileSettings)) {
-        fileSettings.WriteLine((CkAppShared.timerCkCalender.Interval / 1000.0).ToString("g", CultureInfo.InvariantCulture));
-        fileSettings.WriteLine(CkAppShared.timerCkCalender.Enabled.ToString());
-        fileSettings.WriteLine(DateTime.Now.ToString("s", CultureInfo.InvariantCulture));
-        fileSettings.WriteLine(getGameSpeedFromUsers().ToString());
-        fileSettings.WriteLine(CkAppShared.settings.bEmailCertification.ToString());
-        fileSettings.WriteLine(CkAppShared.settings.bRegisterDuringGame.ToString());
+      try {
+        using (StreamWriter fileSettings = new StreamWriter(sFileSettings)) {
+          fileSettings.WriteLine((CkAppShared.timerCkCalender.Interval / 1000.0).ToString("g", CultureInfo.InvariantCulture));
+          fileSettings.WriteLine(CkAppShared.timerCkCalender.Enabled.ToString());
+          fileSettings.WriteLine(DateTime.Now.ToString("s", CultureInfo.InvariantCulture));
+          fileSettings.WriteLine(getGameSpeedFromUsers().ToString());
+          fileSettings.WriteLine(CkAppShared.settings.bEmailCertification.ToString());
+          fileSettings.WriteLine(CkAppShared.settings.bRegisterDuringGame.ToString());
 
-        fileSettings.WriteLine(CkAppShared.settings.bMaintenance.ToString());
-        fileSettings.WriteLine(CkAppShared.settings.sInfo);
-        fileSettings.WriteLine(CkAppShared.settings.dtCounterStart.ToString("s", CultureInfo.InvariantCulture));
+          fileSettings.WriteLine(CkAppShared.settings.bMaintenance.ToString());
+          fileSettings.WriteLine(CkAppShared.settings.sInfo);
+          fileSettings.WriteLine(CkAppShared.settings.dtCounterStart.ToString("s", CultureInfo.InvariantCulture));
 
-        fileSettings.Close();
-      }
+          fileSettings.Close();
+        }
 
 #if _USE_AMAZON_S3
-      Task.Run(() => as3.uploadFileAsync(sFileSettings, as3.sCkInstanceName + CkAppShared.sFilenameSettings));
+        Task.Run(() => as3.uploadFileAsync(sFileSettings, as3.sCkInstanceName + CkAppShared.sFilenameSettings));
 #endif
+      } catch (Exception e) {
+        CkAppShared.ckMng.tl.writeLog("ERROR: could not save laststate to file " + sFileSettings + Environment.NewLine + e.Message + e.StackTrace, bError: true);
+      }
     }
 
     private static void saveMails()
