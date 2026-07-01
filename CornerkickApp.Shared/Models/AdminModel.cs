@@ -62,7 +62,6 @@ namespace CornerkickApp.Shared.Models
     public string sInfo { get; set; }
     public DateTime? dtCounterStart;
 
-    public bool bLogExist { get; set; }
     public bool bAutosaveExist { get; set; }
     public bool bSaveDirExist { get; set; }
 

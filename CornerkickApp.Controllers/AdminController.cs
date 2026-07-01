@@ -52,9 +52,6 @@ namespace CornerkickApp.Controllers
       modelAdmin.dtCkApproach = App.getCkApproachDate();
       modelAdmin.fIntervalAveToApproachTarget = App.getIntervalAve();
 
-      // Files
-      modelAdmin.bLogExist = System.IO.File.Exists(Path.Combine(modelAdmin.sHomeDir, "log", "ck.log"));
-
       //DirectoryInfo d = new DirectoryInfo(sHomeDir + "save");
       //FileInfo[] ltCkxFiles = d.GetFiles("*.ckx");
       modelAdmin.bSaveDirExist  = Directory.Exists(Path.Combine(modelAdmin.sHomeDir, "save"));
@@ -65,7 +62,7 @@ namespace CornerkickApp.Controllers
         FileInfo[] ltCkxFiles = d.GetFiles("*.ckx");
         foreach (FileInfo ckx in ltCkxFiles) {
           modelAdmin.ddlAutosaveFiles.Add(
-            new CornerkickApp.Shared.Models.LayoutModel.SelectListItem {
+            new LayoutModel.SelectListItem {
               Text = ckx.Name,
               Value = ckx.Name
             }
@@ -309,14 +306,19 @@ namespace CornerkickApp.Controllers
       return modelAdmin;
     }
 
-    public static void DeleteLog()
+    public static void DeleteLog(bool bDeleteLog = true, bool bDeleteErr = true)
     {
       var diLog = new DirectoryInfo(Path.Combine(CkAppShared.sAppDataDir, "log"));
-      foreach (var file in diLog.EnumerateFiles("*.log")) {
-        file.Delete();
+
+      if (bDeleteLog) {
+        foreach (var file in diLog.EnumerateFiles("*.log")) {
+          file.Delete();
+        }
       }
-      foreach (var file in diLog.EnumerateFiles("*.err")) {
-        file.Delete();
+      if (bDeleteErr) {
+        foreach (var file in diLog.EnumerateFiles("*.err")) {
+          file.Delete();
+        }
       }
 
       string sFileLogZip = Path.Combine(CkAppShared.sAppDataDir, "log.zip");

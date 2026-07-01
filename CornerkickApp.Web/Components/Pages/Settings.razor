@@ -18,28 +18,25 @@
 
   @if (ModelLoaded) {
     <div style="position: relative; width: 100%; margin-bottom: 10px; display: flex; flex-wrap: wrap; justify-content: left">
-      <form onsubmit="event.preventDefault();">
-        <div style="position: relative; width: 100%; margin-bottom: 10px">
-          <input id="fCalendarInterval" @bind="Model.fCalendarInterval" placeholder="calendar interval" autocomplete="off" autofocus style="width:120px" type="tel" />
-          <input id="sStartHour" @bind="Model.sStartHour" placeholder="start hour" autocomplete="off" style="width:120px" type="number" />
-          <input id="iGameSpeed" @bind="Model.iGameSpeed" placeholder="game speed" autocomplete="off" style="width:120px" type="number" />
-        </div>
-
-        <button @onclick="StartOrUpdateCalendarAsync" class="btn btn-light" style="position: relative; width: 180px">
-          @(Model.bTimer ? "Update" : "Start")
-        </button>
-      </form>
+      <div style="position: relative; width: 100%; margin-bottom: 10px">
+        <input id="fCalendarInterval" @bind="Model.fCalendarInterval" placeholder="calendar interval" autocomplete="off" autofocus style="width:120px" type="tel" />
+        <input id="sStartHour" @bind="Model.sStartHour" placeholder="start hour" autocomplete="off" style="width:120px" type="number" />
+        <input id="iGameSpeed" @bind="Model.iGameSpeed" placeholder="game speed" autocomplete="off" style="width:120px" type="number" />
+      </div>
     </div>
 
     <div style="position: relative; width: 100%; margin-bottom: 10px; display: flex; flex-wrap: wrap; justify-content: left">
-      <button @onclick="StopCalendarAsync" class="btn btn-light" style="position: relative; width: 180px; margin: 4px">Stop</button>
-      <button @onclick="OneStepAsync" class="btn btn-light" style="position: relative; width: 180px; margin: 4px">Next</button>
-      <button @onclick="StepBackAsync" class="btn btn-light" style="position: relative; width: 180px; margin: 4px">Back</button>
+      <button @onclick="StartOrUpdateCalendarAsync" class="btn btn-primary" style="position: relative; width: 180px; margin-right: 0.5rem">
+        @(Model.bTimer ? "Update" : "Start")
+      </button>
+      <button @onclick="StopCalendarAsync" class="btn btn-primary" style="position: relative; width: 180px; margin-right: 0.5rem">Stop</button>
+      <button @onclick="OneStepAsync" class="btn btn-secondary" style="position: relative; width: 180px; margin-right: 0.5rem">Next</button>
+      <button @onclick="StepBackAsync" class="btn btn-secondary" style="position: relative; width: 180px">Back</button>
     </div>
 
     <div style="margin-bottom:10px">
-      <button @onclick="() => SetCalInterval(1)" id="bnSetWeeks1" class="btn btn-light" style="width:180px;margin:4px">1 Day -> 1 Week</button>
-      <button @onclick="() => SetCalInterval(2)" id="bnSetWeeks2" class="btn btn-light" style="width:180px;margin:4px">1 Day -> 2 Weeks</button>
+      <button @onclick="() => SetCalInterval(1)" id="bnSetWeeks1" class="btn btn-secondary" style="width:180px;margin:4px">1 Day -> 1 Week</button>
+      <button @onclick="() => SetCalInterval(2)" id="bnSetWeeks2" class="btn btn-secondary" style="width:180px;margin:4px">1 Day -> 2 Weeks</button>
     </div>
 
     <p></p>
@@ -77,27 +74,20 @@
       <input id="dtCounterStart" type="datetime-local" @bind="Model.dtCounterStart" />
     </p>
 
-    <div style="margin-top:8px">
-      <button @onclick="RestartCkAsync" class="btn btn-light" style="width:180px">Restart Cornerkick</button>
+    <div style="position: relative; width: 100%; margin-top: 8px; display: flex; flex-wrap: wrap">
+      <button @onclick="RestartCkAsync" class="btn btn-secondary" style="position: relative; width:180px; margin-right: 0.5rem">Restart Cornerkick</button>
+      <button @onclick="SaveAutosaveAsync" class="btn btn-secondary" style="position: relative; width: 180px; margin-right: 0.5rem">save autosave</button>
+      <button @onclick="DeleteAutosaveAsync" class="btn btn-secondary" style="position: relative; width: 180px; margin-right: 0.5rem" disabled="@( !Model.bAutosaveExist )">delete autosave</button>
+      <button @onclick="DeleteSaveFolderAsync" class="btn btn-secondary" style="position: relative; width: 180px" disabled="@( !Model.bSaveDirExist )">delete save folder</button>
     </div>
 
-    <div style="position: relative; width: 50%; min-width: 300px; height: 75px; margin-top: 10px">
-      <button @onclick="DeleteLogAsync" class="btn btn-light" style="position: absolute; width: 180px" disabled="@( !Model.bLogExist )">delete Log</button>
-      <button @onclick="DeleteSaveFolderAsync" class="btn btn-light" style="position: absolute; width: 180px; left: 184px" disabled="@( !Model.bSaveDirExist )">delete save folder</button>
-    </div>
-
-    <div style="position: relative; width: 50%; min-width: 300px; height: 40px; margin-top:8px">
-      <button @onclick="SaveAutosaveAsync" class="btn btn-light" style="position: absolute; width: 180px">save autosave</button>
-      <button @onclick="DeleteAutosaveAsync" class="btn btn-light" style="position: absolute; width: 180px; left: 184px" disabled="@( !Model.bAutosaveExist )">delete autosave</button>
-    </div>
-
-    <div style="position: relative; width: 50%; min-width: 300px; height: 40px; margin-top:8px">
-      <select @bind="Model.sSelectedAutosaveFile" style="position:absolute; width:180px">
+    <div style="position: relative; width: 100%; height: 40px; margin-top: 8px; display: flex; flex-wrap: wrap">
+      <select @bind="Model.sSelectedAutosaveFile" style="position: relative; width: 180px; margin-right: 0.5rem">
         @foreach (var it in Model.ddlAutosaveFiles) {
           <option value="@it.Value">@it.Text</option>
         }
       </select>
-      <button @onclick="LoadAutosaveAsync" class="btn btn-light" style="position: absolute; width: 180px; left: 184px" disabled="@( !Model.bAutosaveExist )">load autosave</button>
+      <button @onclick="LoadAutosaveAsync" class="btn btn-secondary" style="position: relative; width: 180px" disabled="@( !Model.bAutosaveExist )">load autosave</button>
     </div>
 
     <div style="margin-top:8px">
@@ -175,7 +165,7 @@
 
     <p></p>
     <input id="itCd" style="width:30%" type="text" autocomplete="off" @bind="CurrentDirInput" />
-    <button id="bnCd" type="button" class="btn btn-light" @onclick="ChangeDirAsync">Change Dir</button>
+    <button id="bnCd" type="button" class="btn btn-secondary" @onclick="ChangeDirAsync">Change Dir</button>
     <div id="divFileExplorer"></div>
 
     <h3>Transfer money</h3>
@@ -186,7 +176,7 @@
     </select>
     <input id="iTransferMoney" @bind="TransferMoneyString" placeholder="value" style="width:120px; text-align:right" />
     <input id="sTransferMoneySubject" @bind="TransferMoneySubject" placeholder="subject" style="width:120px" />
-    <button class="btn btn-light" style="width:180px" @onclick="TransferMoneyAsync">Transfer money</button>
+    <button class="btn btn-secondary" style="width:180px" @onclick="TransferMoneyAsync">Transfer money</button>
 
     <h3>Shift league</h3>
     <select @bind="Model.iSelectedClub" style="width:180px">
@@ -199,7 +189,7 @@
         <option value="@it.Value">@it.Text</option>
       }
     </select>
-    <button class="btn btn-light" style="width:180px" @onclick="ShiftCupAsync">Shift club to league</button>
+    <button class="btn btn-secondary" style="width:180px" @onclick="ShiftCupAsync">Shift club to league</button>
   } else {
     <p>Loading...</p>
   }
@@ -264,12 +254,6 @@
   private async Task RestartCkAsync()
   {
     Controllers.AdminController.RestartCk();
-    StateHasChanged();
-  }
-
-  private async Task DeleteLogAsync()
-  {
-    Controllers.AdminController.DeleteLog();
     StateHasChanged();
   }
 

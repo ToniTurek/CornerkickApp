@@ -31,6 +31,10 @@
     </tbody>
   </table>
 
+  <div style="position: relative; width: 100%; min-width: 300px; height: fit-content; margin-top: 10px">
+    <button @onclick="DeleteLogAsync" class="btn btn-primary" style="position: absolute; width: 180px" disabled="@(Model.ltLog == null || Model.ltLog.Count < 1)">delete Log</button>
+  </div>
+
   <h3>Error</h3>
   <table id="tblErr" style="width: 100%">
     <tbody style="display: block; border: 1px solid black; height: 300px; overflow: scroll">
@@ -43,6 +47,10 @@
       }
     </tbody>
   </table>
+
+  <div style="position: relative; width: 100%; min-width: 300px; height: fit-content; margin-top: 10px">
+    <button @onclick="DeleteErrorAsync" class="btn btn-primary" style="position: absolute; width: 180px" disabled="@(Model.ltErr == null || Model.ltErr.Count < 1)">delete Log</button>
+  </div>
 </body>
 </html>
 
@@ -58,5 +66,19 @@
       //Users = await Http.GetFromJsonAsync<List<CornerkickManager.User>>("/Admin/GetUsers");
       //UnfinishedGames = await Http.GetFromJsonAsync<List<UnfinishedGame>>("/Admin/GetUnfinishedGames");
     } catch { /* Logging optional */ }
+  }
+
+  private async Task DeleteLogAsync()
+  {
+    Controllers.AdminController.DeleteLog(bDeleteErr: false);
+    Model = Controllers.AdminController.Log();
+    StateHasChanged();
+  }
+
+  private async Task DeleteErrorAsync()
+  {
+    Controllers.AdminController.DeleteLog(bDeleteLog: false);
+    Model = Controllers.AdminController.Log();
+    StateHasChanged();
   }
 }
