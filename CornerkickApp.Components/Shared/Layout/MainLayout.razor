@@ -383,10 +383,6 @@
 #endif
   public static bool bOnViewGamePage = false;
 
-#if DEBUG
-  string sDocDir { get; set; } = "";
-#endif
-
   // Display memory consumption
   private double managed_mem = 0.0;
   private double process_mem = 0.0;
@@ -486,10 +482,6 @@
     }
 
     ShowMemory();
-
-#if DEBUG
-    sDocDir = Controllers.App.getDocumentsDir;
-#endif
   }
 
   protected override async Task OnAfterRenderAsync(bool firstRender)

@@ -699,7 +699,7 @@ namespace CornerkickApp.Controllers.Member
 
       // 3rd: try default portraits
       for (byte i = 0; i < 2; i++) { // If bSmall --> try both
-        string sPortraitFile = Path.Combine(sContentDirAbs, "Images", "portraits", getPlayerPortraitId(plPortrait).ToString());
+        string sPortraitFile = Path.Combine(sHomeDir, "Images", "portraits", getPlayerPortraitId(plPortrait).ToString());
 
         // Create small image
         if (bSmall) Tool.resizeImage(sPortraitFile + ".png", 100, "s");
@@ -731,7 +731,7 @@ namespace CornerkickApp.Controllers.Member
 
       try {
         if (pl.clSkin.B == 0) {
-          string sDirPortrait = Path.Combine(sContentDirAbs, "Images", "portraits");
+          string sDirPortrait = Path.Combine(sHomeDir, "Images", "portraits");
           int nPortraitFiles = byte.MaxValue;
 
           if (Directory.Exists(sDirPortrait)) {

@@ -182,9 +182,6 @@ app.MapGet("/api/as3", async (IAmazonS3Service as3service) => {
 
 //app.MapGet("/api/member/desk").RequireAuthorization();
 
-// Start Cornerkick
-CornerkickApp.Shared.Models.CkAppShared.sWwwRootDir = builder.Environment.WebRootPath;
-
 // Get cornerkick instance name
 #if _DEPLOY_ON_HOST // Use environment variable
 CornerkickApp.Shared.Models.CkAppShared.sCkInstanceName = builder.Environment.GetEnvironmentVariable("ckInstanceName");
@@ -192,7 +189,15 @@ CornerkickApp.Shared.Models.CkAppShared.sCkInstanceName = builder.Environment.Ge
 CornerkickApp.Shared.Models.CkAppShared.sCkInstanceName = builder.Configuration.GetSection("ckInstanceName").Value;
 #endif
 
-CornerkickApp.Controllers.App appCk = new CornerkickApp.Controllers.App(builder.Configuration);
+// Compose App_Data dir in Cornerkick.Components
+string sAppDataDir = Path.Combine(builder.Environment.ContentRootPath, "..", "CornerkickApp.Components", "wwwroot", "Content", "Uploads");
+
+// Start Cornerkick
+CornerkickApp.Controllers.App appCk = new CornerkickApp.Controllers.App(
+  builder.Configuration,
+  AppDomain.CurrentDomain.BaseDirectory,
+  sAppDataDir
+);
 appCk.start();
 
 // Set Version

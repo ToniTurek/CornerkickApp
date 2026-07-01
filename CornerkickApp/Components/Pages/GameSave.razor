@@ -96,7 +96,7 @@
       if (!Path.GetExtension(sFileCkSelected).Equals(".ckx")) sFileCkSelected += ".ckx";
 
       // Check if save directory already exists
-      string sDirSave = Path.Combine(CornerkickApp.Controllers.App.getDocumentsDir, "save");
+      string sDirSave = Path.Combine(CornerkickApp.Shared.Models.CkAppShared.sAppDataDir, "save");
       if (!Directory.Exists(sDirSave)) Directory.CreateDirectory(sDirSave);
 
       // Update to full path if not already

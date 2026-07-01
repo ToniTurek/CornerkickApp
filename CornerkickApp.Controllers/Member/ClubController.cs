@@ -363,8 +363,7 @@ namespace CornerkickApp.Controllers.Member
     }
     public static string getScoutImg(int iScoutId, string sScoutName)
     {
-      string sBaseDir = App.getHomeDir();
-      string sPortraitFile = System.IO.Path.Combine(sBaseDir, "Content", "Images", "portraits", "scouts", iScoutId.ToString() + ".png");
+      string sPortraitFile = System.IO.Path.Combine(sHomeDir, "Content", "Images", "portraits", "scouts", iScoutId.ToString() + ".png");
       if (System.IO.File.Exists(sPortraitFile)) {
         return "<img src=\"/Content/Images/portraits/scouts/" + iScoutId.ToString() + ".png\" alt=\"Portrait\" style=\"width:100%\" title=\"" + sScoutName + "\" >";
       }

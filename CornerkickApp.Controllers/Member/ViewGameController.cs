@@ -166,7 +166,7 @@ namespace CornerkickApp.Controllers.Member
           }
 
           // If not live game, check for stored games to load
-          if (!bUserGame) game = ckMng.io.loadGame(Path.Combine(App.getHomeDir(), "App_Data", "save", "games", sGameId + ".ckgx"));
+          if (!bUserGame) game = ckMng.io.loadGame(Path.Combine(sAppDataDir, "save", "games", sGameId + ".ckgx"));
         }
       } else if (game == null || game.data.bFinished/* || view.bAdmin*/) {
         view.bOwnLiveGame = false; // Set own live-game flag
@@ -202,7 +202,7 @@ namespace CornerkickApp.Controllers.Member
         //if (view.ddlGames.Count > 0) view.ddlGames[0].Selected = true;
 
         if (game == null && fiGames.Count > 0) {
-          string sFilenameGame = Path.Combine(App.getHomeDir(), "App_Data", "save", "games", fiGames[fiGames.Count - 1].Name);
+          string sFilenameGame = Path.Combine(sAppDataDir, "save", "games", fiGames[fiGames.Count - 1].Name);
           try {
             game = ckMng.io.loadGame(sFilenameGame);
           } catch (Exception e) {
@@ -260,7 +260,7 @@ namespace CornerkickApp.Controllers.Member
     {
       List<FileInfo> fiGames = new List<FileInfo>();
 
-      DirectoryInfo d = new DirectoryInfo(Path.Combine(App.getHomeDir(), "App_Data", "save", "games"));
+      DirectoryInfo d = new DirectoryInfo(Path.Combine(sAppDataDir, "save", "games"));
 
       if (d.Exists) {
         FileInfo[] ltCkgFiles = d.GetFiles("*.ckgx");
@@ -328,7 +328,7 @@ namespace CornerkickApp.Controllers.Member
       ViewGameModel.gameData2? gd2 = getViewGameData(usr.id);
       if (gd2 == null) gd2 = new ViewGameModel.gameData2();
 
-      string sFilenameGame = Path.Combine(App.getHomeDir(), "App_Data", "save", "games", sFilename);
+      string sFilenameGame = Path.Combine(sAppDataDir, "save", "games", sFilename);
 
       try {
         gd2.game = ckMng.io.loadGame(sFilenameGame);

@@ -35,9 +35,10 @@ namespace CornerkickApp.Shared.Models
 
   public class CkAppShared
   {
-    public static string sWwwRootDir = "";
+    public static string sHomeDir = "";     // Cornerkick home directory E.g. where resources are located
+    public static string sAppDataDir = "";  // For content (images, user uploads, log files, etc.). For standalone app, this could be the documents dir
+
     public const string sContentDir = "./_content/CornerkickApp.Components/Content";
-    public static string sContentDirAbs;
 
     public static string? sFileCk = null;
 

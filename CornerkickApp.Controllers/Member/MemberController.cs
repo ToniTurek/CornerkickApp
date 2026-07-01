@@ -726,7 +726,7 @@ namespace CornerkickApp.Controllers.Member
           if (cupGlobal.iId == iType && (iLand < 0 || cupGlobal.iId2 == iLand) && (iDivision < 0 || cupGlobal.iId3 == iDivision)) return cupGlobal;
         }
 
-        string sFileLoad = Path.Combine(App.getHomeDir(), "App_Data", "archive");
+        string sFileLoad = Path.Combine(sAppDataDir, "archive");
         List<CornerkickManager.Cup> ltCupsTmp;
         try {
           ltCupsTmp = ckMng.io.readCups(sFileLoad, iSeason);
@@ -813,7 +813,7 @@ namespace CornerkickApp.Controllers.Member
             gi.sResult = "<a style=\"text-decoration:none\" href=\"/member/viewgame/";
 
             string sFilenameGame = CornerkickGame.Tool.getFilenameGame(gd);
-            if (File.Exists(Path.Combine(App.getHomeDir(), "App_Data", "save", "games", sFilenameGame + ".ckgx"))) {
+            if (File.Exists(Path.Combine(sAppDataDir, "save", "games", sFilenameGame + ".ckgx"))) {
               gi.sResult += sFilenameGame;
             } else {
               gi.sResult += getGameDataId(cup, iMatchday, iGd);

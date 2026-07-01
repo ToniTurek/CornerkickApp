@@ -86,7 +86,7 @@
     if (!_auth.IsAuthenticated()) return;
 
     // Check if save directory already exists
-    string sDirSave = Path.Combine(CornerkickApp.Controllers.App.getDocumentsDir, "save");
+    string sDirSave = Path.Combine(CornerkickApp.Shared.Models.CkAppShared.sAppDataDir, "save");
     if (!Directory.Exists(sDirSave)) Directory.CreateDirectory(sDirSave);
 
     /*
@@ -113,7 +113,7 @@
     if (!_auth.IsAuthenticated()) return;
 
     // Check if save directory already exists
-    string sDirSave = Path.Combine(CornerkickApp.Controllers.App.getDocumentsDir, "save");
+    string sDirSave = Path.Combine(CornerkickApp.Shared.Models.CkAppShared.sAppDataDir, "save");
     if (!Directory.Exists(sDirSave)) Directory.CreateDirectory(sDirSave);
 
     /*
