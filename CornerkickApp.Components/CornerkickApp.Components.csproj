@@ -59,9 +59,6 @@
 
   <ItemGroup>
     <Folder Include="Shared\Components\UserClubEmblem\" />
-    <Folder Include="wwwroot\Content\Uploads\emblems\" />
-    <Folder Include="wwwroot\Content\Uploads\portraits\" />
-    <Folder Include="wwwroot\mail\" />
   </ItemGroup>
 
 </Project>
