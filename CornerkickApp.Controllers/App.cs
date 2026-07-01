@@ -1657,7 +1657,7 @@ namespace CornerkickApp.Controllers
       //Task<bool> tkDownloadLog = Task.Run(async () => await downloadFileAsync(as3, "ckLog", sAppDataDir + "/log.zip"));
 
       // Download Google ads.txt async
-      as3.downloadFile("ads.txt", Path.Combine(CkAppShared.sWwwRootDir, "ads.txt"));
+      as3.downloadFile("ads.txt", Path.Combine(CkAppShared.sAppDataDir, "ads.txt"));
 #endif
 #endif
 
