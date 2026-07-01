@@ -49,7 +49,11 @@
         statusMessage = "Vielen Dank für die Bestätigung Ihrer E-Mail.";
 
         // Add user to game
-        Register.addUser(user);
+        CornerkickManager.Club? clbUser = Register.addUser(user);
+
+        if (clbUser != null) {
+          bool bOk = CornerkickApp.Controllers.App.MoveFileOnS3("emblems/temp/" + user.Id + ".png", "emblems/" + clbUser.iId.ToString() + ".png");
+        }
       } else {
         statusMessage = "Fehler bei der Bestätigung Ihrer E-Mail.";
       }

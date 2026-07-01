@@ -49,6 +49,42 @@
       background-color: rgb( @(CkAppShared.sClCkRgb) );
       opacity: 1.0 !important;
     }
+
+    /* Completely hide the default ugly file input */
+    .hidden-input {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      border: 0;
+    }
+
+    /* Style the label exactly like a MAUI/Bootstrap button */
+    .custom-file-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      background-color: white; /* MAUI Purple */
+      color: black;
+      border-color: black;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .custom-file-button:hover {
+      background-color: dimgrey;
+    }
+
+    .custom-file-button:active {
+      transform: scale(0.98);
+    }
   </style>
 </head>
 
@@ -127,7 +163,26 @@
         </Blazorise.Select>
         <label for="Input.iLand">Land</label>
       </div>
-      <div style="display: flex; flex-wrap: wrap">
+      <div style="display: flex; flex-wrap: wrap; align-items: center">
+        <div style="position: relative; width: 160px; height: fit-content; top: 0px; left: 0px; margin-right: 1rem; border-style: outset; border-width: 3px; border-color: lightgray; background-color: white">
+          @if (club_emblem == null) {
+            <img src="@CkAppShared.sContentDir/Images/club_default.png" title="Wappen" style="width: 100%" />
+          } else {
+            <img src="data:image/*;base64,@Convert.ToBase64String(club_emblem)" title="Wappen" alt="Wappen" style="width: 100%" />
+          }
+          <div style="position: absolute; bottom: 4px; left: 0; width: 100%; height: fit-content; display: flex; align-items: center; justify-content: center">
+            @if (isLoading) {
+              <div>Uploading ...</div>
+            } else {
+              <div class="file-upload-wrapper">
+                <InputFile OnChange="loadClubEmblem" accept="image/*" id="fileInput" class="hidden-input" />
+                <label for="fileInput" class="btn btn-primary custom-file-button">
+                  <i class="fa-solid fa-upload"></i> Wappen
+                </label>
+              </div>
+            }
+          </div>
+        </div>
         <Jersey @ref="jerseyH" iSet="0" EditColors Header iNb="5" ColorChanged="(e) => setClubColor(0, e)"></Jersey>
         <Jersey @ref="jerseyA" iSet="1" EditColors Header iNb="5" ColorChanged="(e) => setClubColor(1, e)"></Jersey>
       </div>
@@ -278,7 +333,10 @@
       user.Id = sUserAlreadyRegisteredId;
 
       //addUserToCk(appUser, App.ckMng.ltUser.Count == 0);
-      addUser(user, bAdmin: CkAppShared.ckMng.ltUser.Count == 0);
+      CornerkickManager.Club? clbUser = addUser(user, bAdmin: CkAppShared.ckMng.ltUser.Count == 0);
+
+      // Upload club emblem
+      if (clbUser != null && club_emblem != null) CornerkickApp.Controllers.App.uploadFile(club_emblem, CkAppShared.sAppDataDir, "emblems", clbUser.iId);
 
       NavManager.NavigateTo("/member/desk");
       //RedirectManager.RedirectTo(ReturnUrl);
@@ -321,17 +379,23 @@
           }
         }
 
+        // Upload club emblem
+        if (club_emblem != null) CornerkickApp.Controllers.App.uploadFile(club_emblem, CkAppShared.sAppDataDir, Path.Combine("emblems", "temp"), userId);
+
         /*
         NavManager.NavigateTo("/Account/RegisterConfirmation");
         */
-                RedirectManager.RedirectTo(
-                    "Account/RegisterConfirmation",
-                    new() { ["email"] = Input.Email, ["returnUrl"] = ReturnUrl });
+        RedirectManager.RedirectTo(
+            "Account/RegisterConfirmation",
+            new() { ["email"] = Input.Email, ["returnUrl"] = ReturnUrl });
 
         return;
       } else {
         // Add user to game
-        addUser(user);
+        CornerkickManager.Club? clbUser = addUser(user);
+
+        // Upload club emblem
+        if (clbUser != null && club_emblem != null) CornerkickApp.Controllers.App.uploadFile(club_emblem, CkAppShared.sAppDataDir, "emblems", clbUser.iId);
 
         NavigationManager.NavigateTo("Account/Login", forceLoad: true);
       }
@@ -362,7 +426,7 @@
     return (IUserEmailStore<CornerkickAppUser>)UserStore;
   }
 
-  internal static void addUser(CornerkickAppUser appUser, string sInvitedById = "", bool bAdmin = false, int iClubIdExist = -1/*, HttpPostedFileBase fileEmblem = null*/, byte iLevel = 1)
+  internal static CornerkickManager.Club? addUser(CornerkickAppUser appUser, string sInvitedById = "", bool bAdmin = false, int iClubIdExist = -1/*, HttpPostedFileBase fileEmblem = null*/, byte iLevel = 1)
   {
     CornerkickManager.Club? clubExist = null;
     Random rnd = new Random();
@@ -376,7 +440,7 @@
 
     // Check if user is already added
     foreach (CornerkickManager.User usrExist in CkAppShared.ckMng.ltUser) {
-      if (usrExist.id.Equals(appUser.Id)) return;
+      if (usrExist.id.Equals(appUser.Id)) return usrExist.club;
     }
 
     CkAppShared.ckMng.tl.writeLog("  add User to Ck: " + appUser.Vorname + " " + appUser.Nachname);
@@ -401,10 +465,10 @@
       usrAdmin.club = club0;
       CkAppShared.ckMng.ltUser.Add(usrAdmin);
 
-      return;
+      return club0;
     }
 
-    if (appUser.iLand < 0) return;
+    if (appUser.iLand < 0) return null;
 
     for (int iD = 9; iD >= 0; iD--) {
       if (CkAppShared.ckMng.ltCups.Find(c => c.iId == CkAppShared.iCupIdLeague && c.iId2 == appUser.iLand && c.iId3 == iD) != null) {
@@ -412,7 +476,7 @@
         break;
       }
     }
-    if (iDivision < 0) return;
+    if (iDivision < 0) return null;
 
     //CornerkickManager.Cup league = CkAppShared.ckMng.tl.getCup(CkAppShared.iCupIdLeague, iLand, iDivision);
     //CornerkickManager.Cup cup    = CkAppShared.ckMng.tl.getCup(CkAppShared.iCupIdNatCup, iLand);
@@ -488,7 +552,7 @@
         }
       }
 
-      if (clb == null) return;
+      if (clb == null) return null;
     } else {
       //App.writeLog(Path.Combine(App.DocumentsDir, "ckapp.log"), "clubExist != null");
 
@@ -510,6 +574,8 @@
 
     // Update nav menu
     if (CornerkickApp.Components.Shared.Layout.MainLayout.navMenu != null) CornerkickApp.Components.Shared.Layout.MainLayout.navMenu.refresh(bGetUser: true);
+
+    return clb;
   }
 
   private static CornerkickManager.User createUser(CornerkickAppUser appUser)
@@ -619,6 +685,30 @@
     }
 
     return Task.CompletedTask;
+  }
+
+  private bool isLoading;
+  byte[]? club_emblem = null;
+  const ushort iMaxEmblemSize = 240;
+  private async Task loadClubEmblem(InputFileChangeEventArgs e)
+  {
+    isLoading = true;
+
+    await loadClubEmblem(e.File);
+
+    isLoading = false;
+  }
+  private async Task loadClubEmblem(IBrowserFile ibf)
+  {
+    try {
+      //CornerkickApp.Controllers.App.uploadFile(ibf.OpenReadStream(), Path.Combine(CkAppShared.sAppDataDir, "uploads"), "emblems", _usr.club.iId);
+      MemoryStream ms = new MemoryStream();
+      await ibf.OpenReadStream().CopyToAsync(ms);
+      club_emblem = CornerkickApp.Controllers.Tool.resizeImage(ms.ToArray(), iMaxEmblemSize, bShrinkOnly: true);
+      await InvokeAsync(StateHasChanged);
+    } catch (Exception ex) {
+      string sError = "File: " + ibf.Name + " Error: " + ex.Message;
+    }
   }
 
   private sealed class InputModel
