@@ -109,7 +109,9 @@ namespace CornerkickApp.Controllers
       }
 
       try {
+#if DEBUG
         CkAppShared.ckMng.tl.writeLog("Try to upload file '" + sFile + "' to key '" + sKey + "' (Type: '" + sContentType + "')");
+#endif
 
         PutObjectRequest putRequest = new PutObjectRequest {
           BucketName = sBucketName,
@@ -121,7 +123,9 @@ namespace CornerkickApp.Controllers
 
         try {
           PutObjectResponse response = await client.PutObjectAsync(putRequest);
+#if DEBUG
           CkAppShared.ckMng.tl.writeLog("Status code: " + response.HttpStatusCode.ToString());
+#endif
           //using (S3Response r = client.PutObject(putRequest)) { }
         } catch (AmazonS3Exception amazonS3Exception) {
           CkAppShared.ckMng.tl.writeLog("ERROR! S3 PutObjectResponse Exception Message: " + amazonS3Exception.Message, CornerkickManager.Main.sErrorFile);
