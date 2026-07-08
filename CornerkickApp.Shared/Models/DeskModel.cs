@@ -59,7 +59,7 @@ namespace CornerkickApp.Shared.Models
     public bool bAny { get; set; }
     public int iCaptainId { get; set; } = -1;
     public float fSkillPointsFree { get; set; }
-    public bool bEmblemExist { get; set; }
+    public bool bEmblemExist { get; set; } = true;
     public bool bNoTrainingWarning { get; set; }
     public bool bNoStaffWarning { get; set; }
     public bool bNoMerchandisingWarning { get; set; }

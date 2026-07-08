@@ -707,7 +707,7 @@
       await InvokeAsync(StateHasChanged);
     } catch (Exception ex) {
       string sError = "File: <b>" + ibf.Name + "</b><br>Error: " + ex.Message;
-      await CkDialog.ckDialog.Show("Fehler beim Laden des Wappens", sError);
+      await CkDialog.ckDialog.Show("Fehler beim Laden des Wappens", sError, sButtonCancelText2: "");
     }
   }
 
