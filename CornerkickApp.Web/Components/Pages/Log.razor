@@ -32,7 +32,7 @@
   </table>
 
   <div style="position: relative; width: 100%; min-width: 300px; height: fit-content; margin-top: 10px">
-    <button @onclick="DeleteLogAsync" class="btn btn-primary" style="position: absolute; width: 180px" disabled="@(Model.ltLog == null || Model.ltLog.Count < 1)">delete Log</button>
+    <button @onclick="DeleteLogAsync" class="btn btn-primary" style="position: relative; width: 180px" disabled="@(Model.ltLog == null || Model.ltLog.Count < 1)">delete Log</button>
   </div>
 
   <h3>Error</h3>
@@ -49,7 +49,7 @@
   </table>
 
   <div style="position: relative; width: 100%; min-width: 300px; height: fit-content; margin-top: 10px">
-    <button @onclick="DeleteErrorAsync" class="btn btn-primary" style="position: absolute; width: 180px" disabled="@(Model.ltErr == null || Model.ltErr.Count < 1)">delete Log</button>
+    <button @onclick="DeleteErrorAsync" class="btn btn-primary" style="position: relative; width: 180px" disabled="@(Model.ltErr == null || Model.ltErr.Count < 1)">delete Log</button>
   </div>
 </body>
 </html>
