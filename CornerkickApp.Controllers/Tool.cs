@@ -319,17 +319,31 @@ namespace CornerkickApp.Controllers
       return sIcon;
     }
 
-    public static string resizeImage(string sImageFileDatum, int iNewImageWidth, string sNewImageAppendix)
+    public static string resizeImage(string sImageFileDatum, int iNewImageWidth, string sNewImagePath = "", string sNewImageAppendix = "", bool bShrinkOnly = false)
     {
       if (string.IsNullOrEmpty(sImageFileDatum)) return "";
       if (!File.Exists(sImageFileDatum)) return "";
 
-      string sNewImageFile = Path.Combine(Path.GetDirectoryName(sImageFileDatum), Path.GetFileNameWithoutExtension(sImageFileDatum)) + sNewImageAppendix + Path.GetExtension(sImageFileDatum);
+      string? sNewImgDir = string.IsNullOrEmpty(sNewImagePath) ? Path.GetDirectoryName(sImageFileDatum) : sNewImagePath;
+      if (string.IsNullOrEmpty(sNewImgDir)) sNewImgDir = ".";
+
+      // Create target directory if it does not exist
+      if (!Directory.Exists(sNewImgDir)) {
+        try {
+          Directory.CreateDirectory(sNewImgDir);
+        } catch (Exception e) {
+          CkAppShared.ckMng.tl.writeLog("Unable to create target directory '" + sNewImgDir + "'. Message: " + e.Message + Environment.NewLine + e.StackTrace, CornerkickManager.Main.sErrorFile);
+        }
+      }
+
+      string sNewImageFile = Path.Combine(sNewImgDir, Path.GetFileNameWithoutExtension(sImageFileDatum)) + sNewImageAppendix + Path.GetExtension(sImageFileDatum);
       if (File.Exists(sNewImageFile)) return sNewImageFile; // Return if file already exist
 
       using (Image imgEmblem = Image.Load(sImageFileDatum)) {
         int iHeight = (int)(imgEmblem.Height * iNewImageWidth / (double)imgEmblem.Width);
-        imgEmblem.Mutate(x => x.Resize(iNewImageWidth, iHeight));
+        if (!(bShrinkOnly && imgEmblem.Width <= iNewImageWidth)) {
+          imgEmblem.Mutate(x => x.Resize(iNewImageWidth, iHeight));
+        }
 
         try {
           imgEmblem.Save(sNewImageFile);

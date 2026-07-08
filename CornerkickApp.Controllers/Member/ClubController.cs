@@ -113,9 +113,7 @@ namespace CornerkickApp.Controllers.Member
 #if _WebApp
       if (clb == null || clb.user == null) return sContentDir + "/Images/club_default.png\" alt=\"Wappen\" ";
 
-      if (bTiny) return sContentDir + "/Uploads/emblems/" + clb.iId.ToString() + "_tiny.png";
-
-      return sContentDir + "/Uploads/emblems/" + clb.iId.ToString() + ".png";
+      return sContentDir + "/Uploads/emblems/" + (bTiny ? "tiny/" : "") + clb.iId.ToString() + ".png";
 #else
       string sEmblemDefault = sContentDir + "/Uploads/emblems/0.png";
       if (clb == null) return sEmblemDefault;

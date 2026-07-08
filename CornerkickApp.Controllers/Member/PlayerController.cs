@@ -536,7 +536,7 @@ namespace CornerkickApp.Controllers.Member
 #endif
       if (Directory.Exists(sPortraitDir)) {
         string sPortraitFile = Path.Combine(sPortraitDir, plPortrait.plGame.iId.ToString()) + ".png";
-        if (bSmall) sPortraitFile = Tool.resizeImage(sPortraitFile + ".png", 100, "s");
+        if (bSmall) sPortraitFile = Tool.resizeImage(sPortraitFile + ".png", 100, sNewImageAppendix: "s");
         if (File.Exists(sPortraitFile)) return sPortraitFile.Replace("\\\\", "/");
       }
 
@@ -656,7 +656,7 @@ namespace CornerkickApp.Controllers.Member
 
 #if _WebApp
           // Create small image
-          if (bSmall) Tool.resizeImage(sPortraitFile + ".png", 100, "s");
+          if (bSmall) Tool.resizeImage(sPortraitFile + ".png", 100, sNewImageAppendix: "s");
 
           if (bSmall && i == 0) sPortraitFile += "s";
 #endif
@@ -702,7 +702,7 @@ namespace CornerkickApp.Controllers.Member
         string sPortraitFile = Path.Combine(sHomeDir, "Images", "portraits", getPlayerPortraitId(plPortrait).ToString());
 
         // Create small image
-        if (bSmall) Tool.resizeImage(sPortraitFile + ".png", 100, "s");
+        if (bSmall) Tool.resizeImage(sPortraitFile + ".png", 100, sNewImageAppendix: "s");
 
         if (bSmall && i == 0) sPortraitFile += "s";
         sPortraitFile += ".png";
