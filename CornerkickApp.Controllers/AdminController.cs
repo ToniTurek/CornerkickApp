@@ -497,9 +497,15 @@ namespace CornerkickApp.Controllers
 
         // Delete emblem
         foreach (string sFileExt in new string[3] { ".png", ".jpg", ".gif" }) {
-          string sFilenameLocal = Path.Combine(CkAppShared.sAppDataDir, "Content", "Uploads", "emblems", usr.club.iId.ToString() + sFileExt);
+          string sFilenameLocal = Path.Combine(CkAppShared.sAppDataDir, "emblems", usr.club.iId.ToString() + sFileExt);
           try {
             System.IO.File.Delete(sFilenameLocal);
+          } catch {
+          }
+
+          string sFilenameLocalTiny = Path.Combine(CkAppShared.sAppDataDir, "emblems", "tiny", usr.club.iId.ToString() + sFileExt);
+          try {
+            System.IO.File.Delete(sFilenameLocalTiny);
           } catch {
           }
 
