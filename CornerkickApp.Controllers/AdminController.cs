@@ -39,9 +39,7 @@ namespace CornerkickApp.Controllers
       modelAdmin.bMaintenance        = CkAppShared.settings.bMaintenance;
       modelAdmin.sInfo               = CkAppShared.settings.sInfo;
       if (CkAppShared.settings.dtCounterStart > DateTime.Now) modelAdmin.dtCounterStart = CkAppShared.settings.dtCounterStart;
-      else modelAdmin.dtCounterStart = null;
-      modelAdmin.sHomeDir   = Path.Combine(CkAppShared.sAppDataDir);
-      modelAdmin.sHomeDirCk = CkAppShared.ckMng.settings.sHomeDir;
+      else                                                    modelAdmin.dtCounterStart = null;
 
       // Statistics
       modelAdmin.nClubs  = CkAppShared.ckMng.ltClubs .Count;
@@ -54,8 +52,8 @@ namespace CornerkickApp.Controllers
 
       //DirectoryInfo d = new DirectoryInfo(sHomeDir + "save");
       //FileInfo[] ltCkxFiles = d.GetFiles("*.ckx");
-      modelAdmin.bSaveDirExist  = Directory.Exists(Path.Combine(modelAdmin.sHomeDir, "save"));
-      if (modelAdmin.bSaveDirExist) modelAdmin.bAutosaveExist = System.IO.File.Exists(Path.Combine(modelAdmin.sHomeDir, "save", ".autosave.ckx"));
+      modelAdmin.bSaveDirExist  = Directory.Exists(Path.Combine(CkAppShared.sAppDataDir, "save"));
+      if (modelAdmin.bSaveDirExist) modelAdmin.bAutosaveExist = System.IO.File.Exists(Path.Combine(CkAppShared.sAppDataDir, "save", ".autosave.ckx"));
 
       DirectoryInfo d = new DirectoryInfo(Path.Combine(CkAppShared.sAppDataDir, "save"));
       if (d.Exists) {

@@ -182,15 +182,25 @@ app.MapGet("/api/as3", async (IAmazonS3Service as3service) => {
 
 //app.MapGet("/api/member/desk").RequireAuthorization();
 
+// Get cornerkick root directory
+string? sRootPath = builder.Environment.ContentRootPath;
+if (string.IsNullOrEmpty(sRootPath)) sRootPath = builder.Configuration.GetSection("ckRootPath").Value;
+if (string.IsNullOrEmpty(sRootPath)) sRootPath = ".";
+
 // Get cornerkick instance name
+string? sCkInstanceName = Environment.GetEnvironmentVariable("ckInstanceName");
+if (string.IsNullOrEmpty(sCkInstanceName)) sCkInstanceName = builder.Configuration.GetSection("ckInstanceName").Value;
+if (string.IsNullOrEmpty(sCkInstanceName)) sCkInstanceName = "";
+
 #if _DEPLOY_ON_HOST // Use environment variable
-CornerkickApp.Shared.Models.CkAppShared.sCkInstanceName = builder.Environment.GetEnvironmentVariable("ckInstanceName");
+string sHomeDir = Path.Combine(sRootPath, "wwwroot", "_content", "cornerkickapp.components");
 #else
-CornerkickApp.Shared.Models.CkAppShared.sCkInstanceName = builder.Configuration.GetSection("ckInstanceName").Value;
+string sHomeDir = Path.Combine(sRootPath, "..", "CornerkickApp.Components", "wwwroot");
 #endif
+CornerkickApp.Shared.Models.CkAppShared.sCkInstanceName = sCkInstanceName == null ? "" : sCkInstanceName;
 
 // Compose App_Data dir in Cornerkick.Components
-string sAppDataDir = Path.Combine(builder.Environment.ContentRootPath, "..", "CornerkickApp.Components", "wwwroot", "Content", "Uploads");
+string sAppDataDir = Path.Combine(sHomeDir, "Content", "Uploads");
 
 // Start Cornerkick
 CornerkickApp.Controllers.App appCk = new CornerkickApp.Controllers.App(
