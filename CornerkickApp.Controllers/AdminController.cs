@@ -461,7 +461,7 @@ namespace CornerkickApp.Controllers
 
 #endif
 
-    internal static void removeUser(CornerkickManager.User usr)
+    public static void removeUser(CornerkickManager.User usr)
     {
       if (usr.club != null) {
         // Set CPU name to club
