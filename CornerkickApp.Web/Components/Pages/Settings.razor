@@ -254,30 +254,35 @@
   private async Task RestartCkAsync()
   {
     Controllers.AdminController.RestartCk();
+    Model = Controllers.AdminController.StopCalendar();
     StateHasChanged();
   }
 
   private async Task DeleteSaveFolderAsync()
   {
     Controllers.AdminController.DeleteSaveFolder();
+    Model = Controllers.AdminController.StopCalendar();
     StateHasChanged();
   }
 
   private async Task SaveAutosaveAsync()
   {
     Controllers.AdminController.SaveAutosave();
+    Model = Controllers.AdminController.StopCalendar();
     StateHasChanged();
   }
 
   private async Task DeleteAutosaveAsync()
   {
     Controllers.AdminController.DeleteAutosave();
+    Model = Controllers.AdminController.StopCalendar();
     StateHasChanged();
   }
 
   private async Task LoadAutosaveAsync()
   {
     Controllers.AdminController.LoadAutosave(Model);
+    Model = Controllers.AdminController.StopCalendar();
     StateHasChanged();
   }
 
