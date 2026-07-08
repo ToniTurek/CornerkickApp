@@ -52,6 +52,7 @@
         CornerkickManager.Club? clbUser = Register.addUser(user);
 
         if (clbUser != null) {
+          // Move temp. emblem
           bool bOk = CornerkickApp.Controllers.App.MoveFileOnS3(
             "emblems/temp/" + user.Id + ".png",
             "emblems/" + clbUser.iId.ToString() + ".png",

@@ -2629,6 +2629,18 @@ namespace CornerkickApp.Controllers
         readMails();
 #endif
 
+        // Create tiny club emblems
+        foreach (CornerkickManager.User usr in CkAppShared.ckMng.ltUser) {
+          if (usr.club == null) continue;
+
+          string _ = Tool.resizeImage(
+            Path.Combine(CkAppShared.sAppDataDir, "emblems", usr.club.iId.ToString() + ".png"),
+            32,
+            sNewImagePath: Path.Combine(CkAppShared.sAppDataDir, "emblems", "tiny"),
+            bShrinkOnly: true
+          );
+        }
+
         // Stop stopwatch
         swLoad.Stop();
         TimeSpan tsLoad = swLoad.Elapsed;

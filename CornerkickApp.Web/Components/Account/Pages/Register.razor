@@ -343,7 +343,19 @@
       CornerkickManager.Club? clbUser = addUser(user, bAdmin: CkAppShared.ckMng.ltUser.Count == 0);
 
       // Upload club emblem
-      if (clbUser != null && club_emblem != null) CornerkickApp.Controllers.App.uploadFile(club_emblem, CkAppShared.sAppDataDir, "emblems", clbUser.iId);
+      if (clbUser != null && club_emblem != null) {
+        bool bOk = CornerkickApp.Controllers.App.uploadFile(club_emblem, CkAppShared.sAppDataDir, "emblems", clbUser.iId);
+
+        // Create tiny emblem
+        if (bOk) {
+          string _ = CornerkickApp.Controllers.Tool.resizeImage(
+            Path.Combine(CornerkickApp.Shared.Models.CkAppShared.sAppDataDir, "emblems", clbUser.iId.ToString() + ".png"),
+            32,
+            sNewImagePath: Path.Combine(CornerkickApp.Shared.Models.CkAppShared.sAppDataDir, "emblems", "tiny"),
+            bShrinkOnly: true
+          );
+        }
+      }
 
       NavManager.NavigateTo("/member/desk");
       //RedirectManager.RedirectTo(ReturnUrl);
