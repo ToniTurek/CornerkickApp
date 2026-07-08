@@ -3529,12 +3529,17 @@ namespace CornerkickApp.Controllers
       }
     }
 
-    public static bool MoveFileOnS3(string sKey, string sDestKey)
+    public static bool MoveFileOnS3(string sKey, string sDestKey, string sSourceDir, string sTargetDir)
     {
       if (as3 == null) return false;
 
       Task<bool> tk = Task.Run(() => as3.CopyingObjectAsync(as3.sCkInstanceName + sKey, as3.sCkInstanceName + sDestKey));
-      if (tk.Result) Task.Run(() => as3.deleteFileAsync(as3.sCkInstanceName + sKey));
+      if (tk.Result) {
+        Task.Run(() => as3.deleteFileAsync(as3.sCkInstanceName + sKey));
+
+        if (File.Exists(Path.Combine(sSourceDir, sKey))) File.Move(Path.Combine(sSourceDir, sKey), Path.Combine(sTargetDir, sDestKey));
+      }
+
       return true;
     }
 
