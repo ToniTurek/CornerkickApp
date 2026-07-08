@@ -138,7 +138,7 @@ namespace CornerkickApp.Controllers
     */
 
 #if _WebApp
-    internal static void newCk(bool bLoadGame = true)
+    internal static void newCk(bool bLoadGame = true, bool bLoadGameAsync = true)
     {
       // Create new cornerkick manager instance
       CkAppShared.ckMng = new CornerkickManager.Main(sHomeDir: CkAppShared.sHomeDir,
@@ -215,7 +215,11 @@ namespace CornerkickApp.Controllers
       // Load ck game
       if (bLoadGame) {
         CkAppShared.iLoadState = 1;
-        loadAsync(CkAppShared.sAppDataDir, iDelay: (int)CkAppShared.fLoadDelay);
+        if (bLoadGameAsync) {
+          loadAsync(CkAppShared.sAppDataDir, iDelay: (int)CkAppShared.fLoadDelay);
+        } else {
+          load(CkAppShared.sAppDataDir);
+        }
         /*
         CkAppShared.timerLoad = new CkAppShared.TimerLoad {
           Interval = CkAppShared.fLoadDelay,
@@ -239,10 +243,10 @@ namespace CornerkickApp.Controllers
 #endif
     }
 
-    private static async Task loadAsync(string sAppDataDir, int iDelay = 0)
+    private static async Task<bool> loadAsync(string sAppDataDir, int iDelay = 0)
     {
       if (iDelay > 0) await Task.Delay(iDelay);
-      load(sAppDataDir);
+      return load(sAppDataDir);
     }
     /*
     private static void timerLoad_Tick(object sender, EventArgs e)
@@ -1667,7 +1671,9 @@ namespace CornerkickApp.Controllers
         CornerkickManager.Main _ckMng = CkAppShared.ckMng;
         Progress<int[]> progress = new Progress<int[]>(ReportProgress);
 
-        _ckMng = setCkMngToDefault(_ckMng, progress).Result;
+        Task<CornerkickManager.Main> tkCkMngDef = Task.Run(() => setCkMngToDefault(_ckMng, progress));
+        _ckMng = tkCkMngDef.Result;
+
         CkAppShared.ckMng = _ckMng;
         CkAppShared.ckMng.iSeason = 1;
 

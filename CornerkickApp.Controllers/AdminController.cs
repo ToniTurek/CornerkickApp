@@ -155,7 +155,7 @@ namespace CornerkickApp.Controllers
 #if _WebApp
       if (CkAppShared.timerCkCalender != null) CkAppShared.timerCkCalender.Enabled = false;
 
-      App.newCk();
+      App.newCk(bLoadGameAsync: false);
 #endif
     }
 
