@@ -48,41 +48,57 @@ namespace CornerkickApp.Web.Services
       const string sCkFromEmail = "mail@cornerkick-manager.de";
       const string sCkFromUser = "Cornerkick Manager";
 
-      // Use connection string
-      string? sApiKey = _configuration.GetSection(email_api_key)?.Value;
+      try {
+        // Use connection string
+        string? sApiKey = _configuration.GetSection(email_api_key)?.Value;
 
-      if (string.IsNullOrEmpty(sApiKey)) {
-        // Use environment variable
-        sApiKey = Environment.GetEnvironmentVariable(email_api_key);
+        if (string.IsNullOrEmpty(sApiKey)) {
+          // Use environment variable
+          sApiKey = Environment.GetEnvironmentVariable(email_api_key);
+        }
+
+        // Read from environment
+        if (string.IsNullOrEmpty(sApiKey)) {
+          CkAppShared.ckMng.tl.writeLog($"Error: Cannot read ApiKey '{email_api_key}' from connection string or environment", CornerkickManager.Main.sErrorFile);
+          return;
+        }
+
+#if SENDGRID
+        return Execute(sApiKey, subject, message, sEmailTo, new EmailAddress(sCkFromEmail, sCkFromUser));
+#endif
+#if RESEND
+        IResend resend = ResendClient.Create(sApiKey);
+
+        /* for testing
+        var resp = await resend.EmailSendAsync(new EmailMessage() {
+          From = "onboarding@resend.dev",
+          To = "s.jan@web.de",
+          Subject = subject,
+          HtmlBody = message,
+        });
+         */
+        var resp = await resend.EmailSendAsync(new EmailMessage() {
+          From = sCkFromEmail,
+          To = sEmailTo,
+          Subject = subject,
+          HtmlBody = message,
+        });
+#endif
+      } catch (Exception e) {
+        CkAppShared.ckMng.tl.writeLog(
+          "ERROR: Cannot send mail to " + sEmailTo + "! Message: " + e.Message + Environment.NewLine + e.StackTrace,
+          bError: true);
       }
+    }
 
-      // Read from environment
-      if (string.IsNullOrEmpty(sApiKey)) {
-        CkAppShared.ckMng.tl.writeLog($"Error: Cannot read ApiKey '{email_api_key}' from connection string or environment", CornerkickManager.Main.sErrorFile);
+    public async Task SendEmailToAdminAsync(string subject, string message)
+    {
+      if (string.IsNullOrEmpty(AdminModel.sAdminEmail)) {
+        CkAppShared.ckMng.tl.writeLog("ERROR: Admin email address empty!", bError: true);
         return;
       }
 
-#if SENDGRID
-      return Execute(sApiKey, subject, message, sEmailTo, new EmailAddress(sCkFromEmail, sCkFromUser));
-#endif
-#if RESEND
-      IResend resend = ResendClient.Create(sApiKey);
-
-      /* for testing
-      var resp = await resend.EmailSendAsync(new EmailMessage() {
-        From = "onboarding@resend.dev",
-        To = "s.jan@web.de",
-        Subject = subject,
-        HtmlBody = message,
-      });
-       */
-      var resp = await resend.EmailSendAsync(new EmailMessage() {
-        From = sCkFromEmail,
-        To = sEmailTo,
-        Subject = subject,
-        HtmlBody = message,
-      });
-#endif
+      await SendEmailAsync(AdminModel.sAdminEmail, subject, message);
     }
 
     public async Task SendConfirmationLinkAsync(CornerkickAppUser user, string email, string confirmationLink)
