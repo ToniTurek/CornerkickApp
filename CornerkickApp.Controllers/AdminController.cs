@@ -469,7 +469,7 @@ namespace CornerkickApp.Controllers
         int iC = 0;
         while (iC < 10000) {
           iC++;
-          sNameNew = "Team_" + CornerkickManager.Main.sLand[usr.club.iLand] + "_" + iC.ToString();
+          sNameNew = "Team_" + CornerkickManager.Main.sLandShort[usr.club.iLand] + "_" + iC.ToString();
 
           bool bFound = true;
           foreach (CornerkickManager.Club clbExist in CkAppShared.ckMng.ltClubs) {
