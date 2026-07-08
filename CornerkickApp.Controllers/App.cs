@@ -3537,7 +3537,23 @@ namespace CornerkickApp.Controllers
       if (tk.Result) {
         Task.Run(() => as3.deleteFileAsync(as3.sCkInstanceName + sKey));
 
-        if (File.Exists(Path.Combine(sSourceDir, sKey))) File.Move(Path.Combine(sSourceDir, sKey), Path.Combine(sTargetDir, sDestKey));
+        // If target file already exists on disk, delete it first
+        if (File.Exists(Path.Combine(sTargetDir, sDestKey))) {
+          try {
+            File.Delete(Path.Combine(sTargetDir, sDestKey));
+          } catch (Exception ex) {
+            CkAppShared.ckMng.tl.writeLog("Error moving file on disk." + Environment.NewLine + ex.Message + Environment.NewLine + ex.StackTrace, bError: true);
+          }
+        }
+
+        // Move file
+        if (File.Exists(Path.Combine(sSourceDir, sKey))) {
+          try {
+            File.Move(Path.Combine(sSourceDir, sKey), Path.Combine(sTargetDir, sDestKey), true);
+          } catch (Exception ex) {
+            CkAppShared.ckMng.tl.writeLog("Error moving file on disk." + Environment.NewLine + ex.Message + Environment.NewLine + ex.StackTrace, bError: true);
+          }
+        }
       }
 
       return true;
