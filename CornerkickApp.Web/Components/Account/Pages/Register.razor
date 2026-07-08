@@ -154,7 +154,7 @@
         <ValidationMessage For="() => Input.ClubName" class="text-danger" />
       </div>
       <div class="form-floating mb-3">
-        <Blazorise.Select TValue="int" @bind-SelectedValue="Input.iLand" Style="margin-bottom: 6px">
+        <Blazorise.Select TValue="int" @bind-SelectedValue="Input.iLand" Style="width: 100%; max-width: 280px" Class="form-control">
           @foreach (LayoutModel.SelectListItem sli in sliCountries) {
             <Blazorise.SelectItem Value="@sli.Value">
               @*@((MarkupString)Controllers.Tool.getNatIcon(Convert.ToInt32(sli.Value)))*@
@@ -162,7 +162,7 @@
             </Blazorise.SelectItem>
           }
         </Blazorise.Select>
-        <label for="Input.iLand">Land</label>
+        <label for="Input.iLand">Land (Anzahl Manager)</label>
       </div>
       <div style="display: flex; flex-wrap: wrap; align-items: center">
         <div style="position: relative; width: 160px; height: fit-content; top: 0px; left: 0px; margin-right: 1rem; border-style: outset; border-width: 3px; border-color: lightgray; background-color: white">
@@ -240,6 +240,12 @@
       Input.ConfirmPassword = "********";
     }
     sliCountries = await CornerkickApp.Controllers.Tool.getCountries();
+
+    // Add number of clubs in division to country name
+    for (int i = 0; i < sliCountries.Count; i++) {
+      LayoutModel.SelectListItem sli = sliCountries[i];
+      sli.Text += " (" + getNumberOfClubsInDivision(Convert.ToInt32(sli.Value)) + ")";
+    }
 
     Input.iLand = 36; // Germany by default
 
@@ -711,6 +717,12 @@
     }
   }
 
+  private static int getNumberOfClubsInDivision(int iLand)
+  {
+    //var clubs = CkAppShared.ckMng.ltClubs.FindAll(c => c.iLand == iLand);
+    return CkAppShared.ckMng.ltClubs.FindAll(c => c.iLand == iLand & c.user != null).Count;
+  }
+
   private sealed class InputModel
   {
     [Required]
@@ -750,6 +762,16 @@
     [Required]
     [Display(Name = "Land:")]
     public int iLand { get; set; }
+    /*
+    int _i = 0;
+    public int iLand {
+      get { return _i; }
+      set {
+        _i = value;
+        nClubsInLand = getNumberOfClubsInDivision(value);
+      }
+    }
+    */
 
     /*
     [Required]
