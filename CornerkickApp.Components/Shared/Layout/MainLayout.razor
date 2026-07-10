@@ -154,11 +154,11 @@
     <Tutorial @ref="tutorial"></Tutorial>
     <CkDialog></CkDialog>
     <CkProgressBar @ref="ckProgressBar"></CkProgressBar>
-    @if (CkAppShared.ckMng?.ltUser != null && CkAppShared.ckMng.ltUser.Count > 1 && _usr != null) {
-      <div style="position: fixed; right: 4px; bottom: 2px">@_usr.sFirstname @_usr.sSurname</div>
-    }
-
     @if (!CkAppShared.bWebApp) {
+      @if (CkAppShared.ckMng?.ltUser != null && CkAppShared.ckMng.ltUser.Count > 1 && _usr != null) {
+        <div style="position: fixed; right: 4px; bottom: 2px">@_usr.sFirstname @_usr.sSurname</div>
+      }
+
       <Blazorise.Modal @ref="modalGameIni">
         <Blazorise.ModalContent Centered Size="Blazorise.ModalSize.ExtraLarge">
           <Blazorise.ModalHeader>
