@@ -112,6 +112,7 @@ hr {
   .brand-no-sidebar {
     display: block;
     position: fixed;
+    top: 1.5px;
     left: 0.5rem;
     border-style: outset;
     border-width: 3px;
