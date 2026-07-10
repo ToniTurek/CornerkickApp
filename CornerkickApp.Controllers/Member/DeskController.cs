@@ -152,7 +152,8 @@ namespace CornerkickApp.Controllers.Member
                   int iMdCurr = cup.getMatchday(ckMng.dtDatum); // Current matchday
 
                   if (nRound - iMdClub >= 0) {
-                    string sCupRound = CornerkickManager.Main.sCupRound[nRound - iMdClub];
+                    string sCupRound = (nRound - iMdClub).ToString() + ". Runde";
+                    if (CornerkickManager.Main.sCupRound != null && nRound - iMdClub < CornerkickManager.Main.sCupRound.Length) sCupRound = CornerkickManager.Main.sCupRound[nRound - iMdClub];
 
                     mdDesk.sNatCupRound = sCupRound;
                     if (iMdClub < iMdCurr) mdDesk.sNatCupEliminated = "ausgeschieden";

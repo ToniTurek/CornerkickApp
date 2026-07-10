@@ -17,22 +17,24 @@
             <td>
               @{
                 bool bPromNews = false;
-                byte iRspLvl = 0;
-                foreach (string sRespLvlName in CornerkickManager.Names.sUserRespLvlNames) {
-                  if (n.sText.Contains(sRespLvlName)) {
-                    string[] sN = n.sText.Split(sRespLvlName);
-                    bPromNews = true;
+                if (CornerkickManager.Names.sUserRespLvlNames != null) {
+                  byte iRspLvl = 0;
+                  foreach (string sRespLvlName in CornerkickManager.Names.sUserRespLvlNames) {
+                    if (n.sText.Contains(sRespLvlName)) {
+                      string[] sN = n.sText.Split(sRespLvlName);
+                      bPromNews = true;
 
-                    <span>@(sN[0])</span>
+                      <span>@(sN[0])</span>
 
-                    <span style="color: #0366d6; cursor: pointer" @onclick="@(() => MainLayout.showPromotionInfo(n.sText.Trim(), iRspLvl))">@sRespLvlName</span>
+                      <span style="color: #0366d6; cursor: pointer" @onclick="@(() => MainLayout.showPromotionInfo(n.sText.Trim(), iRspLvl))">@sRespLvlName</span>
 
-                    <span>@(sN[1])</span>
+                      <span>@(sN[1])</span>
 
-                    break;
+                      break;
+                    }
+
+                    iRspLvl++;
                   }
-
-                  iRspLvl++;
                 }
 
                 if (!bPromNews) {
