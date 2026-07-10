@@ -8,6 +8,7 @@
 @using CornerkickApp.Web.Data
 @using CornerkickApp.Shared.Models
 @using CornerkickApp.Components.Pages.Templates
+@using CornerkickApp.Components.Shared.Components
 
 @inject UserManager<CornerkickAppUser> UserManager
 @inject IUserStore<CornerkickAppUser> UserStore
@@ -153,7 +154,7 @@
         <ValidationMessage For="() => Input.ClubName" class="text-danger" />
       </div>
       <div class="form-floating mb-3">
-        <Blazorise.Select TValue="int" @bind-SelectedValue="Input.iLand" Style="margin-bottom: 6px">
+        <Blazorise.Select TValue="int" @bind-SelectedValue="Input.iLand" Style="width: 100%; max-width: 280px" Class="form-control">
           @foreach (LayoutModel.SelectListItem sli in sliCountries) {
             <Blazorise.SelectItem Value="@sli.Value">
               @*@((MarkupString)Controllers.Tool.getNatIcon(Convert.ToInt32(sli.Value)))*@
@@ -161,7 +162,7 @@
             </Blazorise.SelectItem>
           }
         </Blazorise.Select>
-        <label for="Input.iLand">Land</label>
+        <label for="Input.iLand">Land (Anzahl Manager)</label>
       </div>
       <div style="display: flex; flex-wrap: wrap; align-items: center">
         <div style="position: relative; width: 160px; height: fit-content; top: 0px; left: 0px; margin-right: 1rem; border-style: outset; border-width: 3px; border-color: lightgray; background-color: white">
@@ -239,6 +240,12 @@
       Input.ConfirmPassword = "********";
     }
     sliCountries = await CornerkickApp.Controllers.Tool.getCountries();
+
+    // Add number of clubs in division to country name
+    for (int i = 0; i < sliCountries.Count; i++) {
+      LayoutModel.SelectListItem sli = sliCountries[i];
+      sli.Text += " (" + getNumberOfClubsInDivision(Convert.ToInt32(sli.Value)) + ")";
+    }
 
     Input.iLand = 36; // Germany by default
 
@@ -336,7 +343,19 @@
       CornerkickManager.Club? clbUser = addUser(user, bAdmin: CkAppShared.ckMng.ltUser.Count == 0);
 
       // Upload club emblem
-      if (clbUser != null && club_emblem != null) CornerkickApp.Controllers.App.uploadFile(club_emblem, CkAppShared.sAppDataDir, "emblems", clbUser.iId);
+      if (clbUser != null && club_emblem != null) {
+        bool bOk = CornerkickApp.Controllers.App.uploadFile(club_emblem, CkAppShared.sAppDataDir, "emblems", clbUser.iId);
+
+        // Create tiny emblem
+        if (bOk) {
+          string _ = CornerkickApp.Controllers.Tool.resizeImage(
+            Path.Combine(CornerkickApp.Shared.Models.CkAppShared.sAppDataDir, "emblems", clbUser.iId.ToString() + ".png"),
+            32,
+            sNewImagePath: Path.Combine(CornerkickApp.Shared.Models.CkAppShared.sAppDataDir, "emblems", "tiny"),
+            bShrinkOnly: true
+          );
+        }
+      }
 
       NavManager.NavigateTo("/member/desk");
       //RedirectManager.RedirectTo(ReturnUrl);
@@ -362,22 +381,20 @@
     } else { // no admin
       if (UserManager.Options.SignIn.RequireConfirmedAccount) {
         var userId = await UserManager.GetUserIdAsync(user);
+
+        // Send confirmation email
         var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
         code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
         var callbackUrl = NavigationManager.GetUriWithQueryParameters(
             NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
             new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code, ["returnUrl"] = ReturnUrl });
-
         await EmailSender.SendConfirmationLinkAsync(user, Input.Email, HtmlEncoder.Default.Encode(callbackUrl));
 
         // Send mail to admin
-        if (!string.IsNullOrEmpty(CornerkickApp.Shared.Models.AdminModel.sAdminEmail)) {
-          try {
-            await EmailSender.SendEmailAsync(CornerkickApp.Shared.Models.AdminModel.sAdminEmail, "User registered: " + user.Vorname + " " + user.Nachname, "New user " + user.Vorname + " " + user.Nachname + " has registered (email: " + Input.Email + ")<br/><br/>Confirmation link:<br/>" + callbackUrl);
-          } catch (Exception e) {
-            CkAppShared.ckMng.tl.writeLog("ERROR: Cannot send new user mail to admin. Message: " + e.Message + Environment.NewLine + e.StackTrace, bError: true);
-          }
-        }
+        await EmailSender.SendEmailToAdminAsync(
+          "User registered: " + user.Vorname + " " + user.Nachname,
+          "New user " + user.Vorname + " " + user.Nachname + " has registered (email: " + Input.Email + ")<br/><br/>Confirmation link:<br/>" + callbackUrl
+        );
 
         // Upload club emblem
         if (club_emblem != null) CornerkickApp.Controllers.App.uploadFile(club_emblem, CkAppShared.sAppDataDir, Path.Combine("emblems", "temp"), userId);
@@ -689,7 +706,7 @@
 
   private bool isLoading;
   byte[]? club_emblem = null;
-  const ushort iMaxEmblemSize = 240;
+  const ushort iMaxEmblemWidth = 240;
   private async Task loadClubEmblem(InputFileChangeEventArgs e)
   {
     isLoading = true;
@@ -704,11 +721,18 @@
       //CornerkickApp.Controllers.App.uploadFile(ibf.OpenReadStream(), Path.Combine(CkAppShared.sAppDataDir, "uploads"), "emblems", _usr.club.iId);
       MemoryStream ms = new MemoryStream();
       await ibf.OpenReadStream().CopyToAsync(ms);
-      club_emblem = CornerkickApp.Controllers.Tool.resizeImage(ms.ToArray(), iMaxEmblemSize, bShrinkOnly: true);
+      club_emblem = CornerkickApp.Controllers.Tool.resizeImage(ms.ToArray(), iMaxEmblemWidth, bShrinkOnly: true);
       await InvokeAsync(StateHasChanged);
     } catch (Exception ex) {
-      string sError = "File: " + ibf.Name + " Error: " + ex.Message;
+      string sError = "File: <b>" + ibf.Name + "</b><br>Error: " + ex.Message;
+      await CkDialog.ckDialog.Show("Fehler beim Laden des Wappens", sError, sButtonCancelText2: "");
     }
+  }
+
+  private static int getNumberOfClubsInDivision(int iLand)
+  {
+    //var clubs = CkAppShared.ckMng.ltClubs.FindAll(c => c.iLand == iLand);
+    return CkAppShared.ckMng.ltClubs.FindAll(c => c.iLand == iLand & c.user != null).Count;
   }
 
   private sealed class InputModel
@@ -750,6 +774,16 @@
     [Required]
     [Display(Name = "Land:")]
     public int iLand { get; set; }
+    /*
+    int _i = 0;
+    public int iLand {
+      get { return _i; }
+      set {
+        _i = value;
+        nClubsInLand = getNumberOfClubsInDivision(value);
+      }
+    }
+    */
 
     /*
     [Required]

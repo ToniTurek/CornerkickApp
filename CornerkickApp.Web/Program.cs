@@ -182,20 +182,34 @@ app.MapGet("/api/as3", async (IAmazonS3Service as3service) => {
 
 //app.MapGet("/api/member/desk").RequireAuthorization();
 
+// Get cornerkick root directory
+string? sRootPath = AppDomain.CurrentDomain.BaseDirectory;
+if (string.IsNullOrEmpty(sRootPath)) sRootPath = Environment.GetEnvironmentVariable("ckRootPath");
+if (string.IsNullOrEmpty(sRootPath)) sRootPath = builder.Configuration.GetSection("ckRootPath").Value;
+if (string.IsNullOrEmpty(sRootPath)) sRootPath = ".";
+
 // Get cornerkick instance name
-#if _DEPLOY_ON_HOST // Use environment variable
-CornerkickApp.Shared.Models.CkAppShared.sCkInstanceName = builder.Environment.GetEnvironmentVariable("ckInstanceName");
-#else
-CornerkickApp.Shared.Models.CkAppShared.sCkInstanceName = builder.Configuration.GetSection("ckInstanceName").Value;
-#endif
+string? sCkInstanceName = Environment.GetEnvironmentVariable("ckInstanceName");
+if (string.IsNullOrEmpty(sCkInstanceName)) sCkInstanceName = builder.Configuration.GetSection("ckInstanceName").Value;
+if (string.IsNullOrEmpty(sCkInstanceName)) sCkInstanceName = "";
+CornerkickApp.Shared.Models.CkAppShared.sCkInstanceName = sCkInstanceName == null ? "" : sCkInstanceName;
+
+// Set ck home directory
+string sHomeDir = builder.Environment.ContentRootPath;
+string? sDeployOnHost = Environment.GetEnvironmentVariable("_DEPLOY_ON_HOST");
+if (!string.IsNullOrEmpty(sDeployOnHost) && sDeployOnHost.Equals("true", StringComparison.OrdinalIgnoreCase)) {
+  sHomeDir = Path.Combine(sHomeDir, "wwwroot", "_content", "cornerkickapp.components");
+} else {
+  sHomeDir = Path.Combine(sHomeDir, "..", "CornerkickApp.Components", "wwwroot");
+}
 
 // Compose App_Data dir in Cornerkick.Components
-string sAppDataDir = Path.Combine(builder.Environment.ContentRootPath, "..", "CornerkickApp.Components", "wwwroot", "Content", "Uploads");
+string sAppDataDir = Path.Combine(sHomeDir, "Content", "Uploads");
 
 // Start Cornerkick
 CornerkickApp.Controllers.App appCk = new CornerkickApp.Controllers.App(
   builder.Configuration,
-  AppDomain.CurrentDomain.BaseDirectory,
+  sRootPath,
   sAppDataDir
 );
 appCk.start();

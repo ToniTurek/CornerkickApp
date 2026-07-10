@@ -138,7 +138,7 @@ namespace CornerkickApp.Controllers
     */
 
 #if _WebApp
-    internal static void newCk(bool bLoadGame = true)
+    internal static void newCk(bool bLoadGame = true, bool bLoadGameAsync = true)
     {
       // Create new cornerkick manager instance
       CkAppShared.ckMng = new CornerkickManager.Main(sHomeDir: CkAppShared.sHomeDir,
@@ -215,7 +215,11 @@ namespace CornerkickApp.Controllers
       // Load ck game
       if (bLoadGame) {
         CkAppShared.iLoadState = 1;
-        loadAsync(CkAppShared.sAppDataDir, iDelay: (int)CkAppShared.fLoadDelay);
+        if (bLoadGameAsync) {
+          loadAsync(CkAppShared.sAppDataDir, iDelay: (int)CkAppShared.fLoadDelay);
+        } else {
+          load(CkAppShared.sAppDataDir);
+        }
         /*
         CkAppShared.timerLoad = new CkAppShared.TimerLoad {
           Interval = CkAppShared.fLoadDelay,
@@ -239,10 +243,10 @@ namespace CornerkickApp.Controllers
 #endif
     }
 
-    private static async Task loadAsync(string sAppDataDir, int iDelay = 0)
+    private static async Task<bool> loadAsync(string sAppDataDir, int iDelay = 0)
     {
       if (iDelay > 0) await Task.Delay(iDelay);
-      load(sAppDataDir);
+      return load(sAppDataDir);
     }
     /*
     private static void timerLoad_Tick(object sender, EventArgs e)
@@ -1657,7 +1661,7 @@ namespace CornerkickApp.Controllers
       //Task<bool> tkDownloadLog = Task.Run(async () => await downloadFileAsync(as3, "ckLog", sAppDataDir + "/log.zip"));
 
       // Download Google ads.txt async
-      as3.downloadFile("ads.txt", Path.Combine(CkAppShared.sWwwRootDir, "ads.txt"));
+      as3.downloadFile("ads.txt", Path.Combine(CkAppShared.sAppDataDir, "ads.txt"));
 #endif
 #endif
 
@@ -1667,7 +1671,9 @@ namespace CornerkickApp.Controllers
         CornerkickManager.Main _ckMng = CkAppShared.ckMng;
         Progress<int[]> progress = new Progress<int[]>(ReportProgress);
 
-        _ckMng = setCkMngToDefault(_ckMng, progress).Result;
+        Task<CornerkickManager.Main> tkCkMngDef = Task.Run(() => setCkMngToDefault(_ckMng, progress));
+        _ckMng = tkCkMngDef.Result;
+
         CkAppShared.ckMng = _ckMng;
         CkAppShared.ckMng.iSeason = 1;
 
@@ -2629,6 +2635,18 @@ namespace CornerkickApp.Controllers
         readMails();
 #endif
 
+        // Create tiny club emblems
+        foreach (CornerkickManager.User usr in CkAppShared.ckMng.ltUser) {
+          if (usr.club == null) continue;
+
+          string _ = Tool.resizeImage(
+            Path.Combine(CkAppShared.sAppDataDir, "emblems", usr.club.iId.ToString() + ".png"),
+            32,
+            sNewImagePath: Path.Combine(CkAppShared.sAppDataDir, "emblems", "tiny"),
+            bShrinkOnly: true
+          );
+        }
+
         // Stop stopwatch
         swLoad.Stop();
         TimeSpan tsLoad = swLoad.Elapsed;
@@ -3529,12 +3547,33 @@ namespace CornerkickApp.Controllers
       }
     }
 
-    public static bool MoveFileOnS3(string sKey, string sDestKey)
+    public static bool MoveFileOnS3(string sKey, string sDestKey, string sSourceDir, string sTargetDir)
     {
       if (as3 == null) return false;
 
       Task<bool> tk = Task.Run(() => as3.CopyingObjectAsync(as3.sCkInstanceName + sKey, as3.sCkInstanceName + sDestKey));
-      if (tk.Result) Task.Run(() => as3.deleteFileAsync(as3.sCkInstanceName + sKey));
+      if (tk.Result) {
+        Task.Run(() => as3.deleteFileAsync(as3.sCkInstanceName + sKey));
+
+        // If target file already exists on disk, delete it first
+        if (File.Exists(Path.Combine(sTargetDir, sDestKey))) {
+          try {
+            File.Delete(Path.Combine(sTargetDir, sDestKey));
+          } catch (Exception ex) {
+            CkAppShared.ckMng.tl.writeLog("Error moving file on disk." + Environment.NewLine + ex.Message + Environment.NewLine + ex.StackTrace, bError: true);
+          }
+        }
+
+        // Move file
+        if (File.Exists(Path.Combine(sSourceDir, sKey))) {
+          try {
+            File.Move(Path.Combine(sSourceDir, sKey), Path.Combine(sTargetDir, sDestKey), true);
+          } catch (Exception ex) {
+            CkAppShared.ckMng.tl.writeLog("Error moving file on disk." + Environment.NewLine + ex.Message + Environment.NewLine + ex.StackTrace, bError: true);
+          }
+        }
+      }
+
       return true;
     }
 

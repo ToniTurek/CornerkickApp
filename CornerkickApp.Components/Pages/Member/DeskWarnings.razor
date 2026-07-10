@@ -44,13 +44,13 @@
         </div>
       }
 
-  #if _WebApp
+#if _WebApp
       if (!_warnings.bEmblemExist && !_warnings.bNation) {
         <div style="position: relative; width: 100%; text-align: center">
           <a href="/member/club?id=@iClubId" style="color:orange; text-decoration: none">Sie haben noch kein Wappen für Ihren Verein ausgewählt</a>
         </div>
       }
-  #endif
+#endif
 
       if (_warnings.fSkillPointsFree >= 1f) {
         <div style="position: relative; width: 100%; text-align: center">

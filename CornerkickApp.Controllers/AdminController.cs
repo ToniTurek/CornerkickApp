@@ -39,9 +39,7 @@ namespace CornerkickApp.Controllers
       modelAdmin.bMaintenance        = CkAppShared.settings.bMaintenance;
       modelAdmin.sInfo               = CkAppShared.settings.sInfo;
       if (CkAppShared.settings.dtCounterStart > DateTime.Now) modelAdmin.dtCounterStart = CkAppShared.settings.dtCounterStart;
-      else modelAdmin.dtCounterStart = null;
-      modelAdmin.sHomeDir   = Path.Combine(CkAppShared.sAppDataDir);
-      modelAdmin.sHomeDirCk = CkAppShared.ckMng.settings.sHomeDir;
+      else                                                    modelAdmin.dtCounterStart = null;
 
       // Statistics
       modelAdmin.nClubs  = CkAppShared.ckMng.ltClubs .Count;
@@ -52,20 +50,17 @@ namespace CornerkickApp.Controllers
       modelAdmin.dtCkApproach = App.getCkApproachDate();
       modelAdmin.fIntervalAveToApproachTarget = App.getIntervalAve();
 
-      // Files
-      modelAdmin.bLogExist = System.IO.File.Exists(Path.Combine(modelAdmin.sHomeDir, "log", "ck.log"));
-
       //DirectoryInfo d = new DirectoryInfo(sHomeDir + "save");
       //FileInfo[] ltCkxFiles = d.GetFiles("*.ckx");
-      modelAdmin.bSaveDirExist  = Directory.Exists(Path.Combine(modelAdmin.sHomeDir, "save"));
-      if (modelAdmin.bSaveDirExist) modelAdmin.bAutosaveExist = System.IO.File.Exists(Path.Combine(modelAdmin.sHomeDir, "save", ".autosave.ckx"));
+      modelAdmin.bSaveDirExist  = Directory.Exists(Path.Combine(CkAppShared.sAppDataDir, "save"));
+      if (modelAdmin.bSaveDirExist) modelAdmin.bAutosaveExist = System.IO.File.Exists(Path.Combine(CkAppShared.sAppDataDir, "save", ".autosave.ckx"));
 
       DirectoryInfo d = new DirectoryInfo(Path.Combine(CkAppShared.sAppDataDir, "save"));
       if (d.Exists) {
         FileInfo[] ltCkxFiles = d.GetFiles("*.ckx");
         foreach (FileInfo ckx in ltCkxFiles) {
           modelAdmin.ddlAutosaveFiles.Add(
-            new CornerkickApp.Shared.Models.LayoutModel.SelectListItem {
+            new LayoutModel.SelectListItem {
               Text = ckx.Name,
               Value = ckx.Name
             }
@@ -160,7 +155,7 @@ namespace CornerkickApp.Controllers
 #if _WebApp
       if (CkAppShared.timerCkCalender != null) CkAppShared.timerCkCalender.Enabled = false;
 
-      App.newCk();
+      App.newCk(bLoadGameAsync: false);
 #endif
     }
 
@@ -309,14 +304,19 @@ namespace CornerkickApp.Controllers
       return modelAdmin;
     }
 
-    public static void DeleteLog()
+    public static void DeleteLog(bool bDeleteLog = true, bool bDeleteErr = true)
     {
       var diLog = new DirectoryInfo(Path.Combine(CkAppShared.sAppDataDir, "log"));
-      foreach (var file in diLog.EnumerateFiles("*.log")) {
-        file.Delete();
+
+      if (bDeleteLog) {
+        foreach (var file in diLog.EnumerateFiles("*.log")) {
+          file.Delete();
+        }
       }
-      foreach (var file in diLog.EnumerateFiles("*.err")) {
-        file.Delete();
+      if (bDeleteErr) {
+        foreach (var file in diLog.EnumerateFiles("*.err")) {
+          file.Delete();
+        }
       }
 
       string sFileLogZip = Path.Combine(CkAppShared.sAppDataDir, "log.zip");
@@ -461,7 +461,7 @@ namespace CornerkickApp.Controllers
 
 #endif
 
-    internal static void removeUser(CornerkickManager.User usr)
+    public static void removeUser(CornerkickManager.User usr)
     {
       if (usr.club != null) {
         // Set CPU name to club
@@ -469,7 +469,7 @@ namespace CornerkickApp.Controllers
         int iC = 0;
         while (iC < 10000) {
           iC++;
-          sNameNew = "Team_" + CornerkickManager.Main.sLand[usr.club.iLand] + "_" + iC.ToString();
+          sNameNew = "Team_" + CornerkickManager.Main.sLandShort[usr.club.iLand] + "_" + iC.ToString();
 
           bool bFound = true;
           foreach (CornerkickManager.Club clbExist in CkAppShared.ckMng.ltClubs) {
@@ -497,9 +497,15 @@ namespace CornerkickApp.Controllers
 
         // Delete emblem
         foreach (string sFileExt in new string[3] { ".png", ".jpg", ".gif" }) {
-          string sFilenameLocal = Path.Combine(CkAppShared.sAppDataDir, "Content", "Uploads", "emblems", usr.club.iId.ToString() + sFileExt);
+          string sFilenameLocal = Path.Combine(CkAppShared.sAppDataDir, "emblems", usr.club.iId.ToString() + sFileExt);
           try {
             System.IO.File.Delete(sFilenameLocal);
+          } catch {
+          }
+
+          string sFilenameLocalTiny = Path.Combine(CkAppShared.sAppDataDir, "emblems", "tiny", usr.club.iId.ToString() + sFileExt);
+          try {
+            System.IO.File.Delete(sFilenameLocalTiny);
           } catch {
           }
 

@@ -52,7 +52,23 @@
         CornerkickManager.Club? clbUser = Register.addUser(user);
 
         if (clbUser != null) {
-          bool bOk = CornerkickApp.Controllers.App.MoveFileOnS3("emblems/temp/" + user.Id + ".png", "emblems/" + clbUser.iId.ToString() + ".png");
+          // Move temp. emblem
+          bool bOk = CornerkickApp.Controllers.App.MoveFileOnS3(
+            "emblems/temp/" + user.Id + ".png",
+            "emblems/" + clbUser.iId.ToString() + ".png",
+            CornerkickApp.Shared.Models.CkAppShared.sAppDataDir,
+            CornerkickApp.Shared.Models.CkAppShared.sAppDataDir
+          );
+
+          // Create tiny emblem
+          if (bOk) {
+            string _ = CornerkickApp.Controllers.Tool.resizeImage(
+              Path.Combine(CornerkickApp.Shared.Models.CkAppShared.sAppDataDir, "emblems", clbUser.iId.ToString() + ".png"),
+              32,
+              sNewImagePath: Path.Combine(CornerkickApp.Shared.Models.CkAppShared.sAppDataDir, "emblems", "tiny"),
+              bShrinkOnly: true
+            );
+          }
         }
       } else {
         statusMessage = "Fehler bei der Bestätigung Ihrer E-Mail.";

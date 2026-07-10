@@ -103,17 +103,18 @@
             </div>
 
             @* World info *@
-            @if (CkAppShared.sCkInstanceName != null) {
+            if (CkAppShared.sCkInstanceName != null) {
               <div style="position: relative; margin-top: 40px">
                 <p style="margin-bottom: 0px;">
                   Aktuelle Welt: <b>@CkAppShared.sCkInstanceName</b>
                   @{
                     if (CkAppShared.ckMng?.ltUser != null) {
                       string sUserCount = Math.Max(CkAppShared.ckMng.ltUser.Count - 1, 0).ToString();
-                      <span>(Anzahl Manager: @sUserCount)</span>
+                      <span> (Anzahl Manager: @sUserCount)</span>
                     }
                   }
                 </p>
+                @*
                 <p style="margin-bottom: 0px;">
                   Wechseln zu Welt:
                   <b>
@@ -124,6 +125,7 @@
                     }
                   </b>
                 </p>
+                *@
               </div>
             }
           }

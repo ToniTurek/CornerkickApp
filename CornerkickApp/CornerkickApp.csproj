@@ -56,288 +56,288 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net9.0-android|AnyCPU'">
-    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
-    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationDisplayVersion>8.2.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
     <ApplicationId>com.cornerkick.maui</ApplicationId>
     <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
     <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net9.0-android|x64'">
-    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
-    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationDisplayVersion>8.2.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
     <ApplicationId>com.cornerkick.maui</ApplicationId>
     <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
     <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net9.0-android|x86'">
-    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
-    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationDisplayVersion>8.2.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
     <ApplicationId>com.cornerkick.maui</ApplicationId>
     <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
     <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net9.0-ios|AnyCPU'">
-    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
-    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationDisplayVersion>8.2.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
     <ApplicationId>com.cornerkick.maui</ApplicationId>
     <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
     <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net9.0-ios|x64'">
-    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
-    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationDisplayVersion>8.2.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
     <ApplicationId>com.cornerkick.maui</ApplicationId>
     <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
     <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net9.0-ios|x86'">
-    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
-    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationDisplayVersion>8.2.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
     <ApplicationId>com.cornerkick.maui</ApplicationId>
     <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
     <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net9.0-maccatalyst|AnyCPU'">
-    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
-    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationDisplayVersion>8.2.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
     <ApplicationId>com.cornerkick.maui</ApplicationId>
     <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
     <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net9.0-maccatalyst|x64'">
-    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
-    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationDisplayVersion>8.2.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
     <ApplicationId>com.cornerkick.maui</ApplicationId>
     <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
     <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net9.0-maccatalyst|x86'">
-    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
-    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationDisplayVersion>8.2.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
     <ApplicationId>com.cornerkick.maui</ApplicationId>
     <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
     <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net9.0-windows10.0.19041.0|AnyCPU'">
-    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
-    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationDisplayVersion>8.2.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
     <ApplicationId>com.cornerkick.maui</ApplicationId>
     <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
     <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net9.0-windows10.0.19041.0|x64'">
-    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
-    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationDisplayVersion>8.2.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
     <ApplicationId>com.cornerkick.maui</ApplicationId>
     <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
     <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net9.0-windows10.0.19041.0|x86'">
-    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
-    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationDisplayVersion>8.2.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
     <ApplicationId>com.cornerkick.maui</ApplicationId>
     <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
     <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net9.0-android|AnyCPU'">
-    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
-    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationDisplayVersion>8.2.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
     <ApplicationId>com.cornerkick.maui</ApplicationId>
     <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
     <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='PublishWin|net9.0-android|AnyCPU'">
-    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
-    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationDisplayVersion>8.2.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
     <ApplicationId>com.cornerkick.maui</ApplicationId>
     <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
     <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net9.0-android|x64'">
-    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
-    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationDisplayVersion>8.2.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
     <ApplicationId>com.cornerkick.maui</ApplicationId>
     <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
     <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='PublishWin|net9.0-android|x64'">
-    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
-    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationDisplayVersion>8.2.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
     <ApplicationId>com.cornerkick.maui</ApplicationId>
     <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
     <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net9.0-android|x86'">
-    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
-    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationDisplayVersion>8.2.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
     <ApplicationId>com.cornerkick.maui</ApplicationId>
     <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
     <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='PublishWin|net9.0-android|x86'">
-    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
-    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationDisplayVersion>8.2.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
     <ApplicationId>com.cornerkick.maui</ApplicationId>
     <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
     <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net9.0-ios|AnyCPU'">
-    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
-    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationDisplayVersion>8.2.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
     <ApplicationId>com.cornerkick.maui</ApplicationId>
     <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
     <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='PublishWin|net9.0-ios|AnyCPU'">
-    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
-    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationDisplayVersion>8.2.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
     <ApplicationId>com.cornerkick.maui</ApplicationId>
     <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
     <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net9.0-ios|x64'">
-    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
-    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationDisplayVersion>8.2.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
     <ApplicationId>com.cornerkick.maui</ApplicationId>
     <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
     <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='PublishWin|net9.0-ios|x64'">
-    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
-    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationDisplayVersion>8.2.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
     <ApplicationId>com.cornerkick.maui</ApplicationId>
     <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
     <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net9.0-ios|x86'">
-    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
-    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationDisplayVersion>8.2.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
     <ApplicationId>com.cornerkick.maui</ApplicationId>
     <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
     <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='PublishWin|net9.0-ios|x86'">
-    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
-    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationDisplayVersion>8.2.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
     <ApplicationId>com.cornerkick.maui</ApplicationId>
     <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
     <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net9.0-maccatalyst|AnyCPU'">
-    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
-    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationDisplayVersion>8.2.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
     <ApplicationId>com.cornerkick.maui</ApplicationId>
     <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
     <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='PublishWin|net9.0-maccatalyst|AnyCPU'">
-    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
-    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationDisplayVersion>8.2.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
     <ApplicationId>com.cornerkick.maui</ApplicationId>
     <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
     <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net9.0-maccatalyst|x64'">
-    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
-    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationDisplayVersion>8.2.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
     <ApplicationId>com.cornerkick.maui</ApplicationId>
     <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
     <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='PublishWin|net9.0-maccatalyst|x64'">
-    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
-    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationDisplayVersion>8.2.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
     <ApplicationId>com.cornerkick.maui</ApplicationId>
     <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
     <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net9.0-maccatalyst|x86'">
-    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
-    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationDisplayVersion>8.2.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
     <ApplicationId>com.cornerkick.maui</ApplicationId>
     <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
     <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='PublishWin|net9.0-maccatalyst|x86'">
-    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
-    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationDisplayVersion>8.2.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
     <ApplicationId>com.cornerkick.maui</ApplicationId>
     <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
     <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net9.0-windows10.0.19041.0|AnyCPU'">
-    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
-    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationDisplayVersion>8.2.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
     <ApplicationId>com.cornerkick.maui</ApplicationId>
     <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
     <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='PublishWin|net9.0-windows10.0.19041.0|AnyCPU'">
-    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
-    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationDisplayVersion>8.2.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
     <ApplicationId>com.cornerkick.maui</ApplicationId>
     <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
     <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net9.0-windows10.0.19041.0|x64'">
-    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
-    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationDisplayVersion>8.2.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
     <ApplicationId>com.cornerkick.maui</ApplicationId>
     <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
     <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='PublishWin|net9.0-windows10.0.19041.0|x64'">
-    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
-    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationDisplayVersion>8.2.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
     <ApplicationId>com.cornerkick.maui</ApplicationId>
     <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
     <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net9.0-windows10.0.19041.0|x86'">
-    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
-    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationDisplayVersion>8.2.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
     <ApplicationId>com.cornerkick.maui</ApplicationId>
     <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
     <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='PublishWin|net9.0-windows10.0.19041.0|x86'">
-    <ApplicationDisplayVersion>8.1.0</ApplicationDisplayVersion>
-    <ApplicationVersion>196</ApplicationVersion>
+    <ApplicationDisplayVersion>8.2.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
     <ApplicationId>com.cornerkick.maui</ApplicationId>
     <ApplicationTitle>Cornerkick-Manager</ApplicationTitle>
     <ApplicationIdGuid>1C0915D6-6D42-42E9-ACEA-EC17E601E8FE</ApplicationIdGuid>

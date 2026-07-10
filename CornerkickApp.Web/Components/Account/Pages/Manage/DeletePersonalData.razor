@@ -9,6 +9,9 @@
 @inject IdentityUserAccessor UserAccessor
 @inject IdentityRedirectManager RedirectManager
 @inject ILogger<DeletePersonalData> Logger
+@inject CornerkickApp.Web.Services.CkEmailSender EmailSender
+
+@attribute [ExcludeFromInteractiveRouting]
 
 <PageTitle>Delete Personal Data</PageTitle>
 
@@ -72,10 +75,27 @@
       throw new InvalidOperationException("Unexpected error occurred deleting user.");
     }
 
+    CornerkickManager.User? usrToDel = CornerkickApp.Controllers.Member.MemberController.ckUser(user.Id);
+    if (usrToDel == null) {
+      //message = "Cornerkick user not found.";
+      return;
+    }
+
+    // Remove user from Cornerkick database
+    Controllers.AdminController.removeUser(usrToDel);
+
     await SignInManager.SignOutAsync();
 
     var userId = await UserManager.GetUserIdAsync(user);
     Logger.LogInformation("User with ID '{UserId}' deleted themselves.", userId);
+
+#if !DEBUG
+    // Send mail to admin
+    await EmailSender.SendEmailToAdminAsync(
+      "User retired: " + user.Vorname + " " + user.Nachname,
+      "User " + user.Vorname + " " + user.Nachname + " has retired (email: " + user.Email + ")."
+    );
+#endif
 
     RedirectManager.RedirectToCurrentPage();
   }

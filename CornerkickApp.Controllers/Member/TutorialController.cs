@@ -351,8 +351,8 @@ namespace CornerkickApp.Controllers.Member
         return lr;
 #if _WebApp
       } else if (iLevel == (iTtMainLevelStart * 10) + iSubLevel++) {
-        lr.sText = "Ist das Spiel gestartet, wird alle 2 Minuten ein Zeitschritt durchgeführt, welcher 15 Minuten im Spiel vergehen lässt. Hierdurch vergeht eine Woche im Spiel genau innerhalb eines Tages.";
-        lr.sText += "<br><br>Ligaspiele der ersten Ligen Samstags um 15:30 Uhr finden somit immer Abends um 20:30 Uhr statt.";
+        lr.sText = "Ist das online Spiel gestartet, wird alle 2 Minuten ein Zeitschritt durchgeführt, welcher 15 Minuten im Spiel vergehen lässt. Hierdurch vergeht eine Woche im Spiel genau innerhalb eines Tages.";
+        lr.sText += "<br><br>Ligaspiele Samstags um 15:30 Uhr finden somit immer Abends um 20:30 Uhr statt.";
         lr.iNextButton = 1;
         return lr;
 #endif
@@ -448,7 +448,7 @@ namespace CornerkickApp.Controllers.Member
         return lr;
       } else if (iLevel == (iTtMainLevelUser * 10) + 1) {
         lr.sText = getScrollToElement("Darunter", "divUserSkillsContainer") + " befindet sich eine Übersicht über deine persönlichen Fähigkeiten als Fussball-Manager.";
-        lr.sText += "<br><br>Mit jedem Sieg - abhängig vom <a href=\"/Home/UserManual/#h2Cups\" target=\"_blank\"><u>Attraktionsfaktor</u></a> des Wettbewerbs - gewinnst du Fähigkeitspunkte. Ist die Menge an Fähigkeitspunkten >= 1, kannst du sie einsetzen um deine persönlichen Fähigkeiten zu verbessern.";
+        lr.sText += "<br><br>Mit jedem Sieg - abhängig vom <a href=\"/usermanual/#h2Cups\" target=\"_blank\"><u>Attraktionsfaktor</u></a> des Wettbewerbs - gewinnst du Fähigkeitspunkte. Ist die Menge an Fähigkeitspunkten >= 1, kannst du sie einsetzen um deine persönlichen Fähigkeiten zu verbessern.";
         lr.iNextButton = 1;
         return lr;
       } else if (iLevel == (iTtMainLevelUser * 10) + 2) {
@@ -460,12 +460,7 @@ namespace CornerkickApp.Controllers.Member
         lr.sText = "Gut. Verteile jetzt noch den restlichen Fähigkeitspunkt auf \"Trainingsgestaltung\".";
         lr.iNextButton = 2;
         return lr;
-      } else if (iLevel == (iTtMainLevelUser * 10) + 4 && bWebApp) {
-        lr.sText = "Eine weitere Einnahmequelle für deinen Verein stellen Kooperationen mit anderen Managern dar. Über den Link im Abschnitt \"Kooperationen\" kannst du über eine vorgefertigte Email Freunde zu Cornerkick einladen. Ihnen wird dann automatisch dein Verein als Kooperationspartner vorgeschlagen.";
-        lr.sText += "<br><br>Hast du bereits Kooperationen geschlossen, werden sie in der Tabelle aufgelistet. Hast du jemanden eingeladen, bist du der Mutterverein und partizipierst monatlich abhängig vom Erfolg deines Tochtervereins an diesem. Aber auch wenn du eingeladen wurdest und somit der Tochterverein bist, erhälst du durch Synergieeffekte monatlich eine bestimmte Summe abhängig vom Erfolg deines Muttervereins (siehe auch Infos in der <a href=\"/Home/UserManual/#h4UserCoop\" target=\"_blank\"><u>Anleitung</u></a>).";
-        lr.iNextButton = 1;
-        return lr;
-      } else if ((iLevel == (iTtMainLevelUser * 10) + 4 && !bWebApp) || (iLevel == (iTtMainLevelUser * 10) + 4 && bWebApp)) {
+      } else if (iLevel == (iTtMainLevelUser * 10) + 4) {
         lr.sText = "Als nächstes wollen wir mal das Training für die nächste Woche festlegen. Klicke dazu im Menü oben auf \"<i class=\"fas fa-users\"></i> Mannschaft -> <i class=\"fas fa-dumbbell\"></i> Mannschaftstraining\".";
         lr.iNextButton = 0;
         return lr;
@@ -527,7 +522,7 @@ namespace CornerkickApp.Controllers.Member
         lr.iNextButton = 1;
         return lr;
       } else if (iLevel == (iTtMainLevelCalendar * 10) + 1 && usr.iResp >= iUserRespTrainingCamps) {
-        lr.sText = "Trainingslager oder Ereignisse durchzuführen, kann sehr vorteilhaft sein. Für eine genaue Beschreibung klicke <a href=\"/Home/UserManual/#h2Calendar\" target=\"_blank\"><u>hier</u></a>.";
+        lr.sText = "Trainingslager oder Ereignisse durchzuführen, kann sehr vorteilhaft sein. Für eine genaue Beschreibung klicke <a href=\"/usermanual/#h2Calendar\" target=\"_blank\"><u>hier</u></a>.";
         lr.iNextButton = 1;
         return lr;
       } else if (iLevel == (iTtMainLevelCalendar * 10) + (usr.iResp < iUserRespTrainingCamps ? 1 : 2)) {
@@ -544,7 +539,7 @@ namespace CornerkickApp.Controllers.Member
         return lr;
       } else if (iLevel == (iTtMainLevelTactic * 10) + 2) {
         lr.sText = getScrollToElement("Ganz unten", "divTcSubs") + " kannst du deinem Co-Trainer bereits vor dem Spiel mitteilen, welche Auswechslungen er für dich durchführen soll. Hast du also mal keine Zeit während eines Spiels dabei zu sein, kannst du trotzdem Frische Kräfte bringen. Dies kann unabhängig des Spielstandes sinnvoll sein.";
-        lr.sText += "<br><br>Eine Beschreibung der weiteren Taktikeinstellungen findest du <a href=\"/Home/UserManual/#h3Tactic\" target=\"_blank\"><u>hier</u></a>.";
+        lr.sText += "<br><br>Eine Beschreibung der weiteren Taktikeinstellungen findest du <a href=\"/usermanual/#h3Tactic\" target=\"_blank\"><u>hier</u></a>.";
         lr.iNextButton = 1;
         return lr;
       } else if (iLevel == (iTtMainLevelTactic * 10) + 3) {
@@ -561,12 +556,15 @@ namespace CornerkickApp.Controllers.Member
         lr.sText += "<li>Dein Stadion und dein Vereinsgelände ausbauen (\"Verein->Stadion\" und \"Verein->Vereinsgelände\")</li>";
         lr.sText += "<li>Dir einen Merchandising-Vermarkter zulegen (\"Verein->Merchandising\")</li>";
         lr.sText += "</ul>";
-        lr.sText += "<br>Für alles weitere, schau dir die <a href=\"/Home/UserManual\" target=\"_blank\">Anleitung</a> an oder stell deine Frage an <a href=\"mailto:mail@cornerkick-manager.de?subject=Cornerkick Frage\">mail@cornerkick-manager.de</a>. Viel Erfolg!";
+        lr.sText += "<br>Für alles weitere, schau dir die <a href=\"/usermanual\" target=\"_blank\">Anleitung</a> an oder stell deine Frage an <a href=\"mailto:mail@cornerkick-manager.de?subject=Cornerkick Frage\">mail@cornerkick-manager.de</a>. Viel Erfolg!";
         lr.sText += "<br><br>Du kannst dieses Tutorial später noch einmal starten, indem du oben rechts auf deine e-mail klickst und anschließend unter \"Optionen\" den Haken bei \"Tutorial zeigen\" setzt.";
         lr.iNextButton = 0;
         */
-        lr.sText = "Dies ist das Ende des 1. Teils des Tutorials. Starte nun den Zeitablauf in dem du oben rechts auf \"weiter <i class=\"fa fa-play\"></i>\" klickst.";
-        lr.sText += "<br><br>Für alles weitere, schau dir die <a href=\"/Home/UserManual\" target=\"_blank\">Anleitung</a> an oder stell deine Frage an <a href=\"mailto:mail@cornerkick-manager.de?subject=Cornerkick Frage\">mail@cornerkick-manager.de</a>.";
+        lr.sText = "Dies ist das Ende des 1. Teils des Tutorials.";
+#if !_WebApp
+        lr.sText += " Starte nun den Zeitablauf in dem du oben rechts auf \"weiter <i class=\"fa fa-play\"></i>\" klickst.";
+#endif
+        lr.sText += "<br><br>Für alles weitere, schau dir die <a href=\"/usermanual\" target=\"_blank\">Anleitung</a> an oder stell deine Frage an <a href=\"mailto:mail@cornerkick-manager.de?subject=Cornerkick Frage\">mail@cornerkick-manager.de</a>.";
         lr.sText += "<br><br>Weitere Infos über das Spiel und zur Community findest du <a href=\"/info\">hier</a>.";
         //lr.sText += "<br><br>Du kannst dieses Tutorial später noch einmal starten, indem du oben rechts auf deine e-mail klickst und anschließend unter \"Optionen\" den Haken bei \"Tutorial zeigen\" setzt.";
 
@@ -620,6 +618,13 @@ namespace CornerkickApp.Controllers.Member
         /*
          * End 3rd part, start 4th part with staff, sponsors and calendar
          */
+#if _WebApp
+      } else if (iLevel == (iTtMainLevelContracts * 10) + 2) {
+        lr.sText = "Eine weitere Einnahmequelle für deinen Verein stellen Kooperationen mit anderen Managern dar. Über den Link im Abschnitt \"Kooperationen\" kannst du über eine vorgefertigte Email Freunde zu Cornerkick einladen. Ihnen wird dann automatisch dein Verein als Kooperationspartner vorgeschlagen.";
+        lr.sText += "<br><br>Hast du bereits Kooperationen geschlossen, werden sie in der Tabelle aufgelistet. Hast du jemanden eingeladen, bist du der Mutterverein und partizipierst monatlich abhängig vom Erfolg deines Tochtervereins an diesem. Aber auch wenn du eingeladen wurdest und somit der Tochterverein bist, erhälst du durch Synergieeffekte monatlich eine bestimmte Summe abhängig vom Erfolg deines Muttervereins (siehe auch Infos in der <a href=\"/usermanual/#h4UserCoop\" target=\"_blank\"><u>Anleitung</u></a>).";
+        lr.iNextButton = 1;
+        return lr;
+#endif
       } else if (iLevel == (iTtMainLevelPart4Start * 10) + 0) { // Start 3st part
         lr.sText = "Herzlich Willkommen zum 4. Teil des CORNERKICK Tutorials.";
         lr.sText += "<br><br>Du solltest jetzt schon einige Erfahrungen gesammelt haben. In diesem Teil wollen wir uns ein paar weitere Aspekte des Spiels anschauen.";
@@ -703,7 +708,7 @@ namespace CornerkickApp.Controllers.Member
         return lr;
       } else if (iLevel == (iTtMainLevelStSurr * 10) + 3 && usr.iResp >= iUserRespStadium) {
         lr.sText = "Gut gemacht. Überlege dir, ob du noch andere Gebäude bauen bzw. erweitern möchtest. Auf manchen Geländefeldern siehst du in der oberen rechten Ecke ein Warnsymbol. Wenn du mit der Maus darüber gehst, erscheint zusätzliche Information über die minimale Ausstattung, welche nicht zu Beeinträchtigungen z.B. beim Zuschaueraufkommen führt.";
-        lr.sText += "<br><br>Für weitere Informationen, was genau die einzelnen Gebäude bewirken, schaue in die <a href=\"/Home/UserManual/#h3Buildings\" target=\"_blank\"><u>Anleitung</u></a>.";
+        lr.sText += "<br><br>Für weitere Informationen, was genau die einzelnen Gebäude bewirken, schaue in die <a href=\"/usermanual/#h3Buildings\" target=\"_blank\"><u>Anleitung</u></a>.";
         lr.sText += "<br><br>Wenn du hier fertig bist, gehe zurück ins Hauptmenü.";
         lr.iNextButton = 0;
         return lr;
