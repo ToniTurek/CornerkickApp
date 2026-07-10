@@ -69,9 +69,11 @@
     _usr = CkAppShared.ckMng.ltUser[CkAppShared.iUserActive];
 #endif
 
+    if (_usr == null) return;
+
     ucm = CornerkickApp.Controllers.Shared.Components.Headline.HeadlineController.Get(_usr);
 
-    if (ucm != null && _usr != null) {
+    if (ucm != null) {
       sHeadlineDate = ucm.sHeadlineDate;
 
       if (bUpdateBalance && _usr.iResp >= CkAppShared.iUserRespFinance) {

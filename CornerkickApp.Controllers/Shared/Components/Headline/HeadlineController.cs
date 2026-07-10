@@ -67,8 +67,6 @@ namespace CornerkickApp.Controllers.Shared.Components.Headline
 
     public static UserComponentModel Get(CornerkickManager.User usr)
     {
-      CultureInfo ci = CultureInfo.CurrentCulture;
-
       CornerkickManager.Club? clb = Member.MemberController.ckClub(usr);
 
       UserComponentModel ucm = new UserComponentModel();
@@ -97,6 +95,9 @@ namespace CornerkickApp.Controllers.Shared.Components.Headline
           ucm.sClubEmblem = @"/Content/Icons/flags/" + CornerkickManager.Main.sLandShort[clb.iLand] + ".png";
         }
       }
+
+      // Culture Info
+      CultureInfo ci = Member.MemberController.getCi(usr);
 
       // Headline date
       ucm.sHeadlineDate = CkAppShared.ckMng.dtDatum.ToString("ddd", ci) + ", " + CkAppShared.ckMng.dtDatum.ToString("d", ci) + ", " + CkAppShared.ckMng.dtDatum.ToString("t", ci);
